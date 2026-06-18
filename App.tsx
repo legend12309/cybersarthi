@@ -2,73 +2,94 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
-import { 
+import {
   useFonts,
   Manrope_400Regular,
   Manrope_600SemiBold,
-  Manrope_700Bold 
+  Manrope_700Bold,
 } from '@expo-google-fonts/manrope';
-import { 
+import {
   PublicSans_400Regular,
   PublicSans_600SemiBold,
-  PublicSans_700Bold 
+  PublicSans_700Bold,
 } from '@expo-google-fonts/public-sans';
 
-import HomeScreen from './src/screens/HomeScreen';
-import VoiceScreen from './src/screens/VoiceScreen';
-import SimulatorScreen from './src/screens/SimulatorScreen';
-import BadgesScreen from './src/screens/BadgesScreen';
+import HomeScreen              from './src/screens/HomeScreen';
+import VoiceScreen             from './src/screens/VoiceScreen';
+import SimulatorScreen         from './src/screens/SimulatorScreen';
+import BadgesScreen            from './src/screens/BadgesScreen';
 import LanguageSelectionScreen from './src/screens/LanguageSelectionScreen';
-import CustomSplashScreen from './src/screens/SplashScreen';
-import { colors } from './src/lib/colors';
+import CustomSplashScreen      from './src/screens/SplashScreen';
+import ScamDetailScreen        from './src/screens/ScamDetailScreen';
+import { colors }              from './src/lib/colors';
+import { LanguageProvider, useLanguage } from './src/context/LanguageContext';
 
 SplashScreen.preventAutoHideAsync();
 
-const Tab = createBottomTabNavigator();
+const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+type TabIconName =
+  | 'home' | 'home-outlined'
+  | 'mic' | 'mic-none'
+  | 'sports-esports'
+  | 'emoji-events' | 'emoji-events';
+
 function MainTabs() {
+  const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: any = 'help-circle';
-          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
-          else if (route.name === 'Chat') iconName = focused ? 'mic' : 'mic-outline';
-          else if (route.name === 'Sim') iconName = focused ? 'game-controller' : 'game-controller-outline';
-          else if (route.name === 'Badges') iconName = focused ? 'medal' : 'medal-outline';
-          
-          return <Ionicons name={iconName} size={size} color={color} />;
+          let iconName: any = 'help';
+          if (route.name === 'Home')   iconName = focused ? 'home'           : 'home';
+          if (route.name === 'Chat')   iconName = focused ? 'mic'            : 'mic-none';
+          if (route.name === 'Sim')    iconName = 'sports-esports';
+          if (route.name === 'Badges') iconName = focused ? 'emoji-events'   : 'emoji-events';
+          return <MaterialIcons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor:   colors.primary,
         tabBarInactiveTintColor: colors.onSurfaceVariant,
+        tabBarLabelStyle: {
+          fontFamily: 'Manrope_600SemiBold',
+          fontSize: 11,
+          marginBottom: 3,
+        },
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.background, // Used as a subtle separator
-          elevation: 8,
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
+          backgroundColor:  colors.surface,
+          borderTopWidth:   1,
+          borderTopColor:   colors.surfaceBorder,
+          height:           62 + insets.bottom,
+          paddingBottom:    8 + insets.bottom,
+          paddingTop:       6,
+          elevation:        0,
+          shadowOpacity:    0,
         },
         headerStyle: {
           backgroundColor: colors.surface,
-          elevation: 0,
-          shadowOpacity: 0,
-        },
+          shadowOpacity:   0,
+          elevation:       0,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.surfaceBorder,
+        } as any,
         headerTitleStyle: {
-          fontFamily: 'Manrope_600SemiBold',
+          fontFamily: 'Manrope_700Bold',
+          fontSize: 18,
           color: colors.onSurface,
         },
+        headerTintColor: colors.onSurface,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Chat" component={VoiceScreen} />
-      <Tab.Screen name="Sim" component={SimulatorScreen} />
-      <Tab.Screen name="Badges" component={BadgesScreen} />
+      <Tab.Screen name="Home"   component={HomeScreen}      options={{ title: t('tab_home'),   headerShown: false }} />
+      <Tab.Screen name="Chat"   component={VoiceScreen}     options={{ title: t('tab_chat'),   headerShown: false }} />
+      <Tab.Screen name="Sim"    component={SimulatorScreen} options={{ title: t('tab_sim'),    headerShown: false }} />
+      <Tab.Screen name="Badges" component={BadgesScreen}    options={{ title: t('tab_badges'), headerShown: false }} />
     </Tab.Navigator>
   );
 }
@@ -84,24 +105,48 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
+    if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  if (!fontsLoaded) return null;
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
-          <Stack.Screen name="Splash" component={CustomSplashScreen} />
-          <Stack.Screen name="Language" component={LanguageSelectionScreen} />
-          <Stack.Screen name="MainTabs" component={MainTabs} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <LanguageProvider>
+        <NavigationContainer
+          theme={{
+            dark: false,
+            fonts: {
+              regular: { fontFamily: 'PublicSans_400Regular', fontWeight: '400' as const },
+              medium:  { fontFamily: 'Manrope_600SemiBold',   fontWeight: '600' as const },
+              bold:    { fontFamily: 'Manrope_700Bold',        fontWeight: '700' as const },
+              heavy:   { fontFamily: 'Manrope_700Bold',        fontWeight: '900' as const },
+            },
+            colors: {
+              primary:      colors.primary,
+              background:   colors.background,
+              card:         colors.surface,
+              text:         colors.onSurface,
+              border:       colors.surfaceBorder,
+              notification: colors.error,
+            },
+          }}
+        >
+          <Stack.Navigator 
+            screenOptions={{ 
+              headerShown: false,
+              animation: 'slide_from_right',
+            }} 
+            initialRouteName="Splash"
+          >
+            <Stack.Screen name="Splash"    component={CustomSplashScreen}      />
+            <Stack.Screen name="Language"  component={LanguageSelectionScreen} />
+            <Stack.Screen name="MainTabs"  component={MainTabs}                />
+            <Stack.Screen name="ScamDetail" component={ScamDetailScreen}       />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

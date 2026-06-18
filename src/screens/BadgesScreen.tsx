@@ -1,107 +1,142 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../lib/colors';
-import { typography } from '../lib/typography';
-import { spacing } from '../lib/spacing';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
+import { colors, theme } from '../lib/colors';
+import { useLanguage } from '../context/LanguageContext';
+import { fetchUserStats, UserStats } from '../lib/dbServices';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - spacing.containerPadding * 2 - 16) / 2;
+const CARD_W = (width - 52) / 2;
+
+const LEVEL_PROGRESS: Record<string, number> = {
+  'Level 2: Vigilant': 0.25,
+  'Level 3: Sentry':   0.50,
+  'Level 4: Defender': 0.75,
+  'Level 5: Guardian': 1.0,
+};
 
 export default function BadgesScreen() {
-  const BadgeCard = ({ title, desc, icon, isUnlocked, status }: any) => {
-    const iconBgColor = isUnlocked
-      ? status === 'safe'
-        ? colors.secondary + '20'
-        : colors.primary + '20'
-      : colors.onSurfaceVariant + '15';
-      
-    const iconColor = isUnlocked
-      ? status === 'safe'
-        ? colors.secondary
-        : colors.primary
-      : colors.onSurfaceVariant + '80';
+  const { t, deviceId } = useLanguage();
+  const isFocused = useIsFocused();
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    return (
-      <View style={[styles.badgeCard, !isUnlocked && styles.badgeCardLocked]}>
-        <View style={[styles.badgeIconContainer, { backgroundColor: iconBgColor }]}>
-          <Ionicons name={icon} size={28} color={iconColor} />
-        </View>
-        <Text style={styles.badgeTitle} numberOfLines={1}>{title}</Text>
-        <Text style={styles.badgeDesc} numberOfLines={2}>{desc}</Text>
-      </View>
-    );
+  useEffect(() => {
+    let active = true;
+    if (isFocused && deviceId) {
+      setLoading(true);
+      fetchUserStats(deviceId).then(data => {
+        if (active) { setStats(data); setLoading(false); }
+      });
+    }
+    return () => { active = false; };
+  }, [isFocused, deviceId]);
+
+  const getLocalizedLevel = (l?: string) => {
+    if (!l) return t('badges_level_title');
+    const map: Record<string, string> = {
+      'Level 2: Vigilant': t('sim_badge_vigilant'),
+      'Level 3: Sentry':   t('level_3_sentry'),
+      'Level 4: Defender': t('level_4_defender'),
+      'Level 5: Guardian': t('level_5_guardian'),
+    };
+    return map[l] || l;
   };
+
+  const isBadgeUnlocked = (name: string) => stats?.unlockedBadges.includes(name) || false;
+  const progress = LEVEL_PROGRESS[stats?.level || 'Level 2: Vigilant'] || 0.25;
+
+  const BADGES = [
+    { id: 'Scam Spotter',       titleKey: 'badges_spotter_title',   descKey: 'badges_spotter_desc',   icon: 'remove-red-eye', colorKey: 'success' },
+    { id: 'Verified Protector', titleKey: 'badges_protector_title', descKey: 'badges_protector_desc', icon: 'verified-user',  colorKey: 'success' },
+    { id: 'Sim Hero',           titleKey: 'badges_hero_title',      descKey: 'badges_hero_desc',      icon: 'sports-esports', colorKey: 'primary' },
+    { id: 'Link Sentry',        titleKey: 'badges_sentry_title',    descKey: 'badges_sentry_desc',    icon: 'link',           colorKey: 'primary' },
+    { id: 'Call Guardian',      titleKey: 'badges_guardian_title',  descKey: 'badges_guardian_desc',  icon: 'headset-mic',    colorKey: 'warning' },
+    { id: 'Family Shield',      titleKey: 'badges_shield_title',    descKey: 'badges_shield_desc',    icon: 'groups',         colorKey: 'error'   },
+  ] as const;
+
+  const COLOR_MAP: Record<string, { bg: string; icon: string }> = {
+    success: { bg: colors.successDim, icon: colors.success },
+    primary: { bg: colors.primaryGlow, icon: colors.primary },
+    warning: { bg: colors.warningDim, icon: colors.warning },
+    error:   { bg: colors.errorDim,   icon: colors.error   },
+  };
+
+  if (loading && !stats) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* ── Profile Hero ─────────────────────────────────── */}
+        <View style={styles.heroCard}>
           <View style={styles.medalCircle}>
-            <Ionicons name="medal" size={48} color={colors.primary} />
+            <MaterialIcons name="military-tech" size={48} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Level 5 Guardian</Text>
-          <Text style={styles.subtitle}>You are highly vigilant. Keep it up!</Text>
+          <Text style={styles.levelLabel}>{getLocalizedLevel(stats?.level)}</Text>
+          <Text style={styles.levelSub}>{t('badges_level_subtitle')}</Text>
+
+          {/* Progress bar */}
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress * 100}%` as any }]} />
+          </View>
+          <Text style={styles.progressLabel}>{Math.round(progress * 100)}% to next level</Text>
         </View>
 
+        {/* ── Stats row ─────────────────────────────────────── */}
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>12</Text>
-            <Text style={styles.statLabel}>Unlocked</Text>
+          <View style={styles.statCell}>
+            <Text style={styles.statNum}>{stats?.unlockedBadges.length || 1}</Text>
+            <Text style={styles.statLab}>{t('badges_stats_unlocked')}</Text>
           </View>
-          <View style={styles.statLine} />
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>20</Text>
-            <Text style={styles.statLabel}>Total</Text>
+          <View style={styles.statDivider} />
+          <View style={styles.statCell}>
+            <Text style={styles.statNum}>6</Text>
+            <Text style={styles.statLab}>{t('badges_stats_total')}</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statCell}>
+            <Text style={styles.statNum}>{stats?.totalQuizScore || 0}</Text>
+            <Text style={styles.statLab}>Score</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Your Achievements</Text>
-
+        {/* ── Badge Grid ─────────────────────────────────────── */}
+        <Text style={styles.sectionTitle}>{t('badges_section_title')}</Text>
         <View style={styles.grid}>
-          <BadgeCard
-            title="Scam Spotter"
-            desc="Identified 5 suspicious messages."
-            icon="eye"
-            isUnlocked={true}
-            status="safe"
-          />
-          <BadgeCard
-            title="Verified Protector"
-            desc="Completed basic security setup."
-            icon="shield-checkmark"
-            isUnlocked={true}
-            status="safe"
-          />
-          <BadgeCard
-            title="Sim Hero"
-            desc="Completed 3 scam simulations."
-            icon="game-controller"
-            isUnlocked={true}
-            status="safe"
-          />
-          <BadgeCard
-            title="Link Sentry"
-            desc="Verify 10 suspicious links to unlock."
-            icon="link"
-            isUnlocked={false}
-            status="suspicious"
-          />
-          <BadgeCard
-            title="Call Guardian"
-            desc="Scan 5 unknown voice calls."
-            icon="mic"
-            isUnlocked={false}
-            status="suspicious"
-          />
-          <BadgeCard
-            title="Family Shield"
-            desc="Add 3 trusted contacts."
-            icon="people"
-            isUnlocked={false}
-            status="suspicious"
-          />
+          {BADGES.map(b => {
+            const unlocked = isBadgeUnlocked(b.id);
+            const c = COLOR_MAP[b.colorKey];
+            return (
+              <View key={b.id} style={[styles.badgeCard, !unlocked && styles.badgeLocked]}>
+                <View style={[styles.badgeIconWrap, { backgroundColor: unlocked ? c.bg : colors.surfaceBorder + '50' }]}>
+                  <MaterialIcons name={b.icon} size={28} color={unlocked ? c.icon : colors.onSurfaceVariant + '60'} />
+                  {!unlocked && (
+                    <View style={styles.lockOverlay}>
+                      <MaterialIcons name="lock" size={14} color={colors.onSurfaceVariant} />
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.badgeTitle, !unlocked && styles.lockedText]} numberOfLines={2}>
+                  {t(b.titleKey)}
+                </Text>
+                <Text style={styles.badgeDesc} numberOfLines={3}>{t(b.descKey)}</Text>
+                {unlocked && (
+                  <View style={styles.unlockedChip}>
+                    <MaterialIcons name="check" size={10} color={colors.success} />
+                    <Text style={styles.unlockedText}>Earned</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -109,126 +144,71 @@ export default function BadgesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    padding: spacing.containerPadding,
-    paddingBottom: 88, // bottom nav height offset
-    gap: spacing.stackGap,
-  },
-  header: {
-    alignItems: 'center',
-    paddingVertical: 12,
+  container: { flex: 1, backgroundColor: colors.background },
+  center: { justifyContent: 'center', alignItems: 'center' },
+  scroll: { padding: 20, paddingBottom: 100, gap: 16 },
+
+  // Hero card
+  heroCard: {
+    backgroundColor: colors.surface, borderRadius: theme.cardRadius,
+    borderWidth: 1, borderColor: colors.surfaceBorder,
+    padding: 24, alignItems: 'center', gap: 8,
   },
   medalCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.primary + '10',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: colors.primaryGlow, borderWidth: 1.5, borderColor: colors.primary + '40',
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: 8,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
   },
-  title: {
-    ...typography.headlineLg,
-    color: colors.onSurface,
+  levelLabel: { fontFamily: 'Manrope_700Bold', fontSize: 22, color: colors.onSurface, letterSpacing: -0.3 },
+  levelSub: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant },
+  progressTrack: {
+    width: '100%', height: 8, borderRadius: 4,
+    backgroundColor: colors.surfaceHigh, overflow: 'hidden', marginTop: 8,
   },
-  subtitle: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
-    marginTop: 6,
-  },
+  progressFill: { height: '100%', borderRadius: 4, backgroundColor: colors.primary },
+  progressLabel: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant },
+
+  // Stats
   statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingVertical: 16,
-    borderRadius: 16,
-    elevation: 2,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    marginVertical: 8,
+    flexDirection: 'row', backgroundColor: colors.surface,
+    borderRadius: theme.borderRadius, borderWidth: 1, borderColor: colors.surfaceBorder,
+    paddingVertical: 18,
   },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statLine: {
-    width: 1,
-    height: 32,
-    backgroundColor: colors.onSurfaceVariant + '20',
-  },
-  statNumber: {
-    ...typography.display,
-    color: colors.primary,
-    fontSize: 28,
-    lineHeight: 32,
-  },
-  statLabel: {
-    ...typography.labelSm,
-    color: colors.onSurfaceVariant,
-    marginTop: 4,
-  },
-  sectionTitle: {
-    ...typography.titleMd,
-    color: colors.onSurface,
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 16,
-  },
+  statCell: { flex: 1, alignItems: 'center' },
+  statDivider: { width: 1, backgroundColor: colors.surfaceBorder },
+  statNum: { fontFamily: 'Manrope_700Bold', fontSize: 28, color: colors.primary, lineHeight: 32 },
+  statLab: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant, marginTop: 4 },
+
+  sectionTitle: { fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onSurface },
+
+  // Grid
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   badgeCard: {
-    width: CARD_WIDTH,
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.onSurfaceVariant + '10',
-    minHeight: 156,
+    width: CARD_W,
+    backgroundColor: colors.surface, borderRadius: theme.cardRadius,
+    borderWidth: 1, borderColor: colors.surfaceBorder,
+    padding: 16, alignItems: 'center', gap: 8, minHeight: 170,
   },
-  badgeCardLocked: {
-    opacity: 0.6,
+  badgeLocked: { opacity: 0.55 },
+  badgeIconWrap: {
+    width: 58, height: 58, borderRadius: 16,
+    justifyContent: 'center', alignItems: 'center',
   },
-  badgeIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
+  lockOverlay: {
+    position: 'absolute', bottom: -2, right: -2,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.surfaceHigh, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: colors.surfaceBorder,
   },
-  badgeTitle: {
-    ...typography.titleMd,
-    fontSize: 15,
-    color: colors.onSurface,
-    textAlign: 'center',
-    marginBottom: 4,
+  badgeTitle: { fontFamily: 'Manrope_600SemiBold', fontSize: 13, color: colors.onSurface, textAlign: 'center' },
+  lockedText: { color: colors.onSurfaceVariant },
+  badgeDesc: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant, textAlign: 'center', lineHeight: 15 },
+  unlockedChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.successDim, borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 3,
   },
-  badgeDesc: {
-    ...typography.labelSm,
-    fontSize: 11,
-    lineHeight: 14,
-    color: colors.onSurfaceVariant,
-    textAlign: 'center',
-  },
+  unlockedText: { fontFamily: 'Manrope_600SemiBold', fontSize: 10, color: colors.success },
 });

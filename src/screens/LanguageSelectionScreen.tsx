@@ -1,105 +1,101 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors } from '../lib/colors';
-import { typography } from '../lib/typography';
-import { spacing } from '../lib/spacing';
+import React, { useState, useEffect } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Dimensions, Animated,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
+import { colors, theme } from '../lib/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - spacing.containerPadding * 2 - 16) / 2;
+const CARD_WIDTH = (width - 48 - 12) / 2;
+
+const LANGUAGES = [
+  { code: 'hi-IN', native: 'हिंदी',    english: 'Hindi'    },
+  { code: 'mr-IN', native: 'मराठी',   english: 'Marathi'  },
+  { code: 'ta-IN', native: 'தமிழ்',   english: 'Tamil'    },
+  { code: 'te-IN', native: 'తెలుగు',  english: 'Telugu'   },
+  { code: 'en-IN', native: 'English',  english: 'English'  },
+  { code: 'gu-IN', native: 'ગુજરાતી', english: 'Gujarati' },
+];
 
 export default function LanguageSelectionScreen({ navigation }: any) {
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const { t, changeLanguage, languageCode } = useLanguage();
+  const [selected, setSelected] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const insets = useSafeAreaInsets();
 
-  const setLanguageAndProceed = async (code: string) => {
+  useEffect(() => {
+    if (languageCode) setSelected(languageCode);
+  }, [languageCode]);
+
+  const handleContinue = async () => {
+    if (!selected || isSubmitting) return;
+    setIsSubmitting(true);
     try {
-      await AsyncStorage.setItem('cybersaathi.language', code);
+      await changeLanguage(selected);
       navigation.replace('MainTabs');
-    } catch (e) {
-      console.error('Failed to save language', e);
+    } catch {
+      setIsSubmitting(false);
     }
-  };
-
-  const LanguageOption = ({ title, nativeTitle, code }: { title: string, nativeTitle: string, code: string }) => {
-    const isSelected = selectedLanguage === code;
-
-    return (
-      <TouchableOpacity 
-        style={[
-          styles.optionCard, 
-          isSelected && styles.optionCardSelected
-        ]}
-        onPress={() => setSelectedLanguage(code)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.cardHeader}>
-          <View style={[
-            styles.radioOuter,
-            isSelected && styles.radioOuterActive
-          ]}>
-            {isSelected && <View style={styles.radioInner} />}
-          </View>
-        </View>
-        
-        <View style={styles.cardTextContainer}>
-          <Text style={[
-            styles.nativeTitle,
-            isSelected && styles.textSelected
-          ]}>{nativeTitle}</Text>
-          <Text style={[
-            styles.englishTitle,
-            isSelected && styles.textSecondarySelected
-          ]}>{title}</Text>
-        </View>
-      </TouchableOpacity>
-    );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="shield-half" size={32} color={colors.primary} />
+          <View style={styles.iconWrap}>
+            <MaterialIcons name="language" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Welcome to CyberSaathi</Text>
-          <Text style={styles.subtitle}>Choose your language to get started.</Text>
+          <Text style={styles.title}>{t('lang_welcome_title')}</Text>
+          <Text style={styles.subtitle}>{t('lang_welcome_subtitle')}</Text>
         </View>
-        
-        <View style={styles.optionsGrid}>
-          <LanguageOption title="Hindi" nativeTitle="हिंदी" code="hi-IN" />
-          <LanguageOption title="Marathi" nativeTitle="मराठी" code="mr-IN" />
-          <LanguageOption title="Tamil" nativeTitle="தமிழ்" code="ta-IN" />
-          <LanguageOption title="Telugu" nativeTitle="తెలుగు" code="te-IN" />
-          <LanguageOption title="English" nativeTitle="English" code="en-IN" />
-          <LanguageOption title="Gujarati" nativeTitle="ગુજરાતી" code="gu-IN" />
+
+        {/* Language grid */}
+        <View style={styles.grid}>
+          {LANGUAGES.map(lang => {
+            const active = selected === lang.code;
+            return (
+              <TouchableOpacity
+                key={lang.code}
+                style={[styles.card, active && styles.cardActive]}
+                onPress={() => setSelected(lang.code)}
+                activeOpacity={0.85}
+              >
+                {/* Radio dot top-right */}
+                <View style={[styles.radio, active && styles.radioActive]}>
+                  {active && <View style={styles.radioFill} />}
+                </View>
+
+                <Text style={[styles.nativeLabel, active && styles.nativeLabelActive]}>
+                  {lang.native}
+                </Text>
+                <Text style={[styles.englishLabel, active && styles.englishLabelActive]}>
+                  {lang.english}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
 
-      {/* Sticky Bottom Action Button */}
-      <View style={styles.bottomContainer}>
+      {/* Sticky Continue */}
+      <View style={[styles.footer, { paddingBottom: Math.max(20, insets.bottom + 10) }]}>
         <TouchableOpacity
-          style={[
-            styles.continueButton,
-            !selectedLanguage && styles.continueButtonDisabled
-          ]}
-          disabled={!selectedLanguage}
-          onPress={() => selectedLanguage && setLanguageAndProceed(selectedLanguage)}
+          style={[styles.btn, (!selected || isSubmitting) && styles.btnDisabled]}
+          onPress={handleContinue}
+          disabled={!selected || isSubmitting}
           activeOpacity={0.9}
         >
-          <Text style={[
-            styles.continueText,
-            !selectedLanguage && styles.continueTextDisabled
-          ]}>
-            Continue
+          <Text style={[styles.btnText, (!selected || isSubmitting) && styles.btnTextDisabled]}>
+            {t('lang_continue_btn')}
           </Text>
-          <Ionicons 
-            name="arrow-forward" 
-            size={20} 
-            color={selectedLanguage ? colors.onPrimary : colors.onSurfaceVariant} 
-            style={{ marginLeft: 8 }} 
+          <MaterialIcons
+            name="arrow-forward"
+            size={20}
+            color={selected && !isSubmitting ? colors.onPrimary : colors.onSurfaceVariant}
           />
         </TouchableOpacity>
       </View>
@@ -108,150 +104,89 @@ export default function LanguageSelectionScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    padding: spacing.containerPadding,
-    paddingBottom: 140, // Extra padding to make sure content doesn't get covered by Continue button
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.primary + '10',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    elevation: 2,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
+  container: { flex: 1, backgroundColor: colors.background },
+  scroll: { padding: 24, paddingBottom: 160 },
+
+  header: { alignItems: 'center', marginBottom: 36 },
+  iconWrap: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: colors.primaryGlow,
+    borderWidth: 1, borderColor: colors.primary + '30',
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
   },
   title: {
-    ...typography.display,
-    color: colors.onSurface,
-    textAlign: 'center',
+    fontFamily: 'Manrope_700Bold', fontSize: 24,
+    color: colors.onSurface, textAlign: 'center', letterSpacing: -0.3,
   },
   subtitle: {
-    ...typography.bodyLg,
-    color: colors.onSurfaceVariant,
-    marginTop: 8,
-    textAlign: 'center',
-    maxWidth: 280,
+    fontFamily: 'PublicSans_400Regular', fontSize: 14,
+    color: colors.onSurfaceVariant, textAlign: 'center',
+    marginTop: 8, lineHeight: 20, maxWidth: 270,
   },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 16,
+
+  grid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    justifyContent: 'space-between', gap: 12,
   },
-  optionCard: {
+  card: {
     width: CARD_WIDTH,
     backgroundColor: colors.surface,
+    borderRadius: theme.cardRadius,
     padding: 20,
-    borderRadius: 16,
-    minHeight: 140,
-    justifyContent: 'space-between',
-    elevation: 2,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    minHeight: 130,
+    borderWidth: 1.5,
+    borderColor: colors.surfaceBorder,
+    justifyContent: 'flex-end',
   },
-  optionCardSelected: {
+  cardActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primaryGlow,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
   },
-  cardHeader: {
-    alignItems: 'flex-end',
-    width: '100%',
+  radio: {
+    position: 'absolute', top: 14, right: 14,
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 2, borderColor: colors.surfaceBorder,
+    justifyContent: 'center', alignItems: 'center',
   },
-  radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.onSurfaceVariant + '40',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioOuterActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  radioActive: { borderColor: colors.primary, backgroundColor: colors.primary },
+  radioFill: {
+    width: 9, height: 9, borderRadius: 5,
     backgroundColor: colors.onPrimary,
   },
-  cardTextContainer: {
-    width: '100%',
-  },
-  nativeTitle: {
-    ...typography.titleMd,
+  nativeLabel: {
+    fontFamily: 'Manrope_700Bold', fontSize: 18,
     color: colors.onSurface,
   },
-  englishTitle: {
-    ...typography.bodyMd,
-    color: colors.onSurfaceVariant,
-    marginTop: 4,
+  nativeLabelActive: { color: colors.primary },
+  englishLabel: {
+    fontFamily: 'PublicSans_400Regular', fontSize: 12,
+    color: colors.onSurfaceVariant, marginTop: 4,
   },
-  textSelected: {
-    color: colors.primary,
+  englishLabelActive: { color: colors.primary + 'BB' },
+
+  footer: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: colors.background + 'EE',
+    paddingHorizontal: 24, paddingVertical: 20,
+    borderTopWidth: 1, borderColor: colors.surfaceBorder,
+    // Note: dynamic paddingBottom applied via style prop in component is better, but we will apply it below.
   },
-  textSecondarySelected: {
-    color: colors.onSurfaceVariant,
+  btn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 56, borderRadius: theme.buttonRadius,
+    backgroundColor: colors.primary, gap: 8,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
   },
-  bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.containerPadding,
-    paddingVertical: 24,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderColor: colors.background,
+  btnDisabled: { backgroundColor: colors.surfaceHigh, shadowOpacity: 0 },
+  btnText: {
+    fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onPrimary,
   },
-  continueButton: {
-    width: '100%',
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-  },
-  continueButtonDisabled: {
-    backgroundColor: colors.surface,
-    elevation: 0,
-    shadowOpacity: 0,
-    borderWidth: 1,
-    borderColor: colors.onSurfaceVariant + '20',
-  },
-  continueText: {
-    ...typography.titleMd,
-    color: colors.onPrimary,
-    fontFamily: 'Manrope_700Bold',
-  },
-  continueTextDisabled: {
-    color: colors.onSurfaceVariant + '60',
-  },
+  btnTextDisabled: { color: colors.onSurfaceVariant },
 });

@@ -16,8 +16,8 @@ interface Props {
 
 export default function SecurityCard({ title, description, icon, iconColor = colors.primary, status, rightAction, children, style }: Props) {
   const getStatusColor = () => {
-    if (status === 'safe') return colors.secondary;
-    if (status === 'suspicious') return colors.tertiary;
+    if (status === 'safe') return colors.success;
+    if (status === 'suspicious') return colors.warning;
     if (status === 'blocked') return colors.error;
     return iconColor;
   };
