@@ -35,30 +35,27 @@ export default function SimulatorScreen() {
           title="The Lucky Winner SMS" 
           description="New"
           icon="chatbubble-ellipses-outline"
-        >
-          <TouchableOpacity style={styles.chevronButton}>
+          rightAction={
             <Ionicons name="chevron-forward" size={24} color={colors.onSurfaceVariant} />
-          </TouchableOpacity>
-        </SecurityCard>
+          }
+        />
 
         <SecurityCard 
           title="Suspicious UPI Request" 
           description="Hard"
           icon="wallet-outline"
-        >
-          <TouchableOpacity style={styles.chevronButton}>
+          rightAction={
             <Ionicons name="chevron-forward" size={24} color={colors.onSurfaceVariant} />
-          </TouchableOpacity>
-        </SecurityCard>
+          }
+        />
 
         <SecurityCard 
           title="Bank KYC Update Call" 
           icon="headset-outline"
-        >
-          <TouchableOpacity style={styles.chevronButton}>
+          rightAction={
             <Ionicons name="chevron-forward" size={24} color={colors.onSurfaceVariant} />
-          </TouchableOpacity>
-        </SecurityCard>
+          }
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -71,6 +68,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.containerPadding,
+    paddingBottom: 88,
     gap: spacing.stackGap,
   },
   header: {
@@ -113,10 +111,5 @@ const styles = StyleSheet.create({
   startSimText: {
     ...typography.labelSm,
     color: colors.primary,
-  },
-  chevronButton: {
-    position: 'absolute',
-    right: 16,
-    top: 24,
   },
 });

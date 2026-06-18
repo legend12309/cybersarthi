@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../lib/colors';
@@ -8,6 +8,25 @@ import { spacing } from '../lib/spacing';
 import SecurityCard from '../components/SecurityCard';
 
 export default function HomeScreen({ navigation }: any) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.12,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -34,9 +53,9 @@ export default function HomeScreen({ navigation }: any) {
           onPress={() => navigation.navigate('Chat')}
           activeOpacity={0.9}
         >
-          <View style={styles.micCircle}>
+          <Animated.View style={[styles.micCircle, { transform: [{ scale: scaleAnim }] }]}>
             <Ionicons name="mic" size={48} color={colors.onPrimary} />
-          </View>
+          </Animated.View>
           <Text style={styles.mainActionTitle}>Tap to ask CyberSaathi anything</Text>
           <Text style={styles.mainActionSubtitle}>
             I'm here to help you verify messages, links, or callers instantly.
@@ -65,6 +84,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.containerPadding,
+    paddingBottom: 88,
     gap: spacing.stackGap,
   },
   header: {

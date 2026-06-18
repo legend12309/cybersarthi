@@ -22,6 +22,7 @@ import VoiceScreen from './src/screens/VoiceScreen';
 import SimulatorScreen from './src/screens/SimulatorScreen';
 import BadgesScreen from './src/screens/BadgesScreen';
 import LanguageSelectionScreen from './src/screens/LanguageSelectionScreen';
+import CustomSplashScreen from './src/screens/SplashScreen';
 import { colors } from './src/lib/colors';
 
 SplashScreen.preventAutoHideAsync();
@@ -95,7 +96,8 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
+          <Stack.Screen name="Splash" component={CustomSplashScreen} />
           <Stack.Screen name="Language" component={LanguageSelectionScreen} />
           <Stack.Screen name="MainTabs" component={MainTabs} />
         </Stack.Navigator>

@@ -41,32 +41,32 @@ export default function VoiceScreen({ navigation }: any) {
         playsInSilentModeIOS: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync({
-        isMeteringEnabled: true,
+      const newRecording = new Audio.Recording();
+      await newRecording.prepareToRecordAsync({
         android: {
-          extension: '.aac',
-          outputFormat: Audio.AndroidOutputFormat.AAC_ADTS,
-          audioEncoder: Audio.AndroidAudioEncoder.AAC,
-          sampleRate: 44100,
+          extension: '.wav',
+          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+          sampleRate: 16000,
           numberOfChannels: 1,
           bitRate: 128000,
         },
         ios: {
           extension: '.wav',
+          outputFormat: Audio.IOSOutputFormat.LINEARPCM,
           audioQuality: Audio.IOSAudioQuality.HIGH,
-          sampleRate: 44100,
+          sampleRate: 16000,
           numberOfChannels: 1,
           bitRate: 128000,
           linearPCMBitDepth: 16,
           linearPCMIsBigEndian: false,
           linearPCMIsFloat: false,
         },
-        web: {
-          mimeType: 'audio/webm',
-          bitsPerSecond: 128000,
-        },
+        web: {},
       });
-      setRecording(recording);
+      
+      await newRecording.startAsync();
+      setRecording(newRecording);
     } catch (err) {
       console.error('Failed to start recording', err);
       setErrorMsg('Failed to start recording. Please check microphone permissions.');
@@ -206,6 +206,7 @@ const styles = StyleSheet.create({
   chatArea: {
     flexGrow: 1,
     padding: 20,
+    paddingBottom: 88,
     justifyContent: 'flex-start',
   },
   statusIndicator: {

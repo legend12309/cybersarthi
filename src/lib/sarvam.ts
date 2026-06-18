@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/build/legacy';
 
 const API_BASE_URL = 'https://api.sarvam.ai';
 const API_KEY = process.env.EXPO_PUBLIC_SARVAM_API_KEY || '';
@@ -11,26 +11,19 @@ const getHeaders = () => ({
 
 export async function speechToText(audioUri: string, languageCode: string): Promise<string> {
   try {
-    const extension = audioUri.split('.').pop() || 'wav';
-    // Force application/octet-stream and a standard extension to bypass strict mimetype rejection
-    // while allowing backend ffmpeg to decode the actual container.
-    const mimeType = 'application/octet-stream';
-    const finalExtension = extension === 'm4a' ? 'aac' : 'wav';
-
     const formData = new FormData();
     formData.append('model', 'saarika:v2.5');
     formData.append('language_code', languageCode);
     formData.append('file', {
       uri: audioUri,
-      name: `audio.${finalExtension}`,
-      type: mimeType,
+      name: 'audio.wav',
+      type: 'audio/wav',
     } as any);
 
     const response = await fetch(`${API_BASE_URL}/speech-to-text`, {
       method: 'POST',
       headers: {
         'api-subscription-key': API_KEY,
-        // Note: Do not set Content-Type header here, fetch automatically adds it with the correct boundary
       },
       body: formData,
     });
@@ -53,7 +46,7 @@ export async function chatWithSarvam(transcript: string, languageCode: string): 
     const response = await axios.post(
       `${API_BASE_URL}/v1/chat/completions`,
       {
-        model: 'sarvam-30b',
+        model: 'sarvam-2b',
         messages: [
           {
             role: 'system',
@@ -117,7 +110,7 @@ export async function playAudio(base64Audio: string): Promise<void> {
     
     // Use the literal string 'base64' to avoid any undefined EncodingType issues
     await FileSystem.writeAsStringAsync(uri, base64Audio, {
-      encoding: 'base64' as FileSystem.EncodingType,
+      encoding: 'base64' as any,
     });
 
     const { sound } = await Audio.Sound.createAsync({ uri });

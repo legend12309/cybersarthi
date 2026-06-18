@@ -9,11 +9,12 @@ interface Props {
   icon?: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
   status?: 'safe' | 'suspicious' | 'blocked';
+  rightAction?: React.ReactNode;
   children?: React.ReactNode;
   style?: ViewStyle;
 }
 
-export default function SecurityCard({ title, description, icon, iconColor = colors.primary, status, children, style }: Props) {
+export default function SecurityCard({ title, description, icon, iconColor = colors.primary, status, rightAction, children, style }: Props) {
   const getStatusColor = () => {
     if (status === 'safe') return colors.secondary;
     if (status === 'suspicious') return colors.tertiary;
@@ -46,6 +47,11 @@ export default function SecurityCard({ title, description, icon, iconColor = col
               <Text style={[styles.statusText, { color: accentColor }]}>
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </Text>
+            </View>
+          )}
+          {rightAction && (
+            <View style={styles.rightActionContainer}>
+              {rightAction}
             </View>
           )}
         </View>
@@ -125,5 +131,10 @@ const styles = StyleSheet.create({
   },
   childrenContainer: {
     marginTop: 12,
+  },
+  rightActionContainer: {
+    marginLeft: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
