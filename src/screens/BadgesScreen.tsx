@@ -87,7 +87,7 @@ export default function BadgesScreen() {
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${progress * 100}%` as any }]} />
           </View>
-          <Text style={styles.progressLabel}>{Math.round(progress * 100)}% to next level</Text>
+          <Text style={styles.progressLabel}>{Math.round(progress * 100)}{t('badges_progress_suffix') || '% to next level'}</Text>
         </View>
 
         {/* ── Stats row ─────────────────────────────────────── */}
@@ -104,7 +104,7 @@ export default function BadgesScreen() {
           <View style={styles.statDivider} />
           <View style={styles.statCell}>
             <Text style={styles.statNum}>{stats?.totalQuizScore || 0}</Text>
-            <Text style={styles.statLab}>Score</Text>
+            <Text style={styles.statLab}>{t('badges_stats_score') || 'Score'}</Text>
           </View>
         </View>
 
@@ -131,7 +131,7 @@ export default function BadgesScreen() {
                 {unlocked && (
                   <View style={styles.unlockedChip}>
                     <MaterialIcons name="check" size={10} color={colors.success} />
-                    <Text style={styles.unlockedText}>Earned</Text>
+                    <Text style={styles.unlockedText}>{t('badges_earned') || 'Earned'}</Text>
                   </View>
                 )}
               </View>

@@ -10,9 +10,12 @@ const getHeaders = () => ({
 });
 
 export async function speechToText(audioUri: string, languageCode: string): Promise<string> {
+  console.log('API Key length:', API_KEY?.length);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
   try {
     const formData = new FormData();
-    formData.append('model', 'saarika:v2');
+    formData.append('model', 'saarika:v2.5');
     formData.append('language_code', languageCode);
     formData.append('file', {
       uri: audioUri,
@@ -26,7 +29,9 @@ export async function speechToText(audioUri: string, languageCode: string): Prom
         'api-subscription-key': API_KEY,
       },
       body: formData,
+      signal: controller.signal as any,
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -36,50 +41,94 @@ export async function speechToText(audioUri: string, languageCode: string): Prom
     const data = await response.json();
     return data.transcript || data.text || '';
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection.');
+    }
     console.error('STT Error Details:', error);
     throw new Error('err_stt_failed');
   }
 }
 
-export async function chatWithSarvam(transcript: string, languageCode: string): Promise<string> {
+const LANG_MAP: Record<string, string> = {
+  'hi-IN': 'Hindi',
+  'mr-IN': 'Marathi',
+  'ta-IN': 'Tamil',
+  'te-IN': 'Telugu',
+  'gu-IN': 'Gujarati',
+  'en-IN': 'English'
+};
+
+export async function chatWithSarvam(transcript: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<string> {
   try {
+    const languageName = LANG_MAP[languageCode] || 'English';
+    const systemPrompt = mode === 'classification'
+      ? `You must respond ONLY in ${languageName}. Do not respond in English unless the target language is English.`
+      : `You are CyberSaathi, a warm cybersecurity friend. Answer only about cyber scams and fraud. Reply in simple conversational language. Maximum 3 sentences. Never use technical jargon. You must respond ONLY in ${languageName}. Do not respond in English unless the target language is English.`;
+
     const response = await axios.post(
       `${API_BASE_URL}/v1/chat/completions`,
       {
-        model: 'sarvam-m',
+        model: 'sarvam-30b',
+        temperature: mode === 'classification' ? 0 : 0.7,
+        max_tokens: mode === 'classification' ? 150 : 200,
         messages: [
-          {
-            role: 'system',
-            content: 'You are CyberSaathi, a warm cybersecurity friend. Answer only about cyber scams and fraud. Reply in simple conversational language matching the user language. Maximum 3 sentences. Never use technical jargon.',
-          },
-          {
-            role: 'user',
-            content: transcript,
-          },
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: transcript },
         ],
       },
       { 
         headers: {
           ...getHeaders(),
           'Content-Type': 'application/json',
-        } 
+        },
+        timeout: 15000
       }
     );
     return response.data.choices[0]?.message?.content || '';
   } catch (error: any) {
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      throw new Error('Request timed out. Please check your connection.');
+    }
     console.error('Chat Error Details:', error?.response?.data || error);
     throw new Error('err_chat_failed');
   }
 }
 
+export async function classifyContent(content: string, languageCode: string): Promise<{verdict: 'safe' | 'suspicious', explanation: string}> {
+  const prompt = `You are a strict cybersecurity classifier. Analyze the given URL or message for phishing/scam indicators (urgency, fake domains, requests for payment, suspicious shorteners, impersonation of banks/government/delivery services, fake threats, too-good-to-be-true offers).
+
+You MUST respond starting with EXACTLY one of these two words in English, followed by a colon:
+SUSPICIOUS: [your explanation in user's language]
+SAFE: [your explanation in user's language]
+
+Default to SUSPICIOUS if there is ANY doubt. Never default to SAFE unless completely certain the link/message is legitimate.
+
+Input to analyze: ${content}`;
+
+  const aiResponse = await chatWithSarvam(prompt, languageCode, 'classification');
+  console.log('RAW AI classification response:', JSON.stringify(aiResponse));
+
+  const normalized = aiResponse.trim().toUpperCase();
+  const isSuspicious = !normalized.startsWith('SAFE:') && !normalized.startsWith('SAFE ');
+  const verdict = isSuspicious ? 'suspicious' : 'safe';
+  
+  const explanation = aiResponse.replace(/^(SAFE:|SUSPICIOUS:|SAFE\s*:|SUSPICIOUS\s*:)\s*/i, '');
+  
+  return { verdict, explanation };
+}
+
 export async function textToSpeech(text: string, languageCode: string): Promise<string> {
+  if (!text || text.trim().length === 0) {
+    throw new Error('No text provided for speech synthesis');
+  }
+
   try {
     const response = await axios.post(
       `${API_BASE_URL}/text-to-speech`,
       {
-        inputs: [text],
+        text: text,
         target_language_code: languageCode,
-        speaker: 'meera',
+        speaker: 'priya',
         model: 'bulbul:v2',
         enable_preprocessing: true,
       },
@@ -87,7 +136,8 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
         headers: {
           ...getHeaders(),
           'Content-Type': 'application/json',
-        } 
+        },
+        timeout: 15000
       }
     );
     
@@ -97,6 +147,9 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
     }
     return audio;
   } catch (error: any) {
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      throw new Error('Request timed out. Please check your connection.');
+    }
     console.error('TTS Error Details:', error?.response?.data || error);
     throw new Error('err_tts_failed');
   }

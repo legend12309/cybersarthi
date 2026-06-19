@@ -8,12 +8,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, theme } from '../lib/colors';
 import { useLanguage } from '../context/LanguageContext';
-import { submitScamReport } from '../lib/dbServices';
+import { submitScamReport, saveLinkScan } from '../lib/api';
+import { chatWithSarvam, classifyContent } from '../lib/sarvam';
+import dailyAlerts from '../data/dailyAlerts.json';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }: any) {
-  const { t, deviceId } = useLanguage();
+  const { t, deviceId, languageCode } = useLanguage();
   const scaleValue   = useRef(new Animated.Value(1)).current;
   const opacityValue = useRef(new Animated.Value(0.6)).current;
   const pulse2Scale  = useRef(new Animated.Value(1)).current;
@@ -22,6 +24,7 @@ export default function HomeScreen({ navigation }: any) {
 
   const [scanModalVisible,   setScanModalVisible]   = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportError, setReportError] = useState('');
   const [linkInput,    setLinkInput]    = useState('');
   const [scanState,    setScanState]    = useState<'idle'|'scanning'|'result'>('idle');
   const [scanResult,   setScanResult]   = useState<'safe'|'suspicious'|null>(null);
@@ -51,43 +54,63 @@ export default function HomeScreen({ navigation }: any) {
     return () => { pulse.stop(); pulse2.stop(); };
   }, []);
 
-  const handleScanLink = () => {
+  const handleScanLink = async () => {
     const url = linkInput.trim().toLowerCase();
     if (!url) return;
     setScanState('scanning');
-    setTimeout(() => {
-      const containsDot = url.includes('.');
-      if (!containsDot) { setScanResult('suspicious'); setScanReason(t('scanner_err_invalid')); setScanAdvice(t('scanner_advice_invalid')); setScanState('result'); return; }
-      const isKnownSafe = ['google.com','google.co.in','sbi.co.in','amazon.in','amazon.com','gov.in','hdfcbank.com','icicibank.com','paytm.com'].some(d => url.includes(d));
-      const hasSuspiciousExt = ['.xyz','.top','.tk','.click','.club','.site','.info','.live'].some(e => url.endsWith(e)||url.includes(e+'/'));
-      const hasPhishingKw = ['jio','gift','reward','bill','electricity','cash','win','kyc','bonus','free','airtel','lotto'].some(w => url.includes(w));
-      const isUnsecure = url.startsWith('http://');
-      if (isKnownSafe) { setScanResult('safe'); setScanReason(t('scanner_safe_reason')); setScanAdvice(t('scanner_safe_advice')); }
-      else if (hasSuspiciousExt || hasPhishingKw || isUnsecure) {
-        setScanResult('suspicious');
-        let r = t('scanner_suspicious_generic');
-        if (hasSuspiciousExt) r = t('scanner_suspicious_ext');
-        else if (isUnsecure) r = t('scanner_suspicious_unsecure');
-        else if (hasPhishingKw) r = t('scanner_suspicious_keyword');
-        setScanReason(r); setScanAdvice(t('scanner_suspicious_advice'));
-      } else { setScanResult('suspicious'); setScanReason(t('scanner_unknown_reason')); setScanAdvice(t('scanner_unknown_advice')); }
+    
+    try {
+      const { verdict, explanation } = await classifyContent(url, languageCode);
+      
+      setScanResult(verdict);
+      setScanReason(explanation);
+      setScanAdvice(verdict === 'suspicious' ? t('scanner_suspicious_advice') : t('scanner_safe_advice'));
+      
+      // Save to Supabase
+      if (deviceId) {
+        await saveLinkScan(deviceId, url, verdict, explanation);
+      }
+    } catch (e) {
+      setScanResult('suspicious');
+      setScanReason('Could not analyze the link right now. Please be cautious.');
+      setScanAdvice(t('scanner_unknown_advice'));
+    } finally {
       setScanState('result');
-    }, 1800);
+    }
   };
 
   const handleSubmitReport = async () => {
-    if (!scammerDetails.trim()) return;
+    if (!scammerDetails.trim() && !description.trim()) {
+      setReportError('Please provide either phone number/link/UPI or a description.');
+      return;
+    }
+    setReportError('');
     setIsSubmitting(true);
     try {
-      if (deviceId) await submitScamReport(deviceId, `report_${fraudType}_lost_${amountLost||'0'}`, true);
-      setIsSubmitted(true);
+      if (deviceId) {
+        await submitScamReport(
+          deviceId,
+          scammerDetails,
+          parseFloat(amountLost) || 0,
+          description,
+          fraudType
+        );
+      }
+      setReportModalVisible(false);
+      Alert.alert(t('report_success_title'), t('report_success_desc'));
+      resetReporter();
     } catch { } finally { setIsSubmitting(false); }
   };
 
   const resetScanner = () => { setLinkInput(''); setScanState('idle'); setScanResult(null); };
-  const resetReporter = () => { setFraudType('call'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); };
+  const resetReporter = () => { setFraudType('call'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); };
 
   const isSafe = scanResult === 'safe';
+
+  // Pick one alert based on day-of-month modulo 10
+  const alertIndex = new Date().getDate() % 10;
+  const currentAlert = dailyAlerts[alertIndex] || dailyAlerts[0];
+  const activeAlertData = (currentAlert as any)[languageCode] || (currentAlert as any)['en-IN'];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -104,18 +127,22 @@ export default function HomeScreen({ navigation }: any) {
         </View>
 
         {/* ── Scam Alert Banner ──────────────────────────────── */}
-        <View style={styles.alertBanner}>
+        <TouchableOpacity 
+          style={styles.alertBanner} 
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('ScamDetail', { scamId: currentAlert.scamId })}
+        >
           <View style={styles.alertIconWrap}>
             <MaterialIcons name="warning-amber" size={20} color={colors.warning} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.alertTitle}>{t('home_alert_title')}</Text>
+            <Text style={styles.alertTitle}>{activeAlertData.title}</Text>
             <Text style={styles.alertBody} numberOfLines={2}>
-              <Text style={{ fontFamily: 'Manrope_700Bold', color: colors.onSurface }}>{t('home_alert_highlight')}</Text>
-              {t('home_alert_text')}
+              <Text style={{ fontFamily: 'Manrope_700Bold', color: colors.onSurface }}>{activeAlertData.highlight}</Text>
+              {activeAlertData.text}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* ── Mic Hero ───────────────────────────────────────── */}
         <View style={styles.heroWrap}>
@@ -167,8 +194,8 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{t('home_scan_link')}</Text>
-              <TouchableOpacity onPress={() => setScanModalVisible(false)}>
-                <MaterialIcons name="close" size={22} color={colors.onSurfaceVariant} />
+              <TouchableOpacity onPress={() => setScanModalVisible(false)} style={styles.closeBtn}>
+                <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
               </TouchableOpacity>
             </View>
 
@@ -186,11 +213,13 @@ export default function HomeScreen({ navigation }: any) {
                   autoCorrect={false}
                 />
                 <TouchableOpacity
-                  style={[styles.sheetBtn, !linkInput.trim() && styles.sheetBtnDisabled]}
+                  style={[styles.sheetBtn, { backgroundColor: colors.primary }]}
                   disabled={!linkInput.trim()}
                   onPress={handleScanLink}
                 >
-                  <Text style={styles.sheetBtnText}>{t('scanner_scan_btn')}</Text>
+                  <Text style={[styles.sheetBtnText, { color: colors.onPrimary, opacity: linkInput.trim() ? 1 : 0.5 }]}>
+                    {t('scanner_scan_btn')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -229,14 +258,15 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{t('home_report_fraud')}</Text>
-              <TouchableOpacity onPress={() => setReportModalVisible(false)}>
-                <MaterialIcons name="close" size={22} color={colors.onSurfaceVariant} />
+              <TouchableOpacity onPress={() => setReportModalVisible(false)} style={styles.closeBtn}>
+                <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
               </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
               {!isSubmitted ? (
                 <>
+                  {reportError ? <Text style={{ color: colors.error, fontFamily: 'Manrope_600SemiBold', marginBottom: -4 }}>{reportError}</Text> : null}
                   <Text style={styles.inputLabel}>{t('report_type_label')}</Text>
                   <View style={styles.typeRow}>
                     {(['call','link','upi','other'] as const).map(type => (
@@ -287,13 +317,13 @@ export default function HomeScreen({ navigation }: any) {
                   />
 
                   <TouchableOpacity
-                    style={[styles.sheetBtn, (!scammerDetails.trim() || isSubmitting) && styles.sheetBtnDisabled]}
-                    disabled={!scammerDetails.trim() || isSubmitting}
+                    style={[styles.sheetBtn, { backgroundColor: colors.error, shadowColor: colors.error }]}
+                    disabled={isSubmitting}
                     onPress={handleSubmitReport}
                   >
                     {isSubmitting
                       ? <ActivityIndicator size="small" color={colors.onPrimary} />
-                      : <Text style={styles.sheetBtnText}>{t('report_submit_btn')}</Text>
+                      : <Text style={[styles.sheetBtnText, { color: colors.onPrimary }]}>{t('report_submit_btn')}</Text>
                     }
                   </TouchableOpacity>
                 </>
@@ -307,7 +337,7 @@ export default function HomeScreen({ navigation }: any) {
                   <View style={styles.helplineBox}>
                     <Text style={styles.helplineHead}>{t('report_helpline_header')}</Text>
                     <TouchableOpacity style={styles.callBtn} onPress={() => Linking.openURL('tel:1930')}>
-                      <MaterialIcons name="call" size={20} color="#fff" />
+                      <MaterialIcons name="call" size={20} color={colors.onPrimary} />
                       <Text style={styles.callBtnText}>{t('report_helpline_btn')}</Text>
                     </TouchableOpacity>
                     <Text style={styles.helplineSub}>{t('report_helpline_support')}</Text>
@@ -400,11 +430,18 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: 20, paddingTop: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 20,
+    shadowColor: colors.onSurface, shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 20,
   },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.surfaceBorder, alignSelf: 'center', marginBottom: 16 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   sheetTitle: { fontFamily: 'Manrope_700Bold', fontSize: 18, color: colors.onSurface },
+  closeBtn: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: -10, // To align nicely while keeping the large touch target
+  },
   sheetBody: { gap: 14 },
   sheetBtn: {
     height: 52, borderRadius: 26, backgroundColor: colors.primary,
@@ -465,6 +502,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24, gap: 8,
     shadowColor: colors.error, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
   },
-  callBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 15, color: '#fff' },
+  callBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 15, color: colors.onPrimary },
   helplineSub: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant, textAlign: 'center' },
 });

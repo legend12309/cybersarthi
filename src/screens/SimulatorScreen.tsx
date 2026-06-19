@@ -9,12 +9,13 @@ import { fetchUserStats } from '../lib/dbServices';
 
 const { width } = Dimensions.get('window');
 
-const SCENARIOS = [
-  { id: 'electricity_bill', icon: 'receipt-long',      colorKey: 'warning', titleKey: 'sim_card_electricity_title', descKey: 'sim_card_electricity_desc' },
-  { id: 'lucky_winner',     icon: 'emoji-events',      colorKey: 'success', titleKey: 'sim_card_lucky_title',       descKey: 'sim_card_lucky_desc'       },
-  { id: 'upi_request',      icon: 'account-balance-wallet', colorKey: 'primary', titleKey: 'sim_card_upi_title',   descKey: 'sim_card_upi_desc'         },
-  { id: 'kyc_call',         icon: 'headset-mic',        colorKey: 'error',  titleKey: 'sim_card_kyc_title',         descKey: 'sim_card_kyc_desc'         },
-] as const;
+import scamsData from '../data/scams.json';
+
+const SCENARIOS = scamsData.map((s, i) => ({
+  ...s,
+  icon: ['receipt-long', 'local-shipping', 'account-balance', 'family-restroom', 'emoji-events', 'qr-code-scanner', 'work', 'phonelink-erase', 'card-giftcard', 'policy'][i % 10],
+  colorKey: ['warning', 'error', 'primary', 'warning', 'success', 'primary', 'success', 'error', 'warning', 'error'][i % 10],
+}));
 
 const COLOR_MAP: Record<string, { bg: string; text: string }> = {
   warning: { bg: colors.warningDim, text: colors.warning },
@@ -67,20 +68,33 @@ export default function SimulatorScreen({ navigation }: any) {
         >
           <View style={styles.heroCardTop}>
             <View style={[styles.heroIconBg, { backgroundColor: COLOR_MAP[SCENARIOS[0].colorKey].bg }]}>
-              <MaterialIcons name={SCENARIOS[0].icon} size={28} color={COLOR_MAP[SCENARIOS[0].colorKey].text} />
+              <MaterialIcons name={SCENARIOS[0].icon as any} size={28} color={COLOR_MAP[SCENARIOS[0].colorKey].text} />
             </View>
             <View style={styles.newBadge}><Text style={styles.newBadgeText}>HOT</Text></View>
           </View>
-          <Text style={styles.heroCardTitle}>{t(SCENARIOS[0].titleKey)}</Text>
-          <Text style={styles.heroCardDesc}>{t(SCENARIOS[0].descKey)}</Text>
+          <Text style={styles.heroCardTitle}>{SCENARIOS[0].title}</Text>
+          <Text style={styles.heroCardDesc} numberOfLines={2}>{SCENARIOS[0].content}</Text>
           <View style={styles.heroCardBtn}>
-            <Text style={styles.heroCardBtnText}>{t('sim_card_electricity_button')}</Text>
+            <Text style={styles.heroCardBtnText}>{t('sim_card_electricity_button') || 'Try Scenario'}</Text>
             <MaterialIcons name="play-arrow" size={18} color={colors.onPrimary} />
           </View>
         </TouchableOpacity>
 
+        {/* Quiz Banner */}
+        <TouchableOpacity
+          style={styles.quizBanner}
+          onPress={() => navigation.navigate('Quiz')}
+          activeOpacity={0.85}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.quizBannerTitle}>{t('sim_quiz_title') || 'Test Your Knowledge'}</Text>
+            <Text style={styles.quizBannerDesc}>{t('sim_quiz_desc') || 'Take a quick 5-question quiz to earn points!'}</Text>
+          </View>
+          <MaterialIcons name="arrow-forward" size={24} color={colors.primary} />
+        </TouchableOpacity>
+
         {/* Scenario List */}
-        <Text style={styles.sectionLabel}>More Scenarios</Text>
+        <Text style={styles.sectionLabel}>{t('sim_more_scenarios') || 'More Scenarios'}</Text>
         {SCENARIOS.slice(1).map(s => {
           const c = COLOR_MAP[s.colorKey];
           return (
@@ -91,11 +105,11 @@ export default function SimulatorScreen({ navigation }: any) {
               activeOpacity={0.8}
             >
               <View style={[styles.scenarioIconBg, { backgroundColor: c.bg }]}>
-                <MaterialIcons name={s.icon} size={22} color={c.text} />
+                <MaterialIcons name={s.icon as any} size={22} color={c.text} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.scenarioTitle}>{t(s.titleKey)}</Text>
-                <Text style={styles.scenarioDesc} numberOfLines={1}>{t(s.descKey)}</Text>
+                <Text style={styles.scenarioTitle}>{s.title}</Text>
+                <Text style={styles.scenarioDesc} numberOfLines={1}>{s.content}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={22} color={colors.onSurfaceVariant} />
             </TouchableOpacity>
@@ -133,7 +147,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning, paddingHorizontal: 8, paddingVertical: 3,
     borderRadius: 8,
   },
-  newBadgeText: { fontFamily: 'Manrope_700Bold', fontSize: 10, color: '#000' },
+  newBadgeText: { fontFamily: 'Manrope_700Bold', fontSize: 10, color: colors.onSurface },
   heroCardTitle: { fontFamily: 'Manrope_700Bold', fontSize: 17, color: colors.onSurface },
   heroCardDesc: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, lineHeight: 19 },
   heroCardBtn: {
@@ -142,7 +156,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
   },
-  heroCardBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 14, color: colors.onPrimary },
+  heroCardBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 13, color: colors.onPrimary },
+
+  quizBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.primary + '15',
+    padding: 16, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.primary + '30',
+  },
+  quizBannerTitle: { fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onSurface },
+  quizBannerDesc: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, marginTop: 4 },
 
   sectionLabel: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: colors.onSurfaceVariant },
 

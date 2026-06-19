@@ -1,86 +1,91 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, theme } from '../lib/colors';
 import { useLanguage } from '../context/LanguageContext';
-import { submitScamReport } from '../lib/dbServices';
+import { submitScamReport } from '../lib/api';
+import { chatWithSarvam, classifyContent } from '../lib/sarvam';
+import scamsData from '../data/scams.json';
 
 export default function ScamDetailScreen({ route, navigation }: any) {
   const { scamId } = route.params || { scamId: 'electricity_bill' };
-  const { t, deviceId } = useLanguage();
+  const { t, deviceId, languageCode } = useLanguage();
   const [userChoice,   setUserChoice]   = useState<'scam' | 'safe' | null>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fadeAnim]  = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(20));
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const isMounted = useRef(true);
 
-  const getScamContent = () => {
-    switch (scamId) {
-      case 'electricity_bill': return {
-        title: t('sim_card_electricity_title'), sender: 'AD-POWRBL',
-        content: t('sim_elect_content'),
-        redFlags: [t('sim_elect_flag_1'), t('sim_elect_flag_2'), t('sim_elect_flag_3')],
-        advice: t('sim_elect_advice'),
-      };
-      case 'lucky_winner': return {
-        title: t('sim_card_lucky_title'), sender: 'KBC-PRIZE',
-        content: t('sim_lucky_content'),
-        redFlags: [t('sim_lucky_flag_1'), t('sim_lucky_flag_2'), t('sim_lucky_flag_3')],
-        advice: t('sim_lucky_advice'),
-      };
-      case 'upi_request': return {
-        title: t('sim_card_upi_title'), sender: 'UPI-REFUND',
-        content: t('sim_upi_content'),
-        redFlags: [t('sim_upi_flag_1'), t('sim_upi_flag_2'), t('sim_upi_flag_3')],
-        advice: t('sim_upi_advice'),
-      };
-      case 'kyc_call': return {
-        title: t('sim_card_kyc_title'), sender: t('sim_kyc_sender'),
-        content: t('sim_kyc_content'),
-        redFlags: [t('sim_kyc_flag_1'), t('sim_kyc_flag_2'), t('sim_kyc_flag_3')],
-        advice: t('sim_kyc_advice'),
-      };
-      default: return { title: 'Unknown', sender: 'UNKNOWN', content: '', redFlags: [], advice: '' };
-    }
-  };
+  const [customAnalysisModalVisible, setCustomAnalysisModalVisible] = useState(false);
+  const [customMsgInput, setCustomMsgInput] = useState('');
+  const [customAnalysisState, setCustomAnalysisState] = useState<'idle'|'scanning'|'result'>('idle');
+  const [customAnalysisVerdict, setCustomAnalysisVerdict] = useState<'safe'|'suspicious'|null>(null);
+  const [customAnalysisReason, setCustomAnalysisReason] = useState('');
 
-  const scamInfo = getScamContent();
+  useEffect(() => {
+    return () => { isMounted.current = false; };
+  }, []);
+
+  const scamInfo = scamsData.find(s => s.id === scamId) || scamsData[0];
 
   const handleChoice = async (choice: 'scam' | 'safe') => {
     if (userChoice || isSubmitting) return;
     setUserChoice(choice);
     setIsSubmitting(true);
     try {
-      if (deviceId) await submitScamReport(deviceId, scamId, choice === 'safe');
+      if (deviceId) {
+        await submitScamReport(deviceId, '', 0, choice === 'safe' ? 'safe' : 'scam', scamId);
+      }
     } catch { }
     finally {
-      setIsSubmitting(false);
-      setShowAnalysis(true);
-      Animated.parallel([
-        Animated.timing(fadeAnim,  { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-      ]).start();
+      if (isMounted.current) {
+        setIsSubmitting(false);
+        setShowAnalysis(true);
+        Animated.parallel([
+          Animated.timing(fadeAnim,  { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+        ]).start();
+      }
     }
   };
 
   const isCorrect = userChoice === 'scam';
 
+  const handleAnalyzeCustomMessage = async () => {
+    if (!customMsgInput.trim()) return;
+    setCustomAnalysisState('scanning');
+    try {
+      const { verdict, explanation } = await classifyContent(customMsgInput, languageCode);
+      setCustomAnalysisVerdict(verdict);
+      setCustomAnalysisReason(explanation);
+    } catch (e) {
+      setCustomAnalysisVerdict('suspicious');
+      setCustomAnalysisReason('Could not analyze the message right now. Please be cautious.');
+    } finally {
+      setCustomAnalysisState('result');
+    }
+  };
+
+  const resetCustomAnalysis = () => {
+    setCustomMsgInput('');
+    setCustomAnalysisState('idle');
+    setCustomAnalysisVerdict(null);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={22} color={colors.onSurface} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('scam_detail_title')}</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>{scamInfo.title}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* ── SMS Mockup Card ─────────────────────────────── */}
+        {/* ── SMS Card ─────────────────────────────── */}
         <View style={styles.smsCard}>
-          {/* SMS bubble header */}
           <View style={styles.smsHeader}>
             <View style={styles.smsAvatar}>
               <MaterialIcons name="sms" size={18} color={colors.onSurface} />
@@ -107,20 +112,20 @@ export default function ScamDetailScreen({ route, navigation }: any) {
             <Text style={styles.promptText}>{t('scam_detail_prompt')}</Text>
             <View style={styles.choiceRow}>
               <TouchableOpacity
-                style={[styles.choiceBtn, styles.trustBtn]}
+                style={[styles.choiceBtn, styles.safeBtn]}
                 onPress={() => handleChoice('safe')}
-                activeOpacity={0.85}
+                disabled={userChoice !== null}
               >
-                <MaterialIcons name="check-circle-outline" size={22} color="#fff" />
+                <MaterialIcons name="check-circle-outline" size={22} color={colors.onPrimary} />
                 <Text style={styles.choiceBtnText}>{t('scam_detail_trust_btn')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.choiceBtn, styles.scamBtn]}
                 onPress={() => handleChoice('scam')}
-                activeOpacity={0.85}
+                disabled={userChoice !== null}
               >
-                <MaterialIcons name="dangerous" size={22} color="#fff" />
+                <MaterialIcons name="dangerous" size={22} color={colors.onPrimary} />
                 <Text style={styles.choiceBtnText}>{t('scam_detail_scam_btn')}</Text>
               </TouchableOpacity>
             </View>
@@ -170,9 +175,81 @@ export default function ScamDetailScreen({ route, navigation }: any) {
               <Text style={styles.continueBtnText}>{t('scam_detail_continue_btn')}</Text>
               <MaterialIcons name="arrow-forward" size={20} color={colors.onPrimary} />
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.continueBtn, { backgroundColor: colors.surfaceHigh, marginTop: 12, borderWidth: 1, borderColor: colors.primary }]}
+              onPress={() => setCustomAnalysisModalVisible(true)}
+              activeOpacity={0.9}
+            >
+              <MaterialIcons name="search" size={20} color={colors.primary} />
+              <Text style={[styles.continueBtnText, { color: colors.primary }]}>Analyze Custom Message</Text>
+            </TouchableOpacity>
           </Animated.View>
         )}
       </ScrollView>
+
+      {/* ══ CUSTOM ANALYSIS MODAL ══════════════════════════════════════════ */}
+      <Modal animationType="slide" transparent visible={customAnalysisModalVisible} onRequestClose={() => setCustomAnalysisModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
+          <View style={[styles.sheet, { paddingBottom: 40 }]}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Analyze Custom Message</Text>
+              <TouchableOpacity onPress={() => setCustomAnalysisModalVisible(false)} style={styles.closeBtn}>
+                <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
+              </TouchableOpacity>
+            </View>
+
+            {customAnalysisState === 'idle' && (
+              <View style={styles.sheetBody}>
+                <Text style={styles.inputLabel}>Paste a suspicious message to analyze:</Text>
+                <TextInput
+                  style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+                  placeholder="Paste message here..."
+                  placeholderTextColor={colors.onSurfaceVariant + '70'}
+                  value={customMsgInput}
+                  onChangeText={setCustomMsgInput}
+                  autoCapitalize="none"
+                  multiline
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  style={[styles.sheetBtn, { backgroundColor: colors.primary }]}
+                  disabled={!customMsgInput.trim()}
+                  onPress={handleAnalyzeCustomMessage}
+                >
+                  <Text style={[styles.sheetBtnText, { color: colors.onPrimary, opacity: customMsgInput.trim() ? 1 : 0.5 }]}>
+                    Analyze Message
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {customAnalysisState === 'scanning' && (
+              <View style={styles.centerBlock}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.analyzeText}>Analyzing message with AI...</Text>
+              </View>
+            )}
+
+            {customAnalysisState === 'result' && (
+              <View style={styles.sheetBody}>
+                <View style={[styles.resultCard, customAnalysisVerdict === 'safe' ? styles.resultSafe : styles.resultDanger]}>
+                  <MaterialIcons name={customAnalysisVerdict === 'safe' ? 'verified-user' : 'gpp-bad'} size={40} color={customAnalysisVerdict === 'safe' ? colors.success : colors.error} />
+                  <Text style={[styles.resultVerdict, { color: customAnalysisVerdict === 'safe' ? colors.success : colors.error }]}>
+                    {customAnalysisVerdict === 'safe' ? 'Looks Safe' : 'Suspicious'}
+                  </Text>
+                  <Text style={styles.resultReason}>{customAnalysisReason}</Text>
+                </View>
+                <TouchableOpacity style={styles.sheetBtn} onPress={resetCustomAnalysis}>
+                  <Text style={styles.sheetBtnText}>Analyze Another</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -181,17 +258,25 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, height: 60,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1, borderColor: colors.surfaceBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.background,
   },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: colors.surfaceHigh,
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
-  headerTitle: { fontFamily: 'Manrope_700Bold', fontSize: 18, color: colors.onSurface },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'Manrope_700Bold',
+    color: colors.onSurface,
+    flex: 1,
+  },
 
   scroll: { padding: 20, paddingBottom: 40, gap: 20 },
 
@@ -231,7 +316,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
   },
-  trustBtn: {
+  safeBtn: {
     backgroundColor: colors.success,
     shadowColor: colors.success,
   },
@@ -239,7 +324,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error,
     shadowColor: colors.error,
   },
-  choiceBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 14, color: '#fff' },
+  choiceBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 15, color: colors.onPrimary },
 
   // Analysis
   resultSection: { gap: 16 },
@@ -273,4 +358,46 @@ const styles = StyleSheet.create({
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
   },
   continueBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onPrimary },
+
+  // Modal sheet styles
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
+  sheet: {
+    backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: 20, paddingTop: 12,
+    shadowColor: colors.onSurface, shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 20,
+  },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.surfaceBorder, alignSelf: 'center', marginBottom: 16 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  sheetTitle: { fontFamily: 'Manrope_700Bold', fontSize: 18, color: colors.onSurface },
+  closeBtn: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: -10,
+  },
+  sheetBody: { gap: 14 },
+  sheetBtn: {
+    height: 52, borderRadius: 26, backgroundColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+    marginTop: 4,
+  },
+  sheetBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onPrimary },
+
+  inputLabel: { fontFamily: 'Manrope_600SemiBold', fontSize: 13, color: colors.onSurface },
+  input: {
+    height: 50, borderRadius: 12, backgroundColor: colors.surfaceHigh,
+    borderWidth: 1, borderColor: colors.surfaceBorder,
+    paddingHorizontal: 16, paddingTop: 12, fontSize: 14,
+    fontFamily: 'PublicSans_400Regular', color: colors.onSurface,
+  },
+
+  centerBlock: { alignItems: 'center', paddingVertical: 32, gap: 16 },
+  analyzeText: { fontFamily: 'PublicSans_400Regular', fontSize: 14, color: colors.onSurfaceVariant },
+  resultCard: { alignItems: 'center', padding: 24, borderRadius: 16, borderWidth: 1, gap: 10 },
+  resultSafe: { backgroundColor: colors.successDim, borderColor: colors.success + '40' },
+  resultDanger: { backgroundColor: colors.errorDim, borderColor: colors.error + '40' },
+  resultVerdict: { fontFamily: 'Manrope_700Bold', fontSize: 18 },
+  resultReason: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center' },
 });

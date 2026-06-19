@@ -1,19 +1,41 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../lib/colors';
 import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
 export default function SplashScreen({ navigation }: any) {
-  const { isInitialized, hasSelectedLanguage, t } = useLanguage();
+  const { t } = useLanguage();
   const fadeAnim   = useRef(new Animated.Value(0)).current;
   const scaleAnim  = useRef(new Animated.Value(0.7)).current;
   const glowAnim   = useRef(new Animated.Value(0)).current;
-  const animDone   = useRef(false);
 
   useEffect(() => {
+    console.log('Splash mounted');
+    const checkLanguage = async () => {
+      try {
+        const lang = await AsyncStorage.getItem('cybersaathi.language');
+        console.log('Stored language value:', lang);
+        setTimeout(() => {
+          console.log('Navigating now. Has language:', !!lang);
+          if (lang) {
+            navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+          } else {
+            navigation.reset({ index: 0, routes: [{ name: 'Language' }] });
+          }
+        }, 2000);
+      } catch (error) {
+        console.log('Splash AsyncStorage error:', error);
+        setTimeout(() => {
+          navigation.reset({ index: 0, routes: [{ name: 'Language' }] });
+        }, 2000);
+      }
+    };
+    checkLanguage();
+
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -38,18 +60,7 @@ export default function SplashScreen({ navigation }: any) {
       ])
     ).start();
 
-    // Navigate after splash
-    const t1 = setTimeout(() => {
-      animDone.current = true;
-    }, 2600);
-    return () => clearTimeout(t1);
   }, []);
-
-  useEffect(() => {
-    if (animDone.current && isInitialized) {
-      navigation.replace('Language');
-    }
-  }, [isInitialized, navigation]);
 
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.65] });
 
@@ -59,7 +70,7 @@ export default function SplashScreen({ navigation }: any) {
       <Animated.View style={[styles.glowRing, { opacity: glowOpacity }]} />
       <Animated.View style={[styles.glowRingInner, { opacity: glowOpacity }]} />
 
-      <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
+      <Animated.View style={[styles.contentWrapper, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         {/* Shield badge */}
         <View style={styles.iconBadge}>
           <MaterialIcons name="security" size={56} color={colors.primary} />
@@ -72,11 +83,6 @@ export default function SplashScreen({ navigation }: any) {
         <Text style={styles.tagline}>{t('splash_tagline')}</Text>
 
         {/* Dots loader */}
-        <View style={styles.dotsRow}>
-          {[0, 1, 2].map(i => (
-            <View key={i} style={[styles.dot, i === 1 && styles.dotActive]} />
-          ))}
-        </View>
       </Animated.View>
     </View>
   );
@@ -88,6 +94,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
   glowRing: {
     position: 'absolute',
@@ -103,6 +110,10 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     backgroundColor: 'rgba(56,189,248,0.12)',
   },
+  contentWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   iconBadge: {
     width: 112,
     height: 112,
@@ -112,7 +123,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary + '40',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
@@ -124,13 +135,14 @@ const styles = StyleSheet.create({
     fontSize: 34,
     color: colors.onSurface,
     letterSpacing: -0.5,
+    marginBottom: 16,
   },
   divider: {
     width: 48,
     height: 3,
     backgroundColor: colors.primary,
     borderRadius: 2,
-    marginVertical: 16,
+    marginBottom: 16,
   },
   tagline: {
     fontFamily: 'PublicSans_400Regular',
@@ -139,19 +151,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: width * 0.72,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 40,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceBorder,
-  },
-  dotActive: {
-    backgroundColor: colors.primary,
   },
 });

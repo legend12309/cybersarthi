@@ -35,7 +35,7 @@ export default function LanguageSelectionScreen({ navigation }: any) {
     setIsSubmitting(true);
     try {
       await changeLanguage(selected);
-      navigation.replace('MainTabs');
+      navigation.replace('Main');
     } catch {
       setIsSubmitting(false);
     }
@@ -46,10 +46,15 @@ export default function LanguageSelectionScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('lang_welcome_title')}</Text>
+        </View>
+        <View style={styles.titleContainer}>
           <View style={styles.iconWrap}>
             <MaterialIcons name="language" size={30} color={colors.primary} />
           </View>
-          <Text style={styles.title}>{t('lang_welcome_title')}</Text>
           <Text style={styles.subtitle}>{t('lang_welcome_subtitle')}</Text>
         </View>
 
@@ -107,7 +112,32 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: 24, paddingBottom: 160 },
 
-  header: { alignItems: 'center', marginBottom: 36 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.background,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'Manrope_700Bold',
+    color: colors.onSurface,
+    flex: 1,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
   iconWrap: {
     width: 64, height: 64, borderRadius: 32,
     backgroundColor: colors.primaryGlow,
@@ -175,7 +205,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background + 'EE',
     paddingHorizontal: 24, paddingVertical: 20,
     borderTopWidth: 1, borderColor: colors.surfaceBorder,
-    // Note: dynamic paddingBottom applied via style prop in component is better, but we will apply it below.
   },
   btn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

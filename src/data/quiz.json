@@ -1,0 +1,62 @@
+[
+  {
+    "id": "q1",
+    "question": "What is the most secure way to check if an SMS link is legitimate?",
+    "options": [
+      "Click the link but don't enter details",
+      "Forward it to a friend to check",
+      "Use the CyberSaathi Link Scanner or go to the official site directly",
+      "Reply to the SMS asking if it is real"
+    ],
+    "correctAnswerIndex": 2,
+    "explanation": "Never click suspicious links. Using a safe scanner or manually typing the official URL is the only safe way."
+  },
+  {
+    "id": "q2",
+    "question": "Someone calls saying they are from your bank and need your OTP to block a fraudulent transaction. What should you do?",
+    "options": [
+      "Share the OTP quickly to stop the fraud",
+      "Ask for their employee ID first, then share",
+      "Disconnect the call immediately",
+      "Give them a fake OTP to test them"
+    ],
+    "correctAnswerIndex": 2,
+    "explanation": "Banks NEVER ask for your OTP on a call. The caller is a scammer trying to initiate a transaction."
+  },
+  {
+    "id": "q3",
+    "question": "You want to sell an item on an online marketplace. The buyer sends a QR code and asks you to scan it to receive the payment. Is this safe?",
+    "options": [
+      "Yes, scanning QR codes is the fastest way to receive money",
+      "No, scanning a QR code and entering a PIN is only for SENDING money",
+      "Yes, as long as the amount mentioned is correct",
+      "No, because QR codes expire too quickly"
+    ],
+    "correctAnswerIndex": 1,
+    "explanation": "You never need to scan a QR code or enter your UPI PIN to receive money. Doing so will deduct money from your account."
+  },
+  {
+    "id": "q4",
+    "question": "You receive a WhatsApp message from an unknown number with a profile picture of a police officer, claiming you are under 'Digital Arrest'. What is your best response?",
+    "options": [
+      "Stay on the call to prove your innocence",
+      "Pay the penalty amount to clear your name",
+      "Share your Aadhaar details for verification",
+      "Block the number and report it to 1930"
+    ],
+    "correctAnswerIndex": 3,
+    "explanation": "There is no such thing as 'Digital Arrest' in Indian law. Real police do not interrogate or demand money via WhatsApp/Skype."
+  },
+  {
+    "id": "q5",
+    "question": "You get an SMS offering a 'Work from Home' job that pays ₹5000 a day for simply liking YouTube videos. What is the catch?",
+    "options": [
+      "It's a genuine offer from a startup",
+      "It's a scam that will eventually ask you to 'invest' money for premium tasks",
+      "You have to like at least 1000 videos to get paid",
+      "The videos are too long to watch"
+    ],
+    "correctAnswerIndex": 1,
+    "explanation": "This is a classic 'Task Scam'. They might pay a tiny amount initially to build trust, but will soon ask you to invest your own money to unlock bigger payouts, which you will never get back."
+  }
+]

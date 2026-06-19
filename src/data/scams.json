@@ -1,0 +1,122 @@
+[
+  {
+    "id": "electricity_bill",
+    "title": "Electricity Bill Disconnect",
+    "sender": "HPSEBL",
+    "content": "Dear customer your electricity power will be disconnected. Tonight at 9.30 PM from update office. because your previous month bill was not update. Please immediately contact with our electricity officer 8240XXXXXX. Thanks",
+    "redFlags": [
+      "Urgency/Threats: 'disconnected Tonight at 9.30 PM'",
+      "Poor Grammar: 'because your previous month bill was not update'",
+      "Personal Number: Asking to call a 10-digit mobile number instead of official toll-free."
+    ],
+    "advice": "Electricity boards never send SMS threatening immediate disconnection at night. Do not call the provided mobile number. Verify bill status only on the official state electricity website or app."
+  },
+  {
+    "id": "fedex_parcel",
+    "title": "FedEx Customs Hold",
+    "sender": "FDX-ALERT",
+    "content": "FedEx: Your parcel #984399 is on hold at customs due to illegal contents. An arrest warrant is being issued. Call Narcotics Dept at +91-98XXXXXX immediately or press link to pay penalty: http://fedex-customs.in/pay",
+    "redFlags": [
+      "Intimidation: Mentioning 'illegal contents' and 'arrest warrant'.",
+      "Fake URLs: 'fedex-customs.in' is not the official FedEx website.",
+      "Pressure to pay: Asking to pay a penalty via an unverified link."
+    ],
+    "advice": "Law enforcement agencies do not inform suspects of arrest warrants via SMS or ask for penalty payments online. Ignore the message and track your package directly on fedex.com."
+  },
+  {
+    "id": "sbi_kyc",
+    "title": "SBI PAN/KYC Block",
+    "sender": "SBI-MSG",
+    "content": "Dear Customer, your YONO SBI account has been blocked today because your PAN card is expired. Update your KYC within 24 hrs to unblock. Click here: http://sbi-kyc-update.com/login",
+    "redFlags": [
+      "Account Block Threat: Creating panic about the account being blocked.",
+      "Fake Link: Directs to a fraudulent site imitating the SBI login portal.",
+      "Time Limit: Forcing action 'within 24 hrs'."
+    ],
+    "advice": "Banks do not ask you to update KYC via SMS links. Never click on such links or enter your credentials. Always use the official YONO app or visit your branch."
+  },
+  {
+    "id": "whatsapp_family",
+    "title": "WhatsApp Emergency",
+    "sender": "Unknown Number",
+    "content": "Hi dad, my phone screen broke and this is my temporary number. I'm at the hospital and need ₹10,000 urgently for an emergency bill. Please UPI it to this number fast.",
+    "redFlags": [
+      "Unknown Sender: The message is from an unknown number claiming to be a relative.",
+      "Urgent Money Request: Asking for immediate transfer via UPI.",
+      "Emotional Manipulation: Using an 'emergency' or 'hospital' scenario to bypass logic."
+    ],
+    "advice": "Always call the family member on their original known number to verify the situation before transferring any money. Never trust text-based emergency requests from new numbers."
+  },
+  {
+    "id": "kbc_lottery",
+    "title": "KBC WhatsApp Lottery",
+    "sender": "KBC_JIO",
+    "content": "Congratulations! Your mobile number has won ₹25 Lakhs in the KBC Jio lucky draw. To claim your prize money, pay ₹5,000 as GST tax clearance fee to the manager's account. Call 99XXXXXX.",
+    "redFlags": [
+      "Too Good to be True: Winning a lottery you never participated in.",
+      "Advance Fee Fraud: Asking for a 'tax clearance fee' upfront.",
+      "Fake Association: Illegally using 'KBC' and 'Jio' names to build trust."
+    ],
+    "advice": "You cannot win a lottery without participating. Real lotteries deduct taxes from the prize money; they never ask you to pay fees upfront. Do not engage."
+  },
+  {
+    "id": "olx_qr",
+    "title": "OLX QR Code Scam",
+    "sender": "Buyer",
+    "content": "I want to buy your sofa immediately. I am sending you a QR code on WhatsApp. Just scan it and enter your UPI PIN to receive the ₹8,000 payment directly into your bank account.",
+    "redFlags": [
+      "Scanning to Receive: You only scan QR codes and enter a PIN to SEND money, never to receive.",
+      "Rushed Transaction: The buyer insists on completing the transaction immediately without seeing the item.",
+      "Overpayment/Glitches: The scammer might claim a 'glitch' and ask you to send money first."
+    ],
+    "advice": "Never enter your UPI PIN to receive money. UPI PIN is only used for deducting money from your account. Conduct transactions in person or via trusted payment requests."
+  },
+  {
+    "id": "wfh_job",
+    "title": "Part-Time Job Offer",
+    "sender": "HR-Recruit",
+    "content": "Work from Home! Earn ₹3000-₹5000 daily simply by liking YouTube videos. No experience required. Join our VIP Telegram group today to start your first task and earn ₹150 joining bonus: http://t.me/youtube-job-vip",
+    "redFlags": [
+      "Unrealistic Earnings: Promising high pay for trivial tasks like 'liking videos'.",
+      "Telegram Groups: Redirecting communication to unmoderated platforms.",
+      "Task-Based Traps: These start by paying small amounts, then ask you to invest money for 'premium tasks'."
+    ],
+    "advice": "Legitimate jobs do not pay you for liking videos. These are 'task scams' that build false trust before stealing your investment. Ignore and block."
+  },
+  {
+    "id": "trai_disconnect",
+    "title": "TRAI Sim Disconnect",
+    "sender": "Tele-Admin",
+    "content": "TRAI Notice: 5 complaints have been registered against your mobile number. Your SIM card will be deactivated in 2 hours. Press 9 to speak to a police officer for verification.",
+    "redFlags": [
+      "Fake Authority: Scammers posing as Telecom Regulatory Authority of India (TRAI).",
+      "Immediate Deactivation: Threatening to block the SIM card within hours.",
+      "Press 9 Trap: Interactive voice response designed to connect you to fake police."
+    ],
+    "advice": "TRAI does not call or message individuals regarding SIM disconnection. Hang up immediately. Do not press any numbers to speak to their 'executives'."
+  },
+  {
+    "id": "credit_card_points",
+    "title": "Reward Points Expiry",
+    "sender": "HDFC-RWD",
+    "content": "Dear Customer, your 15,432 HDFC Credit Card reward points worth ₹3,858 will expire by 5 PM today. Redeem them immediately for cash back. Click: http://hdfc-rewards-redeem.in/cash",
+    "redFlags": [
+      "Fake Expiry: Creating artificial urgency regarding reward points.",
+      "Cash Equivalent: Promising direct cash back to lure victims.",
+      "Phishing Link: The URL is designed to steal credit card details, CVV, and OTPs."
+    ],
+    "advice": "Redeem reward points only through your bank's official net banking portal or verified mobile app. Never click on links sent via SMS to claim rewards."
+  },
+  {
+    "id": "digital_arrest",
+    "title": "CBI Digital Arrest",
+    "sender": "CBI Officer",
+    "content": "Your Aadhaar card was used to open a bank account in Mumbai involved in money laundering. You are under 'Digital Arrest'. Do not disconnect this Skype video call or we will send police to your home.",
+    "redFlags": [
+      "Digital Arrest: There is no legal concept of 'Digital Arrest' in Indian law.",
+      "Skype/Video Calls: Police do not conduct interrogations via Skype or WhatsApp.",
+      "Threat of Physical Arrest: Using fear to prevent you from hanging up or asking for help."
+    ],
+    "advice": "Do not panic. Hang up the call immediately. Indian law enforcement will never ask you to transfer money to 'safe accounts' or hold you digitally hostage."
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "scamId": "electricity_bill",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "Fake Electricity Bill", "text": " scams are rising. Do not call the numbers in the SMS." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "फर्जी बिजली बिल", "text": " स्कैम बढ़ रहे हैं। SMS में दिए नंबर पर कॉल न करें।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "बनावट वीज बिल", "text": " स्कॅम वाढत आहेत. SMS मधील नंबरवर कॉल करू नका." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "போலி மின் கட்டணம்", "text": " மோசடிகள் அதிகரிக்கின்றன. SMS இல் உள்ள எண்களை அழைக்க வேண்டாம்." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "నకిలీ విద్యుత్ బిల్లు", "text": " స్కామ్‌లు పెరుగుతున్నాయి. SMS లోని నంబర్‌లకు కాల్ చేయవద్దు." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "નકલી વીજળી બિલ", "text": " સ્કેમ વધી રહ્યા છે. SMS માં આપેલ નંબર પર કૉલ કરશો નહીં." }
+  },
+  {
+    "scamId": "courier_customs",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "Package Held", "text": " scams: Never pay 'customs fees' for items you didn't order." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "पार्सल होल्ड", "text": " स्कैम: जिस सामान का ऑर्डर नहीं दिया, उसके लिए 'कस्टम शुल्क' न दें।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "पार्सल होल्ड", "text": " स्कॅम: तुम्ही ऑर्डर न केलेल्या वस्तूसाठी 'कस्टम फी' देऊ नका." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "பார்சல் மோசடி", "text": " நீங்கள் ஆர்டர் செய்யாத பொருளுக்கு 'சுங்கக் கட்டணம்' செலுத்த வேண்டாம்." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "పార్శిల్ స్కామ్", "text": " మీరు ఆర్డర్ చేయని వస్తువులకు 'కస్టమ్స్ ఫీజు' చెల్లించవద్దు." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "પાર્સલ સ્કેમ", "text": " તમે જે વસ્તુનો ઑર્ડર નથી કર્યો તેના માટે 'કસ્ટમ ફી' ચૂકવશો નહીં." }
+  },
+  {
+    "scamId": "bank_kyc",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "Bank KYC Update", "text": " calls are often fake. Banks never ask for OTPs over the phone." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "बैंक KYC अपडेट", "text": " कॉल अक्सर फर्जी होते हैं। बैंक कभी फोन पर OTP नहीं मांगते।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "बँक KYC अपडेट", "text": " कॉल बहुधा बनावट असतात. बँक कधीही फोनवर OTP मागत नाही." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "வங்கி KYC அப்டேட்", "text": " வங்கிகள் ஒருபோதும் தொலைபேசியில் OTP கேட்காது." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "బ్యాంక్ KYC అప్‌డేట్", "text": " బ్యాంకులు ఎప్పుడూ ఫోన్‌లో OTP అడగవు." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "બેંક KYC અપડેટ", "text": " બેંક ક્યારેય ફોન પર OTP માંગતી નથી." }
+  },
+  {
+    "scamId": "family_emergency",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "Family Emergency", "text": " SMS asking for urgent money? Verify by calling their known number." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "पारिवारिक आपातकाल", "text": " SMS? पैसे भेजने से पहले उनके पुराने नंबर पर कॉल करके पुष्टि करें।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "कौटुंबिक आणीबाणी", "text": " SMS? पैसे पाठवण्यापूर्वी त्यांच्या जुन्या नंबरवर कॉल करून खात्री करा." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "குடும்ப அவசரம்", "text": " அவசரமாக பணம் கேட்கும் SMS? பழைய எண்ணுக்கு அழைத்து உறுதிப்படுத்தவும்." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "కుటుంబ అత్యవసరం", "text": " డబ్బు పంపే ముందు వారి పాత నంబర్‌కు కాల్ చేసి నిర్ధారించుకోండి." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "પારિવારિક ઇમરજન્સી", "text": " પૈસા મોકલતા પહેલા તેમના જૂના નંબર પર કૉલ કરીને ખાતરી કરો." }
+  },
+  {
+    "scamId": "lucky_draw",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "Lucky Draw", "text": " scams ask for a 'processing fee'. If you didn't enter, you didn't win." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "लकी ड्रॉ", "text": " स्कैम 'प्रोसेसिंग फीस' मांगते हैं। कोई फीस न भरें।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "लकी ड्रॉ", "text": " स्कॅम 'प्रोसेसिंग फी' मागतात. कोणतीही फी भरू नका." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "லக்கி ட்ரா", "text": " நீங்கள் பங்கேற்காத போட்டியில் வெற்றி பெற முடியாது. பணம் செலுத்த வேண்டாம்." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "లక్కీ డ్రా", "text": " స్కామ్‌లలో ప్రాసెసింగ్ ఫీజు అడుగుతారు. చెల్లించవద్దు." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "લકી ડ્રો", "text": " સ્કેમમાં 'પ્રોસેસિંગ ફી' માંગવામાં આવે છે. ચૂકવશો નહીં." }
+  },
+  {
+    "scamId": "qr_code_receive",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "QR Code Payment", "text": " rule: You NEVER need to enter your UPI PIN to RECEIVE money." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "QR कोड पेमेंट", "text": " नियम: पैसे प्राप्त करने के लिए कभी भी UPI PIN की आवश्यकता नहीं होती।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "QR कोड पेमेंट", "text": " नियम: पैसे मिळवण्यासाठी कधीही UPI PIN लागत नाही." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "QR கோடு கட்டணம்", "text": " பணம் பெற உங்கள் UPI PIN ஐ ஒருபோதும் உள்ளிட தேவையில்லை." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "QR కోడ్ పేమెంట్", "text": " డబ్బు పొందడానికి మీ UPI PIN ఎప్పుడూ అవసరం లేదు." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "QR કોડ પેમેન્ટ", "text": " પૈસા મેળવવા માટે ક્યારેય UPI PIN ની જરૂર પડતી નથી." }
+  },
+  {
+    "scamId": "job_offer",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "Part-Time Job", "text": " offers asking you to pay a 'registration fee' first are always fake." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "पार्ट-टाइम जॉब", "text": " ऑफर जो 'रजिस्ट्रेशन फीस' मांगते हैं, वे हमेशा फर्जी होते हैं।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "पार्ट-टाइम जॉब", "text": " जे जॉब ऑफर 'नोंदणी फी' मागतात ते नेहमी बनावट असतात." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "பகுதிநேர வேலை", "text": " 'பதிவு கட்டணம்' கேட்கும் வேலை வாய்ப்புகள் எப்போதும் போலியானவை." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "పార్ట్-టైమ్ జాబ్", "text": " 'రిజిస్ట్రేషన్ ఫీజు' అడిగే జాబ్ ఆఫర్లు ఎప్పుడూ నకిలీవే." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "પાર્ટ-ટાઇમ જોબ", "text": " 'રજીસ્ટ્રેશન ફી' માંગતી જોબ ઑફર્સ હંમેશા નકલી હોય છે." }
+  },
+  {
+    "scamId": "video_call_blackmail",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "Unknown Video Call", "text": " extortion is rising. Do not accept WhatsApp video calls from strangers." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "अज्ञात वीडियो कॉल", "text": " ब्लैकमेलिंग बढ़ रही है। अजनबियों से वीडियो कॉल न उठाएं।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "अज्ञात व्हिडिओ कॉल", "text": " ब्लॅकमेलिंग वाढत आहे. अनोळखी लोकांचे व्हिडिओ कॉल उचलू नका." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "தெரியாத வீடியோ அழைப்பு", "text": " மிரட்டல்கள் அதிகரிக்கின்றன. அந்நியர்களின் வீடியோ அழைப்புகளை ஏற்க வேண்டாம்." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "తెలియని వీడియో కాల్", "text": " బ్లాక్ మెయిల్ పెరుగుతోంది. అపరిచితుల వీడియో కాల్స్ అంగీకరించవద్దు." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "અજાણ્યા વિડિયો કૉલ", "text": " બ્લેકમેલિંગ વધી રહ્યું છે. અજાણ્યા લોકોના વિડિયો કૉલ ન ઉપાડો." }
+  },
+  {
+    "scamId": "gift_card",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "Boss Gift Card", "text": " scams: If your boss texts asking for urgent gift cards, verify in person." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "बॉस गिफ्ट कार्ड", "text": " स्कैम: यदि बॉस गिफ्ट कार्ड मांगे, तो व्यक्तिगत रूप से पुष्टि करें।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "बॉस गिफ्ट कार्ड", "text": " स्कॅम: बॉसने गिफ्ट कार्ड मागितल्यास, समक्ष खात्री करा." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "பரிசு அட்டை மோசடி", "text": " உங்கள் அதிகாரி பரிசு அட்டைகள் கேட்டால், நேரில் சரிபார்க்கவும்." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "గిఫ్ట్ కార్డ్ స్కామ్", "text": " మీ బాస్ గిఫ్ట్ కార్డ్ అడిగితే, నేరుగా నిర్ధారించుకోండి." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "ગિફ્ટ કાર્ડ સ્કેમ", "text": " જો બોસ ગિફ્ટ કાર્ડ માંગે, તો રૂબરૂમાં ખાતરી કરો." }
+  },
+  {
+    "scamId": "insurance_fraud",
+    "en-IN": { "title": "Daily Scam Alert", "highlight": "Policy Lapsed", "text": " messages are often fake. Check policy status directly on official portals." },
+    "hi-IN": { "title": "दैनिक स्कैम अलर्ट", "highlight": "पॉलिसी लैप्स्ड", "text": " मैसेज फर्जी हो सकते हैं। आधिकारिक पोर्टल पर स्थिति जांचें।" },
+    "mr-IN": { "title": "दैनिक स्कॅम अलर्ट", "highlight": "पॉलिसी लॅप्स", "text": " मेसेज बनावट असू शकतात. अधिकृत पोर्टलवर स्थिती तपासा." },
+    "ta-IN": { "title": "தினசரி மோசடி எச்சரிக்கை", "highlight": "பாலிசி காலாவதி", "text": " செய்திகள் போலியாக இருக்கலாம். அதிகாரப்பூர்வ இணையதளத்தில் சரிபார்க்கவும்." },
+    "te-IN": { "title": "రోజువారీ స్కామ్ అలర్ట్", "highlight": "పాలసీ ల్యాప్స్", "text": " సందేశాలు నకిలీవి కావచ్చు. అధికారిక పోర్టల్‌లో తనిఖీ చేయండి." },
+    "gu-IN": { "title": "દૈનિક સ્કેમ એલર્ટ", "highlight": "પોલિસી લેપ્સ", "text": " મેસેજ નકલી હોઈ શકે છે. સત્તાવાર પોર્ટલ પર સ્થિતિ તપાસો." }
+  }
+]

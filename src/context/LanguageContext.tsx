@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations } from '../lib/translations';
-import { getOrCreateUser, updateUserLanguage } from '../lib/dbServices';
+import { getOrCreateUser } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 interface LanguageContextProps {
   languageCode: string;
@@ -79,7 +80,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await AsyncStorage.setItem('cybersaathi.language', code);
       if (deviceId) {
         // Sync language to Supabase backend database profile
-        await updateUserLanguage(deviceId, code);
+        await supabase.from('users').update({ preferred_language: code }).eq('device_id', deviceId);
       }
     } catch (error) {
       console.error('Failed to change language:', error);

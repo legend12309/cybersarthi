@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator,
-  TouchableOpacity, TextInput, FlatList,
-  KeyboardAvoidingView, Platform, Keyboard,
+  TouchableOpacity, FlatList, Animated, Easing,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
@@ -27,12 +26,16 @@ export default function VoiceScreen({ navigation }: any) {
   const [appState, setAppState] = useState<AppState>('idle');
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
   const insets = useSafeAreaInsets();
 
   const isMounted = useRef(true);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const flatListRef = useRef<FlatList>(null);
+
+  // Animations for mic pulse
+  const pulseScale = useRef(new Animated.Value(1)).current;
+  const pulseOpacity = useRef(new Animated.Value(0.4)).current;
+  const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     isMounted.current = true;
@@ -44,6 +47,22 @@ export default function VoiceScreen({ navigation }: any) {
   useEffect(() => {
     if (!isFocused) { cleanupAudioAndRecording(); setAppState('idle'); }
   }, [isFocused]);
+
+  useEffect(() => {
+    if (appState === 'recording') {
+      pulseLoop.current = Animated.loop(
+        Animated.parallel([
+          Animated.timing(pulseScale, { toValue: 1.6, duration: 1500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseOpacity, { toValue: 0, duration: 1500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        ])
+      );
+      pulseLoop.current.start();
+    } else {
+      pulseLoop.current?.stop();
+      pulseScale.setValue(1);
+      pulseOpacity.setValue(0.4);
+    }
+  }, [appState]);
 
   const cleanupAudioAndRecording = () => {
     if (recordingRef.current) {
@@ -57,8 +76,8 @@ export default function VoiceScreen({ navigation }: any) {
 
   const getOfflineAIReply = (text: string, lang: string): string => {
     const q = text.toLowerCase().trim();
-    const isHi = lang.startsWith('hi'), isMr = lang.startsWith('mr'),
-          isTa = lang.startsWith('ta'), isTe = lang.startsWith('te'), isGu = lang.startsWith('gu');
+    const isHi = lang === 'hi-IN', isMr = lang === 'mr-IN',
+          isTa = lang === 'ta-IN', isTe = lang === 'te-IN', isGu = lang === 'gu-IN';
 
     if (q.includes('electricity') || q.includes('bill') || q.includes('बिजली') || q.includes('बिल')) {
       if (isHi) return 'बिजली बिल स्कैम में जालसाज तुरंत कनेक्शन काटने की धमकी देते हैं। किसी भी अज्ञात नंबर पर पैसे न भेजें।';
@@ -92,11 +111,9 @@ export default function VoiceScreen({ navigation }: any) {
     return 'Hello! I am CyberSaathi. Ask me to verify any suspicious call, message, link, or transaction.';
   };
 
-  const handleSendMessage = async (textToSend?: string) => {
-    const msgText = textToSend || inputText.trim();
+  const handleSendMessage = async (textToSend: string) => {
+    const msgText = textToSend.trim();
     if (!msgText) return;
-    if (!textToSend) setInputText('');
-    Keyboard.dismiss();
     const userMsgId = 'u_' + Date.now();
     setMessages(prev => [...prev, { id: userMsgId, sender: 'user', text: msgText }]);
     setAppState('thinking');
@@ -105,6 +122,8 @@ export default function VoiceScreen({ navigation }: any) {
     try { aiText = await chatWithSarvam(msgText, languageCode); }
     catch { aiText = getOfflineAIReply(msgText, languageCode); }
     if (!isMounted.current) return;
+    console.log('AI reply text being added:', aiText);
+    console.log('AI reply text length:', aiText?.length);
     const aiMsgId = 'a_' + Date.now();
     setMessages(prev => [...prev, { id: aiMsgId, sender: 'ai', text: aiText }]);
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
@@ -113,8 +132,16 @@ export default function VoiceScreen({ navigation }: any) {
       setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, isAudioPlaying: true } : m));
       const audio = await textToSpeech(aiText, languageCode);
       if (isMounted.current) await playAudio(audio);
-    } catch { }
-    finally {
+    } catch (error) {
+      console.log('TTS/Audio error:', error);
+      if (isMounted.current) {
+        setMessages(prev => [...prev, {
+          id: 'err_tts_' + Date.now(),
+          sender: 'ai',
+          text: t('err_audio_failed') || 'Sorry, I could not play the voice response. Please read the text above.'
+        }]);
+      }
+    } finally {
       if (isMounted.current) {
         setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, isAudioPlaying: false } : m));
         setAppState('idle');
@@ -154,12 +181,20 @@ export default function VoiceScreen({ navigation }: any) {
       let userText = '';
       try { userText = await speechToText(uri, languageCode); }
       catch {
-        setMessages(prev => [...prev, { id: 'err_stt_' + Date.now(), sender: 'ai', text: t('err_stt_failed') }]);
-        setAppState('idle'); return;
+        if (isMounted.current) {
+          setMessages(prev => [...prev, { id: 'err_stt_' + Date.now(), sender: 'ai', text: t('err_stt_failed') }]);
+          setAppState('idle');
+        }
+        return;
       }
-      if (userText.trim()) await handleSendMessage(userText);
-      else setAppState('idle');
-    } catch { setAppState('idle'); }
+      
+      if (isMounted.current) {
+        if (userText.trim()) await handleSendMessage(userText);
+        else setAppState('idle');
+      }
+    } catch { 
+      if (isMounted.current) setAppState('idle'); 
+    }
   };
 
   const handleMicPress = () => {
@@ -199,8 +234,8 @@ export default function VoiceScreen({ navigation }: any) {
 
   // Status bar color/label
   const statusInfo = {
-    idle:      { color: colors.success,  label: 'Ready' },
-    starting:  { color: colors.warning,  label: 'Starting...' },
+    idle:      { color: colors.success,  label: t('voice_status_ready') || 'Ready' },
+    starting:  { color: colors.warning,  label: t('voice_status_starting') || 'Starting...' },
     recording: { color: colors.error,    label: t('voice_status_listening') },
     thinking:  { color: colors.primary,  label: t('voice_status_thinking')  },
     playing:   { color: colors.primary,  label: t('voice_status_speaking')  },
@@ -246,37 +281,40 @@ export default function VoiceScreen({ navigation }: any) {
         </View>
       )}
 
-      {/* ── Input Row ────────────────────────────────────────── */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            placeholder={t('voice_default_instruction')?.slice(0, 30) + '…'}
-            placeholderTextColor={colors.onSurfaceVariant + '60'}
-            value={inputText}
-            onChangeText={setInputText}
-            returnKeyType="send"
-            onSubmitEditing={() => handleSendMessage()}
-            editable={appState === 'idle'}
-          />
-          {inputText.trim() ? (
-            <TouchableOpacity style={styles.sendBtn} onPress={() => handleSendMessage()}>
-              <MaterialIcons name="send" size={20} color={colors.onPrimary} />
-            </TouchableOpacity>
+      {/* ── Input Area (Voice-first) ─────────────────────────── */}
+      <View style={[styles.micContainer, { paddingBottom: Math.max(20, insets.bottom + 10) }]}>
+        
+        {appState === 'recording' && (
+          <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]} />
+        )}
+        
+        <TouchableOpacity
+          style={[
+            styles.heroMicBtn,
+            appState === 'recording' && styles.heroMicBtnRec,
+            appState === 'thinking' && styles.heroMicBtnThinking,
+            appState === 'playing' && styles.heroMicBtnPlaying
+          ]}
+          onPress={handleMicPress}
+          disabled={appState === 'starting' || appState === 'thinking' || appState === 'playing'}
+          activeOpacity={0.8}
+        >
+          {appState === 'thinking' ? (
+            <ActivityIndicator size="large" color={colors.onPrimary} />
+          ) : appState === 'playing' ? (
+            <MaterialIcons name="volume-up" size={36} color={colors.onPrimary} />
           ) : (
-            <TouchableOpacity
-              style={[styles.sendBtn, appState === 'recording' && styles.sendBtnRec]}
-              onPress={handleMicPress}
-              disabled={appState === 'starting' || appState === 'thinking' || appState === 'playing'}
-            >
-              <MaterialIcons name={appState === 'recording' ? 'stop' : 'mic'} size={22} color={colors.onPrimary} />
-            </TouchableOpacity>
+            <MaterialIcons name={appState === 'recording' ? 'stop' : 'mic'} size={36} color={colors.onPrimary} />
           )}
-        </View>
-      </KeyboardAvoidingView>
+        </TouchableOpacity>
+        
+        <Text style={styles.micHelperText}>
+          {appState === 'idle' ? t('home_mic_title') || 'Tap to Speak'
+            : appState === 'recording' ? t('voice_status_listening')
+            : appState === 'thinking' ? t('voice_status_thinking')
+            : t('voice_status_speaking')}
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }
@@ -332,32 +370,31 @@ const styles = StyleSheet.create({
   },
   stopSpeechLabel: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, color: colors.primary },
 
-  indicator: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 20, paddingVertical: 8,
-  },
-  indicatorText: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant },
-  recDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.error },
+  indicator: { display: 'none' },
+  indicatorText: { display: 'none' },
+  recDot: { display: 'none' },
 
-  inputRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 10,
+  micContainer: {
+    alignItems: 'center', justifyContent: 'center',
+    paddingTop: 24,
     backgroundColor: colors.surface,
     borderTopWidth: 1, borderColor: colors.surfaceBorder,
-    // Provide sufficient padding for gesture bars, without duplicating tab bar space if possible.
-    paddingBottom: Math.max(10, insets.bottom),
+    shadowColor: colors.shadow, shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 10,
   },
-  input: {
-    flex: 1, height: 44, borderRadius: 22,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1, borderColor: colors.surfaceBorder,
-    paddingHorizontal: 16, fontSize: 14,
-    fontFamily: 'PublicSans_400Regular', color: colors.onSurface,
+  pulseRing: {
+    position: 'absolute', top: 24,
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: colors.error,
   },
-  sendBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
-    shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 4,
+  heroMicBtn: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
+    marginBottom: 16,
   },
-  sendBtnRec: { backgroundColor: colors.error },
+  heroMicBtnRec: { backgroundColor: colors.error, shadowColor: colors.error },
+  heroMicBtnThinking: { backgroundColor: colors.warning, shadowColor: colors.warning },
+  heroMicBtnPlaying: { backgroundColor: colors.success, shadowColor: colors.success },
+  micHelperText: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: colors.onSurfaceVariant },
 });

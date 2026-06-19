@@ -6,6 +6,15 @@ export interface TranslationsDictionary {
 
 export const translations: TranslationsDictionary = {
   'en-IN': {
+    sim_quiz_title: 'Test Your Knowledge',
+    sim_quiz_desc: 'Take a quick 5-question quiz to earn points!',
+    sim_more_scenarios: 'More Scenarios',
+    badges_progress_suffix: '% to next level',
+    badges_stats_score: 'Score',
+    badges_earned: 'Earned',
+    voice_status_ready: 'Ready',
+    voice_status_starting: 'Starting...',
+
     // Navigation / Tabs
     tab_home: 'Home',
     tab_chat: 'Chat',
@@ -88,6 +97,8 @@ export const translations: TranslationsDictionary = {
     err_tts_failed: 'Could not convert text to speech.',
     err_playback_failed: 'Could not play audio.',
     err_generic: 'Something went wrong. Please try again.',
+    err_audio_failed: "Sorry, I could not play the audio. Please read the text.",
+    err_timeout: "Request timed out. Please check your connection.",
 
     // ScamDetailScreen
     scam_detail_title: 'Spot the Scam',
@@ -164,6 +175,15 @@ export const translations: TranslationsDictionary = {
     report_helpline_support: 'Available 24/7. File official complaints at cybercrime.gov.in.',
   },
   'hi-IN': {
+    sim_quiz_title: 'अपने ज्ञान का परीक्षण करें',
+    sim_quiz_desc: 'पॉइंट्स कमाने के लिए 5-प्रश्नों की त्वरित प्रश्नोत्तरी लें!',
+    sim_more_scenarios: 'अधिक परिदृश्य',
+    badges_progress_suffix: '% अगले स्तर के लिए',
+    badges_stats_score: 'स्कोर',
+    badges_earned: 'अर्जित',
+    voice_status_ready: 'तैयार',
+    voice_status_starting: 'शुरू हो रहा है...',
+
     // Navigation / Tabs
     tab_home: 'होम',
     tab_chat: 'चैट',
@@ -246,6 +266,8 @@ export const translations: TranslationsDictionary = {
     err_tts_failed: 'टेक्स्ट को आवाज़ में बदलने में असमर्थ।',
     err_playback_failed: 'ऑडियो चलाने में असमर्थ।',
     err_generic: 'कुछ गलत हो गया। कृपया पुन: प्रयास करें।',
+    err_audio_failed: "क्षमा करें, मैं ऑडियो नहीं चला सका। कृपया टेक्स्ट पढ़ें।",
+    err_timeout: "अनुरोध का समय समाप्त हो गया। कृपया अपना कनेक्शन जांचें।",
 
     // ScamDetailScreen
     scam_detail_title: 'स्कैम को पहचानें',
@@ -322,6 +344,15 @@ export const translations: TranslationsDictionary = {
     report_helpline_support: '24/7 उपलब्ध। cybercrime.gov.in पर आधिकारिक शिकायत दर्ज करें।',
   },
   'mr-IN': {
+    sim_quiz_title: 'तुमच्या ज्ञानाची चाचणी घ्या',
+    sim_quiz_desc: 'पॉइंट्स मिळवण्यासाठी ५-प्रश्नांची जलद प्रश्नमंजुषा सोडवा!',
+    sim_more_scenarios: 'अधिक परिस्थिती',
+    badges_progress_suffix: '% पुढील पातळीसाठी',
+    badges_stats_score: 'स्कोर',
+    badges_earned: 'मिळवले',
+    voice_status_ready: 'तयार',
+    voice_status_starting: 'सुरू होत आहे...',
+
     // Navigation / Tabs
     tab_home: 'होम',
     tab_chat: 'चॅट',
@@ -404,6 +435,8 @@ export const translations: TranslationsDictionary = {
     err_tts_failed: 'मजकूर आवाजात रूपांतरित करण्यात असमर्थ.',
     err_playback_failed: 'ऑडिओ प्ले करण्यात अक्षम.',
     err_generic: 'काहीतरी चुकीचे घडले. कृपया पुन्हा प्रयत्न करा.',
+    err_audio_failed: "क्षमस्व, मी ऑडिओ प्ले करू शकलो नाही. कृपया मजकूर वाचा.",
+    err_timeout: "विनंती वेळ संपली. कृपया तुमचे कनेक्शन तपासा.",
 
     // ScamDetailScreen
     scam_detail_title: 'स्कॅम ओळखा',
@@ -480,6 +513,15 @@ export const translations: TranslationsDictionary = {
     report_helpline_support: '२४/7 उपलब्ध. cybercrime.gov.in वर अधिकृत तक्रार नोंदवा.',
   },
   'ta-IN': {
+    sim_quiz_title: 'உங்கள் அறிவை சோதிக்கவும்',
+    sim_quiz_desc: 'புள்ளிகளைப் பெற 5 கேள்விகள் கொண்ட விரைவான வினாடி வினாவை எடுக்கவும்!',
+    sim_more_scenarios: 'மேலும் காட்சிகள்',
+    badges_progress_suffix: '% அடுத்த நிலைக்கு',
+    badges_stats_score: 'மதிப்பெண்',
+    badges_earned: 'சம்பாதித்தது',
+    voice_status_ready: 'தயார்',
+    voice_status_starting: 'தொடங்குகிறது...',
+
     // Navigation / Tabs
     tab_home: 'முகப்பு',
     tab_chat: 'அரட்டை',
@@ -562,6 +604,8 @@ export const translations: TranslationsDictionary = {
     err_tts_failed: 'உரையை பேச்சாக மாற்ற முடியவில்லை.',
     err_playback_failed: 'ஆடியோவை இயக்க முடியவில்லை.',
     err_generic: 'ஏதோ தவறு நடந்துவிட்டது. மீண்டும் முயற்சிக்கவும்.',
+    err_audio_failed: "மன்னிக்கவும், என்னால் ஆடியோவை இயக்க முடியவில்லை. உரையைப் படிக்கவும்.",
+    err_timeout: "கோரிக்கை நேரம் முடிந்தது. உங்கள் இணைப்பை சரிபார்க்கவும்.",
 
     // ScamDetailScreen
     scam_detail_title: 'மோசடியைக் கண்டறி',
@@ -638,6 +682,15 @@ export const translations: TranslationsDictionary = {
     report_helpline_support: '24/7 சேவை கிடைக்கும். cybercrime.gov.in இல் அதிகாரப்பூர்வமாகப் புகார் அளிக்கவும்.',
   },
   'te-IN': {
+    sim_quiz_title: 'మీ జ్ఞానాన్ని పరీక్షించుకోండి',
+    sim_quiz_desc: 'పాయింట్లను సంపాదించడానికి 5-ప్రశ్నల క్విజ్ తీసుకోండి!',
+    sim_more_scenarios: 'మరిన్ని దృశ్యాలు',
+    badges_progress_suffix: '% తదుపరి స్థాయికి',
+    badges_stats_score: 'స్కోర్',
+    badges_earned: 'సంపాదించారు',
+    voice_status_ready: 'సిద్ధంగా ఉంది',
+    voice_status_starting: 'ప్రారంభించబడుతోంది...',
+
     // Navigation / Tabs
     tab_home: 'హోమ్',
     tab_chat: 'చాట్',
@@ -720,6 +773,8 @@ export const translations: TranslationsDictionary = {
     err_tts_failed: 'టెక్స్ట్‌ను వాయిస్‌గా మార్చలేకపోయాము.',
     err_playback_failed: 'ఆడియోను ప్లే చేయలేకపోయాము.',
     err_generic: 'ఏదో తప్పు జరిగింది. దయచేసి మళ్లీ ప్రయత్ండి.',
+    err_audio_failed: "క్షమించండి, నేను ఆడియోను ప్లే చేయలేకపోయాను. దయచేసి వచనాన్ని చదవండి.",
+    err_timeout: "అభ్యర్థన గడువు ముగిసింది. దయచేసి మీ కనెక్షన్‌ని తనిఖీ చేయండి.",
 
     // ScamDetailScreen
     scam_detail_title: 'మోసాలను గుర్తించండి',
@@ -796,6 +851,15 @@ export const translations: TranslationsDictionary = {
     report_helpline_support: '24/7 అందుబాటులో ఉంటుంది. cybercrime.gov.in లో అధికారికంగా ఫిర్యాదు చేయండి.',
   },
   'gu-IN': {
+    sim_quiz_title: 'તમારા જ્ઞાનની કસોટી કરો',
+    sim_quiz_desc: 'પોઈન્ટ કમાવવા માટે 5-પ્રશ્નોની ક્વિઝ લો!',
+    sim_more_scenarios: 'વધુ દૃશ્યો',
+    badges_progress_suffix: '% આગલા સ્તર માટે',
+    badges_stats_score: 'સ્કોર',
+    badges_earned: 'કમાવ્યા',
+    voice_status_ready: 'તૈયાર',
+    voice_status_starting: 'શરૂ થઈ રહ્યું છે...',
+
     // Navigation / Tabs
     tab_home: 'હોમ',
     tab_chat: 'ચેટ',
@@ -878,6 +942,8 @@ export const translations: TranslationsDictionary = {
     err_tts_failed: 'લખાણને અવાજમાં રૂપાંતરિત કરવામાં અસમર્થ.',
     err_playback_failed: 'ઑડિઓ પ્લે કરવામાં અસમર્થ.',
     err_generic: 'કંઈક ખોટું થયું. કૃપા કરીને ફરી પ્રયાસ કરો.',
+    err_audio_failed: "માફ કરશો, હું ઑડિઓ ચલાવી શક્યો નહીં. કૃપા કરીને ટેક્સ્ટ વાંચો.",
+    err_timeout: "વિનંતીનો સમય સમાપ્ત. કૃપા કરીને તમારું કનેક્શન તપાસો.",
 
     // ScamDetailScreen
     scam_detail_title: 'સ્કેમ ઓળખી કાઢો',
