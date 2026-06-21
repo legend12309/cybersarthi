@@ -42,7 +42,8 @@
         {
           "microphonePermission": "Allow CyberSaathi to access your microphone."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

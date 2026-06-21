@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator,
   TouchableOpacity, FlatList, Animated, Easing,
+  TextInput, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Audio } from 'expo-av';
+import { useAudioRecorder, useAudioPlayer, AudioModule, RecordingPresets } from 'expo-audio';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { colors, theme } from '../lib/colors';
-import { speechToText, chatWithSarvam, textToSpeech, playAudio, stopAudio } from '../lib/sarvam';
+import { speechToText, chatWithSarvam, textToSpeech, classifyContent } from '../lib/sarvam';
 import { useLanguage } from '../context/LanguageContext';
 
 interface Message {
@@ -24,12 +25,13 @@ export default function VoiceScreen({ navigation }: any) {
   const { t, languageCode } = useLanguage();
   const isFocused = useIsFocused();
   const [appState, setAppState] = useState<AppState>('idle');
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const player = useAudioPlayer();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
   const insets = useSafeAreaInsets();
 
   const isMounted = useRef(true);
-  const recordingRef = useRef<Audio.Recording | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   // Animations for mic pulse
@@ -39,9 +41,22 @@ export default function VoiceScreen({ navigation }: any) {
 
   useEffect(() => {
     isMounted.current = true;
-    Audio.requestPermissionsAsync();
+    
+    // Listen for playback finished
+    const subscription = player.addListener('playbackStatusUpdate', (status: any) => {
+      if (status.didJustFinish) {
+        setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
+        setAppState('idle');
+      }
+    });
+
     setMessages([{ id: 'welcome', sender: 'ai', text: t('voice_default_instruction') }]);
-    return () => { isMounted.current = false; cleanupAudioAndRecording(); };
+    
+    return () => { 
+      isMounted.current = false; 
+      subscription.remove();
+      cleanupAudioAndRecording(); 
+    };
   }, [languageCode]);
 
   useEffect(() => {
@@ -65,13 +80,15 @@ export default function VoiceScreen({ navigation }: any) {
   }, [appState]);
 
   const cleanupAudioAndRecording = () => {
-    if (recordingRef.current) {
-      recordingRef.current.stopAndUnloadAsync().catch(() => {});
-      recordingRef.current = null;
+    try {
+      if (appState === 'recording' || appState === 'starting') {
+        recorder.stop().catch((e) => console.warn('Recorder stop error', e));
+      }
+      player.pause();
+      AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
+    } catch (e) {
+      console.warn('Cleanup error', e);
     }
-    setRecording(null);
-    stopAudio().catch(() => {});
-    Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true, playThroughEarpieceAndroid: false }).catch(() => {});
   };
 
   const getOfflineAIReply = (text: string, lang: string): string => {
@@ -114,86 +131,218 @@ export default function VoiceScreen({ navigation }: any) {
   const handleSendMessage = async (textToSend: string) => {
     const msgText = textToSend.trim();
     if (!msgText) return;
-    const userMsgId = 'u_' + Date.now();
-    setMessages(prev => [...prev, { id: userMsgId, sender: 'user', text: msgText }]);
-    setAppState('thinking');
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-    let aiText = '';
-    try { aiText = await chatWithSarvam(msgText, languageCode); }
-    catch { aiText = getOfflineAIReply(msgText, languageCode); }
-    if (!isMounted.current) return;
-    console.log('AI reply text being added:', aiText);
-    console.log('AI reply text length:', aiText?.length);
-    const aiMsgId = 'a_' + Date.now();
-    setMessages(prev => [...prev, { id: aiMsgId, sender: 'ai', text: aiText }]);
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
     try {
+      console.log('[PIPELINE] Starting chat...');
+      const userMsgId = 'u_' + Date.now();
+      setMessages(prev => [...prev, { id: userMsgId, sender: 'user', text: msgText }]);
+      setAppState('thinking');
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+      let aiText = '';
+      try { 
+        aiText = await chatWithSarvam(msgText, languageCode); 
+        console.log('[PIPELINE] Chat result:', aiText);
+      } catch (chatError) { 
+        console.log('[CHAT] error:', chatError);
+        aiText = getOfflineAIReply(msgText, languageCode); 
+        console.log('[PIPELINE] Chat fallback result:', aiText);
+      }
+      
+      if (!isMounted.current) return;
+      
+      const aiMsgId = 'a_' + Date.now();
+      setMessages(prev => [...prev, { id: aiMsgId, sender: 'ai', text: aiText }]);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+      console.log('[PIPELINE] Starting TTS...');
       setAppState('playing');
       setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, isAudioPlaying: true } : m));
-      const audio = await textToSpeech(aiText, languageCode);
-      if (isMounted.current) await playAudio(audio);
-    } catch (error) {
-      console.log('TTS/Audio error:', error);
-      if (isMounted.current) {
-        setMessages(prev => [...prev, {
-          id: 'err_tts_' + Date.now(),
-          sender: 'ai',
-          text: t('err_audio_failed') || 'Sorry, I could not play the voice response. Please read the text above.'
-        }]);
+      
+      let audio = '';
+      try {
+        audio = await textToSpeech(aiText, languageCode);
+        console.log('[PIPELINE] TTS result length:', audio?.length);
+      } catch (ttsError) {
+        console.log('[TTS] error:', ttsError);
+        if (isMounted.current) {
+          setMessages(prev => [...prev, { id: 'err_tts_' + Date.now(), sender: 'ai', text: t('err_audio_failed') || 'Could not generate audio.' }]);
+        }
+        throw new Error('TTS failed'); // Skip playback
       }
-    } finally {
+
+      console.log('[PIPELINE] Starting Audio Playback...');
+      try {
+        if (isMounted.current && audio) {
+          player.replace(audio);
+          player.play();
+          console.log('[PIPELINE] Audio Playback started.');
+          // State transition to idle is handled by the player playbackStatusUpdate listener
+        }
+      } catch (playbackError) {
+        console.log('[AUDIO PLAYBACK] error:', playbackError);
+        if (isMounted.current) {
+          setMessages(prev => [...prev, { id: 'err_play_' + Date.now(), sender: 'ai', text: t('err_audio_failed') || 'Could not play audio.' }]);
+          setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
+          setAppState('idle');
+        }
+      }
+
+    } catch (globalError) {
+      console.log('[PIPELINE] Global Chat/TTS error:', globalError);
       if (isMounted.current) {
-        setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, isAudioPlaying: false } : m));
+        setMessages(prev => [...prev, { id: 'err_global_' + Date.now(), sender: 'ai', text: 'An unexpected error occurred during chat.' }]);
+        setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
+        setAppState('idle');
+      }
+    }
+  };
+
+  const handleTextSubmit = async () => {
+    const text = inputText.trim();
+    if (!text || appState !== 'idle') return;
+    setInputText('');
+
+    try {
+      console.log('[PIPELINE] Starting text classification...');
+      const userMsgId = 'u_' + Date.now();
+      setMessages(prev => [...prev, { id: userMsgId, sender: 'user', text: `🔗 Checking: ${text}` }]);
+      setAppState('thinking');
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+      let aiText = '';
+      let audioText = '';
+      try {
+        const isUrl = /^(https?:\/\/|[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$)/i.test(text) || text.toLowerCase().includes('.com');
+        const type = isUrl ? 'url' : 'message';
+        
+        const { verdict, explanation } = await classifyContent(text, languageCode, type);
+        
+        const verdictLabel = verdict === 'suspicious' 
+          ? (languageCode === 'hi-IN' ? 'ख़तरा (SUSPICIOUS)' : 'SUSPICIOUS')
+          : (languageCode === 'hi-IN' ? 'सुरक्षित (SAFE)' : 'SAFE');
+
+        aiText = `[${verdictLabel}]\n${explanation}`;
+        audioText = explanation; // Only read the explanation aloud
+        console.log('[PIPELINE] Classification result:', aiText);
+      } catch (chatError) { 
+        console.log('[CHAT] error:', chatError);
+        const fallbackLabel = languageCode === 'hi-IN' ? 'ख़तरा (SUSPICIOUS)' : 'SUSPICIOUS';
+        const fallbackExp = languageCode === 'hi-IN' 
+          ? 'नेटवर्क समस्या के कारण लिंक/संदेश की जाँच नहीं हो सकी। कृपया सावधान रहें।' 
+          : 'Could not analyze the content due to a network issue. Please be cautious.';
+        aiText = `[${fallbackLabel}]\n${fallbackExp}`; 
+        audioText = fallbackExp;
+        console.log('[PIPELINE] Fallback result:', aiText);
+      }
+      
+      if (!isMounted.current) return;
+      
+      const aiMsgId = 'a_' + Date.now();
+      setMessages(prev => [...prev, { id: aiMsgId, sender: 'ai', text: aiText }]);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
+      console.log('[PIPELINE] Starting TTS...');
+      setAppState('playing');
+      setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, isAudioPlaying: true } : m));
+      
+      let audio = '';
+      try {
+        audio = await textToSpeech(audioText, languageCode);
+        console.log('[PIPELINE] TTS result length:', audio?.length);
+      } catch (ttsError) {
+        console.log('[TTS] error:', ttsError);
+        if (isMounted.current) {
+          setMessages(prev => [...prev, { id: 'err_tts_' + Date.now(), sender: 'ai', text: t('err_audio_failed') || 'Could not generate audio.' }]);
+        }
+        throw new Error('TTS failed');
+      }
+
+      console.log('[PIPELINE] Starting Audio Playback...');
+      try {
+        if (isMounted.current && audio) {
+          player.replace(audio);
+          player.play();
+          console.log('[PIPELINE] Audio Playback started.');
+        }
+      } catch (playbackError) {
+        console.log('[AUDIO PLAYBACK] error:', playbackError);
+        if (isMounted.current) {
+          setMessages(prev => [...prev, { id: 'err_play_' + Date.now(), sender: 'ai', text: t('err_audio_failed') || 'Could not play audio.' }]);
+          setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
+          setAppState('idle');
+        }
+      }
+
+    } catch (globalError) {
+      console.log('[PIPELINE] Global Chat/TTS error:', globalError);
+      if (isMounted.current) {
+        setMessages(prev => [...prev, { id: 'err_global_' + Date.now(), sender: 'ai', text: 'An unexpected error occurred during chat.' }]);
+        setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
         setAppState('idle');
       }
     }
   };
 
   const startRecording = async () => {
-    if (appState !== 'idle') return;
+    if (appState !== 'idle') {
+      console.log('[MIC] Ignored press, appState is not idle:', appState);
+      return;
+    }
+    console.log('[PIPELINE] Starting recording process...');
     try {
       setAppState('starting');
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true, playThroughEarpieceAndroid: false });
-      const rec = new Audio.Recording();
-      await rec.prepareToRecordAsync({
-        android: { extension: '.wav', outputFormat: Audio.AndroidOutputFormat.MPEG_4, audioEncoder: Audio.AndroidAudioEncoder.AAC, sampleRate: 16000, numberOfChannels: 1, bitRate: 128000 },
-        ios: { extension: '.wav', audioQuality: Audio.IOSAudioQuality.HIGH, sampleRate: 16000, numberOfChannels: 1, bitRate: 128000, linearPCMBitDepth: 16, linearPCMIsBigEndian: false, linearPCMIsFloat: false },
-        web: {},
-      });
-      await rec.startAsync();
-      setRecording(rec);
-      recordingRef.current = rec;
+      await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
+      await recorder.prepareToRecordAsync();
+      recorder.record();
       setAppState('recording');
-    } catch {
-      setMessages(prev => [...prev, { id: 'err_' + Date.now(), sender: 'ai', text: t('err_mic_permission') }]);
-      setAppState('idle');
+      console.log('[PIPELINE] Recording started.');
+    } catch (error) {
+      console.log('[MIC] error:', error);
+      if (isMounted.current) {
+        setMessages(prev => [...prev, { id: 'err_' + Date.now(), sender: 'ai', text: t('err_mic_permission') || 'Could not start microphone.' }]);
+        setAppState('idle');
+      }
     }
   };
 
   const stopRecordingAndProcess = async () => {
-    if (!recording) return;
+    if (appState !== 'recording') return;
+    console.log('[PIPELINE] Stopping recording...');
     setAppState('thinking');
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null); recordingRef.current = null;
-      if (!uri) throw new Error('No audio');
+      await recorder.stop();
+      const uri = recorder.uri;
+      if (!uri) throw new Error('No audio URI found from recording');
+      
+      console.log('[PIPELINE] Starting STT...');
       let userText = '';
-      try { userText = await speechToText(uri, languageCode); }
-      catch {
+      try { 
+        userText = await speechToText(uri, languageCode); 
+        console.log('[PIPELINE] STT result:', userText);
+      } catch (sttError) {
+        console.log('[STT] error:', sttError);
         if (isMounted.current) {
-          setMessages(prev => [...prev, { id: 'err_stt_' + Date.now(), sender: 'ai', text: t('err_stt_failed') }]);
+          setMessages(prev => [...prev, { id: 'err_stt_' + Date.now(), sender: 'ai', text: t('err_stt_failed') || 'Could not recognize speech.' }]);
           setAppState('idle');
         }
         return;
       }
       
       if (isMounted.current) {
-        if (userText.trim()) await handleSendMessage(userText);
-        else setAppState('idle');
+        if (userText.trim()) {
+          await handleSendMessage(userText);
+        } else {
+          console.log('[PIPELINE] STT result was empty. Resetting to idle.');
+          setAppState('idle');
+        }
       }
-    } catch { 
-      if (isMounted.current) setAppState('idle'); 
+    } catch (globalError) { 
+      console.log('[PIPELINE] Global STT/Processing error:', globalError);
+      if (isMounted.current) {
+        setMessages(prev => [...prev, { id: 'err_global_stt_' + Date.now(), sender: 'ai', text: 'An unexpected error occurred processing your audio.' }]);
+        setAppState('idle'); 
+      }
     }
   };
 
@@ -203,7 +352,7 @@ export default function VoiceScreen({ navigation }: any) {
   };
 
   const handleStopSpeech = async () => {
-    await stopAudio();
+    player.pause();
     setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
     setAppState('idle');
   };
@@ -232,22 +381,25 @@ export default function VoiceScreen({ navigation }: any) {
     );
   };
 
-  // Status bar color/label
   const statusInfo = {
-    idle:      { color: colors.success,  label: t('voice_status_ready') || 'Ready' },
-    starting:  { color: colors.warning,  label: t('voice_status_starting') || 'Starting...' },
+    idle:      { color: colors.success,  label: t('voice_status_ready') },
+    starting:  { color: colors.warning,  label: t('voice_status_starting') },
     recording: { color: colors.error,    label: t('voice_status_listening') },
     thinking:  { color: colors.primary,  label: t('voice_status_thinking')  },
     playing:   { color: colors.primary,  label: t('voice_status_speaking')  },
   }[appState];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+      style={styles.container}
+    >
+      <SafeAreaView style={styles.safeArea}>
       {/* ── Header ───────────────────────────────────────────── */}
       <View style={styles.header}>
         <View style={styles.brand}>
           <MaterialIcons name="security" size={22} color={colors.primary} />
-          <Text style={styles.brandText}>AI Chat</Text>
+          <Text style={styles.brandText}>{t('tab_voice')}</Text>
         </View>
         {/* Status pill */}
         <View style={[styles.statusPill, { borderColor: statusInfo.color + '40', backgroundColor: statusInfo.color + '18' }]}>
@@ -272,21 +424,43 @@ export default function VoiceScreen({ navigation }: any) {
       {/* ── Input Area (Voice-first) ─────────────────────────── */}
       <View style={[styles.micContainer, { paddingBottom: Math.max(20, insets.bottom + 10) }]}>
         
-        {appState === 'recording' && (
-          <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]} />
-        )}
-        
-        <TouchableOpacity
-          style={[
-            styles.heroMicBtn,
-            appState === 'recording' && styles.heroMicBtnRec,
-            appState === 'thinking' && styles.heroMicBtnThinking,
-            appState === 'playing' && styles.heroMicBtnPlaying
-          ]}
-          onPress={handleMicPress}
-          disabled={appState === 'starting' || appState === 'thinking' || appState === 'playing'}
-          activeOpacity={0.8}
-        >
+        {/* Secondary Text Input */}
+        <View style={styles.textInputContainer}>
+          <TextInput
+            style={styles.textInput}
+            placeholder={t('home_link_scan_input') || 'Paste link or message...'}
+            placeholderTextColor={colors.onSurfaceVariant}
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity 
+            style={[styles.sendButton, (!inputText.trim() || appState !== 'idle') && styles.sendButtonDisabled]} 
+            onPress={handleTextSubmit}
+            disabled={appState !== 'idle' || !inputText.trim()}
+          >
+            <MaterialIcons name="send" size={18} color={colors.onPrimary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ position: 'relative', marginBottom: 16 }}>
+          {appState === 'recording' && (
+            <Animated.View style={[styles.pulseRing, { top: 0, left: 0, transform: [{ scale: pulseScale }], opacity: pulseOpacity }]} />
+          )}
+          
+          <TouchableOpacity
+            style={[
+              styles.heroMicBtn,
+              { marginBottom: 0 },
+              appState === 'recording' && styles.heroMicBtnRec,
+              appState === 'thinking' && styles.heroMicBtnThinking,
+              appState === 'playing' && styles.heroMicBtnPlaying
+            ]}
+            onPress={handleMicPress}
+            disabled={appState === 'starting' || appState === 'thinking' || appState === 'playing'}
+            activeOpacity={0.8}
+          >
           {appState === 'thinking' ? (
             <ActivityIndicator size="large" color={colors.onPrimary} />
           ) : appState === 'playing' ? (
@@ -294,7 +468,8 @@ export default function VoiceScreen({ navigation }: any) {
           ) : (
             <MaterialIcons name={appState === 'recording' ? 'stop' : 'mic'} size={36} color={colors.onPrimary} />
           )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
         
         <Text style={styles.micHelperText}>
           {appState === 'idle' ? t('home_mic_title') || 'Tap to Speak'
@@ -303,12 +478,14 @@ export default function VoiceScreen({ navigation }: any) {
             : t('voice_status_speaking')}
         </Text>
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  safeArea: { flex: 1 },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -364,10 +541,42 @@ const styles = StyleSheet.create({
 
   micContainer: {
     alignItems: 'center', justifyContent: 'center',
-    paddingTop: 24,
+    paddingTop: 16,
     backgroundColor: colors.surface,
     borderTopWidth: 1, borderColor: colors.surfaceBorder,
     shadowColor: colors.shadow, shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 10,
+  },
+  textInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    width: '90%',
+  },
+  textInput: {
+    flex: 1,
+    color: colors.onSurface,
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 14,
+    maxHeight: 100,
+  },
+  sendButton: {
+    marginLeft: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: colors.surfaceBorder,
   },
   pulseRing: {
     position: 'absolute', top: 24,

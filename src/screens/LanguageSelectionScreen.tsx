@@ -53,7 +53,7 @@ export default function LanguageSelectionScreen({ navigation }: any) {
         </View>
         <View style={styles.titleContainer}>
           <View style={styles.iconWrap}>
-            <MaterialIcons name="language" size={30} color={colors.primary} />
+            <MaterialIcons name="language" size={32} color={colors.primary} />
           </View>
           <Text style={styles.subtitle}>{t('lang_welcome_subtitle')}</Text>
         </View>
@@ -139,13 +139,18 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   iconWrap: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: colors.primaryGlow,
-    borderWidth: 1, borderColor: colors.primary + '30',
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: colors.primary, shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 4,
   },
   title: {
     fontFamily: 'Manrope_700Bold', fontSize: 24,
@@ -174,9 +179,6 @@ const styles = StyleSheet.create({
   cardActive: {
     borderColor: colors.primary,
     backgroundColor: colors.primaryGlow,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
   },
   radio: {
     position: 'absolute', top: 14, right: 14,

@@ -107,7 +107,7 @@ export default function BadgesScreen() {
           <View style={styles.statDivider} />
           <View style={styles.statCell}>
             <Text style={styles.statNum}>{stats?.totalQuizScore || 0}</Text>
-            <Text style={styles.statLab}>{t('badges_stats_score') || 'Score'}</Text>
+            <Text style={styles.statLab}>{t('badges_stats_score')}</Text>
           </View>
         </View>
 
@@ -134,7 +134,7 @@ export default function BadgesScreen() {
                 {unlocked && (
                   <View style={styles.unlockedChip}>
                     <MaterialIcons name="check" size={10} color={colors.success} />
-                    <Text style={styles.unlockedText}>{t('badges_earned') || 'Earned'}</Text>
+                    <Text style={styles.unlockedText}>{t('badges_earned')}</Text>
                   </View>
                 )}
               </View>

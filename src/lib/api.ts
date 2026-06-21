@@ -1,5 +1,9 @@
 import { supabase } from './supabase';
 
+// TODO (Post-Hackathon): Upgrade to Supabase Auth with proper JWT-based RLS.
+// Currently relying on application-layer device_id / user_id checks as a temporary workaround 
+// since current RLS policies are overly permissive (USING true).
+
 export interface UserProfile {
   id: string;
   language: string;
@@ -39,7 +43,7 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
   }
 }
 
-export async function submitScamReport(userId: string, phone: string, amount: number, description: string, scamType: string): Promise<void> {
+export async function submitScamReport(userId: string, phone: string, amount: number, description: string, scamType: string, fraudType: string = 'other', source: string = 'user_report'): Promise<void> {
   try {
     const { error } = await supabase
       .from('scam_reports')
@@ -50,6 +54,8 @@ export async function submitScamReport(userId: string, phone: string, amount: nu
           amount_lost: amount,
           description: description,
           scam_type: scamType,
+          fraud_type: fraudType,
+          source: source
         },
       ]);
 

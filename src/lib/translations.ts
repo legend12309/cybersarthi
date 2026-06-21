@@ -15,9 +15,12 @@ export const translations: TranslationsDictionary = {
     voice_status_ready: 'Ready',
     voice_status_starting: 'Starting...',
 
+    home_link_scan_input: 'Paste link or message here...',
+    tab_chat: 'Chat',
     // Navigation / Tabs
     tab_home: 'Home',
-    tab_chat: 'Chat',
+    
+    tab_voice: 'Voice',
     tab_sim: 'Sim',
     tab_badges: 'Badges',
 
@@ -38,7 +41,8 @@ export const translations: TranslationsDictionary = {
     voice_speak_now: 'Speak now, I am listening to you...',
     voice_processing: 'Processing voice input...',
     voice_default_instruction: 'I\'m here to help you verify messages, links, or callers instantly.',
-    voice_end_session: 'End Session',
+    
+
 
     // SimulatorScreen
     sim_practice_title: 'Practice Your Safety Skills',
@@ -184,9 +188,12 @@ export const translations: TranslationsDictionary = {
     voice_status_ready: 'तैयार',
     voice_status_starting: 'शुरू हो रहा है...',
 
+    home_link_scan_input: 'लिंक या संदेश यहाँ पेस्ट करें...',
+    tab_chat: 'चैट',
     // Navigation / Tabs
     tab_home: 'होम',
-    tab_chat: 'चैट',
+    
+    tab_voice: 'Voice',
     tab_sim: 'सिम्युलेटर',
     tab_badges: 'बैज',
 
@@ -207,7 +214,8 @@ export const translations: TranslationsDictionary = {
     voice_speak_now: 'अब बोलें, मैं आपको सुन रहा हूँ...',
     voice_processing: 'आवाज इनपुट संसाधित किया जा रहा है...',
     voice_default_instruction: 'मैं संदेशों, लिंक या कॉल को तुरंत सत्यापित करने में आपकी मदद के लिए यहाँ हूँ।',
-    voice_end_session: 'सत्र समाप्त करें',
+    
+
 
     // SimulatorScreen
     sim_practice_title: 'अपने सुरक्षा कौशल का अभ्यास करें',
@@ -353,9 +361,12 @@ export const translations: TranslationsDictionary = {
     voice_status_ready: 'तयार',
     voice_status_starting: 'सुरू होत आहे...',
 
+    home_link_scan_input: 'लिंक किंवा संदेश येथे पेस्ट करा...',
+    tab_chat: 'चॅट',
     // Navigation / Tabs
     tab_home: 'होम',
-    tab_chat: 'चॅट',
+    
+    tab_voice: 'Voice',
     tab_sim: 'सिम्युलेटर',
     tab_badges: 'बॅजेस',
 
@@ -376,7 +387,8 @@ export const translations: TranslationsDictionary = {
     voice_speak_now: 'आता बोला, मी ऐकत आहे...',
     voice_processing: 'आवाज प्रक्रिया सुरू आहे...',
     voice_default_instruction: 'मी मेसेज, लिंक किंवा कॉल त्वरित तपासण्यासाठी येथे आहे.',
-    voice_end_session: 'सत्र संपवा',
+    
+
 
     // SimulatorScreen
     sim_practice_title: 'तुमच्या सुरक्षा कौशल्यांचा सराव करा',
@@ -522,9 +534,12 @@ export const translations: TranslationsDictionary = {
     voice_status_ready: 'தயார்',
     voice_status_starting: 'தொடங்குகிறது...',
 
+    home_link_scan_input: 'இணைப்பை அல்லது செய்தியை இங்கே ஒட்டவும்...',
+    tab_chat: 'அரட்டை',
     // Navigation / Tabs
     tab_home: 'முகப்பு',
-    tab_chat: 'அரட்டை',
+    
+    tab_voice: 'Voice',
     tab_sim: 'சிமுலேட்டர்',
     tab_badges: 'பேட்ஜ்கள்',
 
@@ -545,7 +560,8 @@ export const translations: TranslationsDictionary = {
     voice_speak_now: 'இப்போது பேசுங்கள், நான் கேட்டுக்கொண்டிருக்கிறேன்...',
     voice_processing: 'குரல் உள்ளீடு செயலாக்கப்படுகிறது...',
     voice_default_instruction: 'செய்திகள், இணைப்புகள் அல்லது அழைப்பாளர்களை உடனடியாக சரிபார்க்க நான் இங்கு இருக்கிறேன்.',
-    voice_end_session: 'அமர்வை முடி',
+    
+
 
     // SimulatorScreen
     sim_practice_title: 'உங்கள் பாதுகாப்பு திறன்களைப் பயிற்சி செய்யுங்கள்',
@@ -691,9 +707,12 @@ export const translations: TranslationsDictionary = {
     voice_status_ready: 'సిద్ధంగా ఉంది',
     voice_status_starting: 'ప్రారంభించబడుతోంది...',
 
+    home_link_scan_input: 'లింక్ లేదా సందేశాన్ని ఇక్కడ అతికించండి...',
+    tab_chat: 'చాట్',
     // Navigation / Tabs
     tab_home: 'హోమ్',
-    tab_chat: 'చాట్',
+    
+    tab_voice: 'Voice',
     tab_sim: 'సిమ్యులేటర్',
     tab_badges: 'బ్యాడ్జీలు',
 
@@ -714,7 +733,8 @@ export const translations: TranslationsDictionary = {
     voice_speak_now: 'ఇప్పుడు మాట్లాడండి, నేను వింటున్నాను...',
     voice_processing: 'వాయిస్ ఇన్పుట్ ప్రాసెస్ అవుతోంది...',
     voice_default_instruction: 'సందేశాలు, లింకులు లేదా కాలర్‌లను వెంటనే ధృవీకరించడానికి నేను ఇక్కడ ఉన్నాను.',
-    voice_end_session: 'సెషన్‌ను ముగించు',
+    
+
 
     // SimulatorScreen
     sim_practice_title: 'మీ భద్రతా నైపుణ్యాలను ప్రాక్టీస్ చేయండి',
@@ -860,9 +880,12 @@ export const translations: TranslationsDictionary = {
     voice_status_ready: 'તૈયાર',
     voice_status_starting: 'શરૂ થઈ રહ્યું છે...',
 
+    home_link_scan_input: 'લિંક અથવા સંદેશ અહીં પેસ્ટ કરો...',
+    tab_chat: 'ચેટ',
     // Navigation / Tabs
     tab_home: 'હોમ',
-    tab_chat: 'ચેટ',
+    
+    tab_voice: 'Voice',
     tab_sim: 'સિમ્યુલેટર',
     tab_badges: 'બેજ',
 
@@ -883,7 +906,8 @@ export const translations: TranslationsDictionary = {
     voice_speak_now: 'હવે બોલો, હું સાંભળી રહ્યો છું...',
     voice_processing: 'વોઇસ પ્રોસેસ થઈ રહ્યો છે...',
     voice_default_instruction: 'હું મેસેજ, લિંક અથવા કોલરને તરત જ ચકાસવામાં તમારી મદદ માટે અહીં છું.',
-    voice_end_session: 'સત્ર સમાપ્ત કરો',
+    
+
 
     // SimulatorScreen
     sim_practice_title: 'તમારી સુરક્ષા કુશળતાનો અભ્યાસ કરો',

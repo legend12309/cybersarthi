@@ -36,9 +36,11 @@ export default function ScamDetailScreen({ route, navigation }: any) {
     setIsSubmitting(true);
     try {
       if (deviceId) {
-        await submitScamReport(deviceId, '', 0, choice === 'safe' ? 'safe' : 'scam', scamId);
+        await submitScamReport(deviceId, '', 0, choice === 'safe' ? 'safe' : 'scam', scamId, scamId, 'simulator');
       }
-    } catch { }
+    } catch (e) {
+      console.warn('Failed to submit simulator telemetry:', e);
+    }
     finally {
       if (isMounted.current) {
         setIsSubmitting(false);

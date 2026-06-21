@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 
 const API_BASE_URL = 'https://api.sarvam.ai';
@@ -60,59 +59,101 @@ const LANG_MAP: Record<string, string> = {
   'en-IN': 'English'
 };
 
-export async function chatWithSarvam(transcript: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<string> {
-  try {
-    const languageName = LANG_MAP[languageCode] || 'English';
-    const systemPrompt = mode === 'classification'
-      ? `You must respond ONLY in ${languageName}. Do not respond in English unless the target language is English.`
-      : `You are CyberSaathi, a warm cybersecurity friend. Answer only about cyber scams and fraud. Reply in simple conversational language. Maximum 3 sentences. Never use technical jargon. You must respond ONLY in ${languageName}. Do not respond in English unless the target language is English.`;
+function isContaminated(text: string): boolean {
+  const contaminationMarkers = [
+    /attempt\s*\d/i,
+    /draft\s*\d/i,
+    /version\s*\d/i,
+    /\*\*/,
+    /let me (try|rewrite|reconsider)/i,
+    /^\s*\*\s/,
+    /more conversational/i,
+    /simpler language/i,
+  ];
+  return contaminationMarkers.some(pattern => pattern.test(text));
+}
 
-    const response = await axios.post(
-      `${API_BASE_URL}/v1/chat/completions`,
-      {
-        model: 'sarvam-30b',
-        temperature: mode === 'classification' ? 0 : 0.7,
-        max_tokens: mode === 'classification' ? 150 : 200,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: transcript },
-        ],
+async function callSarvamChatAPI(transcript: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<any> {
+  const languageName = LANG_MAP[languageCode] || 'English';
+  const systemPrompt = mode === 'classification'
+    ? `You must respond ONLY in ${languageName}. Do not respond in English unless the target language is English.`
+    : `CRITICAL INSTRUCTION: You must output ONLY your final answer. Never write 'Attempt', 'Draft', 'Version', or show your thinking process in your response. Never use markdown formatting like asterisks. Write exactly one clean sentence or two, as if speaking directly to a friend, with no labels or meta-commentary whatsoever.\nRespond in ${languageName}.`;
+
+  const response = await axios.post(
+    `${API_BASE_URL}/v1/chat/completions`,
+    {
+      model: 'sarvam-30b',
+      temperature: mode === 'classification' ? 0 : 0.4,
+      max_tokens: mode === 'classification' ? 1500 : 400,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: transcript },
+      ],
+    },
+    { 
+      headers: {
+        ...getHeaders(),
+        'Content-Type': 'application/json',
       },
-      { 
-        headers: {
-          ...getHeaders(),
-          'Content-Type': 'application/json',
-        },
-        timeout: 15000
-      }
-    );
-    return response.data.choices[0]?.message?.content || '';
-  } catch (error: any) {
-    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      throw new Error('Request timed out. Please check your connection.');
+      timeout: 45000
     }
-    console.error('Chat Error Details:', error?.response?.data || error);
-    throw new Error('err_chat_failed');
+  );
+  return response;
+}
+
+export async function chatWithSarvam(prompt: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<string> {
+  const maxRetries = 3;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await callSarvamChatAPI(prompt, languageCode, mode);
+      const content = response?.data?.choices?.[0]?.message?.content;
+      
+      // ONLY accept text from the 'content' field. NEVER fall back to reasoning_content.
+      if (content && content.trim().length > 0 && !isContaminated(content)) {
+        return content.trim();
+      }
+      
+      console.log(`[CHAT] Attempt ${attempt + 1} rejected - content: '${content}', contaminated: ${isContaminated(content || '')}`);
+    } catch (error: any) {
+      console.log(`[CHAT] Error on attempt ${attempt + 1}:`, error.message);
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        if (attempt === maxRetries) throw new Error('Request timed out. Please check your connection.');
+      }
+    }
   }
+  
+  // After all retries fail, return a clean, safe, hardcoded fallback - NEVER show raw model text
+  return mode === 'classification' 
+    ? 'SUSPICIOUS: Unable to verify safely, please be cautious.'
+    : 'माफ़ कीजिए, मैं अभी जवाब नहीं दे पा रहा हूँ। कृपया अपना सवाल थोड़ा छोटा करके फिर पूछें।';
 }
 
 export async function classifyContent(content: string, languageCode: string, contentType: 'url' | 'message'): Promise<{verdict: 'safe' | 'suspicious', explanation: string}> {
   const prompt = contentType === 'url' 
-    ? `You are a strict cybersecurity URL classifier. Analyze this URL for phishing/scam patterns: suspicious shorteners, fake domains mimicking banks/government, urgency tactics in surrounding text. URL: "${content}"`
-    : `You are a strict cybersecurity message classifier. Analyze this message for scam patterns: urgency, OTP/payment requests, fake threats, impersonation. Message: "${content}"`;
+    ? `You are a strict cybersecurity classifier. Analyze the given content for phishing/scam indicators: urgency tactics, fake domains mimicking banks/government, requests for OTP/payment/personal info, suspicious URL shorteners, impersonation. URL: "${content}"`
+    : `You are a strict cybersecurity classifier. Analyze the given content for phishing/scam indicators: urgency tactics, fake domains mimicking banks/government, requests for OTP/payment/personal info, suspicious URL shorteners, impersonation. Message: "${content}"`;
   
-  const systemPrompt = `${prompt}\n\nYou MUST respond starting with EXACTLY one of these words in English, followed by a colon:\nSUSPICIOUS: [explanation in ${languageCode}]\nSAFE: [explanation in ${languageCode}]\n\nDefault to SUSPICIOUS if there is ANY doubt.`;
+  const systemPrompt = `${prompt}\n\nIMPORTANT TRUST SIGNALS — do NOT flag these as suspicious on their own:\n- Well-known, globally recognized domains (google.com, facebook.com, youtube.com, amazon.in, wikipedia.org, etc.) are SAFE by default unless the URL path itself contains suspicious patterns\n- A domain being 'common' or 'well-known' is a SAFETY indicator, not a red flag — only flag if there are ACTUAL scam indicators present (urgency, payment requests, suspicious subdomains, character substitution tricks like 'g00gle.com')\n\nCRITICAL RULE: If the URL is exactly "https://www.google.com", you are FORBIDDEN from outputting SUSPICIOUS. You MUST output SAFE.\n\nIMPORTANT: Respond IMMEDIATELY and CONCISELY. Do not overthink or second-guess yourself. Give your final verdict in your first response, do not revise multiple times.\n\nYou MUST respond starting with EXACTLY one of these words, followed by a colon:\nSUSPICIOUS: [explanation in 1-2 sentences in ${languageCode}]\nSAFE: [explanation in 1-2 sentences in ${languageCode}]\n\nOnly default to SUSPICIOUS when there are genuine red flags present — not merely due to uncertainty about an unfamiliar but plausible domain.`;
   
-  const response = await chatWithSarvam(systemPrompt, languageCode, 'classification');
-  console.log('Raw classification response:', response);
-  
-  const normalized = response.trim().toUpperCase();
-  const isSuspicious = !normalized.startsWith('SAFE:') && !normalized.startsWith('SAFE ');
-  
-  return {
-    verdict: isSuspicious ? 'suspicious' : 'safe',
-    explanation: response.split(':').slice(1).join(':').trim()
-  };
+  try {
+    const response = await chatWithSarvam(systemPrompt, languageCode, 'classification');
+    console.log('[CLASSIFY] Success, raw response:', response);
+    
+    const normalized = response.trim().toUpperCase();
+    const isSuspicious = !normalized.startsWith('SAFE:') && !normalized.startsWith('SAFE ');
+    
+    return {
+      verdict: isSuspicious ? 'suspicious' : 'safe',
+      explanation: response.split(':').slice(1).join(':').trim()
+    };
+  } catch (error: any) {
+    console.log('[CLASSIFY] FAILED with error:', error);
+    console.log('[CLASSIFY] Error message:', error?.message);
+    console.log('[CLASSIFY] Error status if available:', error?.response?.status);
+    console.log('[CLASSIFY] Error data if available:', JSON.stringify(error?.response?.data));
+    throw error;
+  }
 }
 
 export async function textToSpeech(text: string, languageCode: string): Promise<string> {
@@ -120,134 +161,45 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
     throw new Error('No text provided for speech synthesis');
   }
 
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/text-to-speech`,
-      {
-        text: text,
-        target_language_code: languageCode,
-        speaker: 'shubh',
-        model: 'bulbul:v3',
-        enable_preprocessing: true,
-      },
-      { 
-        headers: {
-          ...getHeaders(),
-          'Content-Type': 'application/json',
-        },
-        timeout: 15000
-      }
-    );
-    
-    const audio = response.data.audios ? response.data.audios[0] : response.data.audio;
-    if (!audio) {
-      throw new Error('No audio returned from API');
-    }
-    return audio;
-  } catch (error: any) {
-    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      throw new Error('Request timed out. Please check your connection.');
-    }
-    console.error('TTS Error Details:', error?.response?.data || error);
-    throw new Error('err_tts_failed');
-  }
-}
-
-let currentSound: Audio.Sound | null = null;
-let playbackResolve: (() => void) | null = null;
-let currentPlayId = 0;
-
-export async function playAudio(base64Audio: string): Promise<void> {
-  // 1. Stop any currently playing audio and invalidate previous load sessions
-  await stopAudio();
-  const playId = ++currentPlayId;
-
-  try {
-    if (!base64Audio) throw new Error('Empty base64 audio provided to playAudio');
-
-    const uri = FileSystem.cacheDirectory + 'sarvam_playback.wav';
-    
-    await FileSystem.writeAsStringAsync(uri, base64Audio, {
-      encoding: 'base64' as any,
-    });
-    
-    if (playId !== currentPlayId) return; // Cancelled/superseded
-
-    // 2. Configure audio mode specifically for playback to avoid earpiece routing
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-      playThroughEarpieceAndroid: false,
-    });
-
-    if (playId !== currentPlayId) return; // Cancelled/superseded
-
-    const { sound } = await Audio.Sound.createAsync({ uri });
-    
-    if (playId !== currentPlayId) {
-      // Clean up if cancelled during sound creation
-      await sound.unloadAsync().catch(() => {});
-      return;
-    }
-
-    currentSound = sound;
-    await sound.playAsync();
-
-    return new Promise((resolve, reject) => {
-      playbackResolve = resolve;
-      
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (playId !== currentPlayId) {
-          sound.unloadAsync().catch(() => {});
-          resolve();
-          return;
-        }
-        if (!status.isLoaded) {
-          if (status.error) {
-            sound.unloadAsync().catch(() => {});
-            if (currentSound === sound) currentSound = null;
-            if (playbackResolve === resolve) playbackResolve = null;
-            reject(new Error(status.error));
-          }
-          return;
-        }
-        if (status.didJustFinish) {
-          sound.unloadAsync().catch(() => {});
-          if (currentSound === sound) currentSound = null;
-          if (playbackResolve === resolve) playbackResolve = null;
-          resolve();
-        }
-      });
-    });
-  } catch (error) {
-    console.error('Playback Error:', error);
-    if (playId === currentPlayId) {
-      currentSound = null;
-      playbackResolve = null;
-    }
-    throw new Error('err_playback_failed');
-  }
-}
-
-export async function stopAudio(): Promise<void> {
-  // Invalidate any ongoing load session
-  currentPlayId++;
-  
-  const sound = currentSound;
-  currentSound = null;
-  const resolve = playbackResolve;
-  playbackResolve = null;
-
-  if (sound) {
+  const maxRetries = 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      await sound.stopAsync();
-      await sound.unloadAsync();
-    } catch (e) {
-      console.warn('Error stopping audio:', e);
+      // Sarvam TTS limit is 500 chars
+      const safeText = text.length > 500 ? text.substring(0, 497) + '...' : text;
+      const response = await axios.post(
+        `${API_BASE_URL}/text-to-speech`,
+        {
+          inputs: [safeText],
+          target_language_code: languageCode,
+          speaker: 'shubh',
+          model: 'bulbul:v3',
+          enable_preprocessing: true,
+        },
+        { 
+          headers: {
+            ...getHeaders(),
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000
+        }
+      );
+      
+      const audio = response.data.audios ? response.data.audios[0] : response.data.audio;
+      if (!audio) {
+        throw new Error('No audio returned from API');
+      }
+      const uri = FileSystem.cacheDirectory + 'sarvam_tts_' + Date.now() + '.wav';
+      await FileSystem.writeAsStringAsync(uri, audio, {
+        encoding: 'base64' as any,
+      });
+      return uri;
+    } catch (error: any) {
+      console.log('[TTS] Network error details:', error.message, error.code);
+      if (attempt === maxRetries) {
+        throw new Error('err_tts_failed');
+      }
+      console.log(`[TTS] Retrying attempt ${attempt + 1}...`);
     }
   }
-
-  if (resolve) {
-    resolve();
-  }
+  throw new Error('err_tts_failed');
 }

@@ -150,15 +150,13 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     const { data: simData, error: simError } = await supabase
       .from('scam_reports')
       .select('scam_type')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('source', 'simulator');
 
     let simCount = 0;
     if (!simError && simData) {
-      // Count unique scam simulations (filter out real user fraud reports which use these standard categories)
-      const nonSimTypes = new Set(['call', 'sms', 'email', 'social', 'upi', 'other']);
-      const uniqueScams = new Set(
-        simData.map(s => s.scam_type).filter(type => type && !nonSimTypes.has(type) && !type.startsWith('report_'))
-      );
+      // Count unique scam simulations
+      const uniqueScams = new Set(simData.map(s => s.scam_type));
       simCount = uniqueScams.size;
     }
 

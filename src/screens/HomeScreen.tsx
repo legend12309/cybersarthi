@@ -30,12 +30,27 @@ export default function HomeScreen({ navigation }: any) {
   const [scanResult,   setScanResult]   = useState<'safe'|'suspicious'|null>(null);
   const [scanReason,   setScanReason]   = useState('');
   const [scanAdvice,   setScanAdvice]   = useState('');
-  const [fraudType,    setFraudType]    = useState<'call'|'link'|'upi'|'other'>('call');
+  const [fraudType,    setFraudType]    = useState<'otp_scam'|'kyc_scam'|'job_scam'|'lottery_scam'|'upi_scam'|'electricity_scam'|'love_scam'|'parcel_scam'|'screen_share_scam'|'police_scam'|'other'>('other');
   const [scammerDetails, setScammerDetails] = useState('');
   const [amountLost,   setAmountLost]   = useState('');
   const [description,  setDescription]  = useState('');
   const [isSubmitted,  setIsSubmitted]  = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError,  setSubmitError]  = useState(false);
+
+  const SCAM_TYPES = [
+    { id: 'otp_scam', label: 'OTP / Bank' },
+    { id: 'kyc_scam', label: 'KYC Update' },
+    { id: 'job_scam', label: 'Fake Job' },
+    { id: 'lottery_scam', label: 'Lottery / Prize' },
+    { id: 'upi_scam', label: 'UPI Fraud' },
+    { id: 'electricity_scam', label: 'Electricity Bill' },
+    { id: 'love_scam', label: 'Romance / Love' },
+    { id: 'parcel_scam', label: 'Customs / Parcel' },
+    { id: 'screen_share_scam', label: 'Screen Share' },
+    { id: 'police_scam', label: 'Fake Police/CBI' },
+    { id: 'other', label: 'Other' }
+  ] as const;
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -93,7 +108,9 @@ export default function HomeScreen({ navigation }: any) {
           scammerDetails,
           parseFloat(amountLost) || 0,
           description,
-          fraudType
+          fraudType, // Keep this as scamType for backwards compat
+          fraudType, // Also pass it as the new fraud_type column
+          'user_report' // source column
         );
       }
       setReportModalVisible(false);
@@ -106,13 +123,14 @@ export default function HomeScreen({ navigation }: any) {
         ]
       );
       resetReporter();
-    } catch { 
-      setReportError('Network error. Could not submit report.');
+    } catch (error) { 
+      console.log('Report submission error:', error);
+      setSubmitError(true);
     } finally { setIsSubmitting(false); }
   };
 
   const resetScanner = () => { setLinkInput(''); setScanState('idle'); setScanResult(null); };
-  const resetReporter = () => { setFraudType('call'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); };
+  const resetReporter = () => { setFraudType('other'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); };
 
   const isSafe = scanResult === 'safe';
 
@@ -277,26 +295,26 @@ export default function HomeScreen({ navigation }: any) {
                 <>
                   {reportError ? <Text style={{ color: colors.error, fontFamily: 'Manrope_600SemiBold', marginBottom: -4 }}>{reportError}</Text> : null}
                   <Text style={styles.inputLabel}>{t('report_type_label')}</Text>
-                  <View style={styles.typeRow}>
-                    {(['call','link','upi','other'] as const).map(type => (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                    {SCAM_TYPES.map(type => (
                       <TouchableOpacity
-                        key={type}
-                        style={[styles.typeChip, fraudType === type && styles.typeChipActive]}
-                        onPress={() => setFraudType(type)}
+                        key={type.id}
+                        style={[styles.typeChip, fraudType === type.id && styles.typeChipActive]}
+                        onPress={() => setFraudType(type.id)}
                       >
-                        <Text style={[styles.typeChipText, fraudType === type && styles.typeChipTextActive]}>
-                          {t(`report_type_${type}`)}
+                        <Text style={[styles.typeChipText, fraudType === type.id && styles.typeChipTextActive]}>
+                          {type.label}
                         </Text>
                       </TouchableOpacity>
                     ))}
-                  </View>
+                  </ScrollView>
 
                   <Text style={styles.inputLabel}>
-                    {fraudType === 'call' ? t('report_details_phone') : fraudType === 'link' ? t('report_details_link') : t('report_details_upi')}
+                    {t('report_details_phone')} / Link / UPI ID
                   </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder={fraudType === 'call' ? '+91 98765 43210' : fraudType === 'link' ? 'http://scam.site' : 'scammer@ybl'}
+                    placeholder={'+91 98765 43210 / http://scam.site / scammer@ybl'}
                     placeholderTextColor={colors.onSurfaceVariant + '70'}
                     value={scammerDetails}
                     onChangeText={setScammerDetails}
@@ -325,6 +343,18 @@ export default function HomeScreen({ navigation }: any) {
                     numberOfLines={4}
                   />
 
+                  {submitError && (
+                    <View style={[styles.alertBanner, { backgroundColor: colors.error + '20', borderColor: colors.error + '40', marginBottom: 8 }]}>
+                      <View style={[styles.alertIconWrap, { backgroundColor: colors.error + '30' }]}>
+                        <MaterialIcons name="error-outline" size={20} color={colors.error} />
+                      </View>
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={[styles.alertTitle, { color: colors.error }]}>Error / त्रुटि</Text>
+                        <Text style={[styles.alertBody, { color: colors.onSurface }]}>रिपोर्ट सबमिट नहीं हो सकी। कृपया पुनः प्रयास करें।</Text>
+                      </View>
+                    </View>
+                  )}
+
                   <TouchableOpacity
                     style={[styles.sheetBtn, { backgroundColor: colors.error, shadowColor: colors.error }]}
                     disabled={isSubmitting}
@@ -332,7 +362,9 @@ export default function HomeScreen({ navigation }: any) {
                   >
                     {isSubmitting
                       ? <ActivityIndicator size="small" color={colors.onPrimary} />
-                      : <Text style={[styles.sheetBtnText, { color: colors.onPrimary }]}>{t('report_submit_btn')}</Text>
+                      : <Text style={[styles.sheetBtnText, { color: colors.onPrimary }]}>
+                          {submitError ? 'Retry / पुनः प्रयास करें' : t('report_submit_btn')}
+                        </Text>
                     }
                   </TouchableOpacity>
                 </>
