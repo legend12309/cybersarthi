@@ -30,6 +30,8 @@ export default function BadgesScreen() {
       fetchUserStats(deviceId).then(data => {
         if (active) { setStats(data); setLoading(false); }
       });
+    } else {
+      setLoading(false);
     }
     return () => { active = false; };
   }, [isFocused, deviceId]);
@@ -85,7 +87,8 @@ export default function BadgesScreen() {
 
           {/* Progress bar */}
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progress * 100}%` as any }]} />
+            <View style={[styles.progressFill, { flex: progress }]} />
+            <View style={{ flex: Math.max(0, 1 - progress) }} />
           </View>
           <Text style={styles.progressLabel}>{Math.round(progress * 100)}{t('badges_progress_suffix') || '% to next level'}</Text>
         </View>

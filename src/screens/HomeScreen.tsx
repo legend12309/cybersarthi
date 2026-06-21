@@ -60,7 +60,7 @@ export default function HomeScreen({ navigation }: any) {
     setScanState('scanning');
     
     try {
-      const { verdict, explanation } = await classifyContent(url, languageCode);
+      const { verdict, explanation } = await classifyContent(url, languageCode, 'url');
       
       setScanResult(verdict);
       setScanReason(explanation);
@@ -97,9 +97,18 @@ export default function HomeScreen({ navigation }: any) {
         );
       }
       setReportModalVisible(false);
-      Alert.alert(t('report_success_title'), t('report_success_desc'));
+      Alert.alert(
+        'Report Saved',
+        'Your report has been saved. For urgent action, also call National Cyber Helpline 1930.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Call 1930', onPress: () => Linking.openURL('tel:1930') }
+        ]
+      );
       resetReporter();
-    } catch { } finally { setIsSubmitting(false); }
+    } catch { 
+      setReportError('Network error. Could not submit report.');
+    } finally { setIsSubmitting(false); }
   };
 
   const resetScanner = () => { setLinkInput(''); setScanState('idle'); setScanResult(null); };

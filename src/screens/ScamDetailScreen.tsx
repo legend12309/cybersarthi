@@ -57,7 +57,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
     if (!customMsgInput.trim()) return;
     setCustomAnalysisState('scanning');
     try {
-      const { verdict, explanation } = await classifyContent(customMsgInput, languageCode);
+      const { verdict, explanation } = await classifyContent(customMsgInput, languageCode, 'message');
       setCustomAnalysisVerdict(verdict);
       setCustomAnalysisReason(explanation);
     } catch (e) {

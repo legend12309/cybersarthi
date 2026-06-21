@@ -154,8 +154,11 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
 
     let simCount = 0;
     if (!simError && simData) {
-      // Count unique scam simulations
-      const uniqueScams = new Set(simData.map(s => s.scam_type));
+      // Count unique scam simulations (filter out real user fraud reports which use these standard categories)
+      const nonSimTypes = new Set(['call', 'sms', 'email', 'social', 'upi', 'other']);
+      const uniqueScams = new Set(
+        simData.map(s => s.scam_type).filter(type => type && !nonSimTypes.has(type) && !type.startsWith('report_'))
+      );
       simCount = uniqueScams.size;
     }
 

@@ -96,27 +96,23 @@ export async function chatWithSarvam(transcript: string, languageCode: string, m
   }
 }
 
-export async function classifyContent(content: string, languageCode: string): Promise<{verdict: 'safe' | 'suspicious', explanation: string}> {
-  const prompt = `You are a strict cybersecurity classifier. Analyze the given URL or message for phishing/scam indicators (urgency, fake domains, requests for payment, suspicious shorteners, impersonation of banks/government/delivery services, fake threats, too-good-to-be-true offers).
-
-You MUST respond starting with EXACTLY one of these two words in English, followed by a colon:
-SUSPICIOUS: [your explanation in user's language]
-SAFE: [your explanation in user's language]
-
-Default to SUSPICIOUS if there is ANY doubt. Never default to SAFE unless completely certain the link/message is legitimate.
-
-Input to analyze: ${content}`;
-
-  const aiResponse = await chatWithSarvam(prompt, languageCode, 'classification');
-  console.log('RAW AI classification response:', JSON.stringify(aiResponse));
-
-  const normalized = aiResponse.trim().toUpperCase();
+export async function classifyContent(content: string, languageCode: string, contentType: 'url' | 'message'): Promise<{verdict: 'safe' | 'suspicious', explanation: string}> {
+  const prompt = contentType === 'url' 
+    ? `You are a strict cybersecurity URL classifier. Analyze this URL for phishing/scam patterns: suspicious shorteners, fake domains mimicking banks/government, urgency tactics in surrounding text. URL: "${content}"`
+    : `You are a strict cybersecurity message classifier. Analyze this message for scam patterns: urgency, OTP/payment requests, fake threats, impersonation. Message: "${content}"`;
+  
+  const systemPrompt = `${prompt}\n\nYou MUST respond starting with EXACTLY one of these words in English, followed by a colon:\nSUSPICIOUS: [explanation in ${languageCode}]\nSAFE: [explanation in ${languageCode}]\n\nDefault to SUSPICIOUS if there is ANY doubt.`;
+  
+  const response = await chatWithSarvam(systemPrompt, languageCode, 'classification');
+  console.log('Raw classification response:', response);
+  
+  const normalized = response.trim().toUpperCase();
   const isSuspicious = !normalized.startsWith('SAFE:') && !normalized.startsWith('SAFE ');
-  const verdict = isSuspicious ? 'suspicious' : 'safe';
   
-  const explanation = aiResponse.replace(/^(SAFE:|SUSPICIOUS:|SAFE\s*:|SUSPICIOUS\s*:)\s*/i, '');
-  
-  return { verdict, explanation };
+  return {
+    verdict: isSuspicious ? 'suspicious' : 'safe',
+    explanation: response.split(':').slice(1).join(':').trim()
+  };
 }
 
 export async function textToSpeech(text: string, languageCode: string): Promise<string> {
