@@ -15,7 +15,8 @@ export async function speechToText(audioUri: string, languageCode: string): Prom
   const timeoutId = setTimeout(() => controller.abort(), 15000);
   try {
     const formData = new FormData();
-    formData.append('model', 'saarika:v2.5');
+    formData.append('model', 'saaras:v3');
+    formData.append('mode', 'transcribe');
     formData.append('language_code', languageCode);
     formData.append('file', {
       uri: audioUri,
@@ -31,7 +32,6 @@ export async function speechToText(audioUri: string, languageCode: string): Prom
       body: formData,
       signal: controller.signal as any,
     });
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -46,6 +46,8 @@ export async function speechToText(audioUri: string, languageCode: string): Prom
     }
     console.error('STT Error Details:', error);
     throw new Error('err_stt_failed');
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -128,8 +130,8 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
       {
         text: text,
         target_language_code: languageCode,
-        speaker: 'priya',
-        model: 'bulbul:v2',
+        speaker: 'shubh',
+        model: 'bulbul:v3',
         enable_preprocessing: true,
       },
       { 

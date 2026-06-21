@@ -262,24 +262,12 @@ export default function VoiceScreen({ navigation }: any) {
         data={messages}
         renderItem={renderMessage}
         keyExtractor={item => item.id}
+        style={{ flex: 1 }}
         contentContainerStyle={styles.chatList}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         showsVerticalScrollIndicator={false}
       />
 
-      {/* ── State Indicators ─────────────────────────────────── */}
-      {appState === 'thinking' && (
-        <View style={styles.indicator}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={styles.indicatorText}>{t('voice_status_thinking')}</Text>
-        </View>
-      )}
-      {appState === 'recording' && (
-        <View style={styles.indicator}>
-          <View style={styles.recDot} />
-          <Text style={[styles.indicatorText, { color: colors.error }]}>{t('voice_status_listening')}</Text>
-        </View>
-      )}
 
       {/* ── Input Area (Voice-first) ─────────────────────────── */}
       <View style={[styles.micContainer, { paddingBottom: Math.max(20, insets.bottom + 10) }]}>
