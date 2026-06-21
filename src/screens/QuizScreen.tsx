@@ -49,7 +49,7 @@ export default function QuizScreen({ navigation }: any) {
         setCurrentIndex(i => i + 1);
         setSelectedOption(null);
       } else {
-        finishQuiz(score + (correct ? 1 : 0));
+        finishQuiz(finalScore);
       }
     });
   };

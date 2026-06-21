@@ -46,7 +46,7 @@ export default function LanguageSelectionScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : null} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('lang_welcome_title')}</Text>

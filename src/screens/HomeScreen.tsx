@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Animated, Easing, Modal, TextInput, ActivityIndicator,
-  Linking, KeyboardAvoidingView, Platform, Dimensions,
+  Linking, KeyboardAvoidingView, Platform, Dimensions, Alert
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
