@@ -117,6 +117,7 @@ async function callSarvamChatAPI(transcript: string, languageCode: string, mode:
 export async function chatWithSarvam(prompt: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<string> {
   const maxRetries = 3;
   let lastIncompleteContent: string | null = null;
+  let lastErrorMsg: string | null = null;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -147,6 +148,7 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
       
     } catch (error: any) {
       console.log(`[CHAT] Error on attempt ${attempt + 1}:`, error.message);
+      lastErrorMsg = error.response?.data?.message || error.response?.data?.error?.message || error.message;
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
         if (attempt === maxRetries) throw new Error('Request timed out. Please check your connection.');
       }
@@ -158,9 +160,11 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
     return truncateToLastSentence(lastIncompleteContent);
   }
 
+  const errorReason = lastErrorMsg ? ` (Error: ${lastErrorMsg})` : '';
+
   return mode === 'classification' 
     ? 'SUSPICIOUS: Unable to verify safely, please be cautious.'
-    : 'माफ़ कीजिए, मैं अभी जवाब नहीं दे पा रहा हूँ। कृपया अपना सवाल थोड़ा छोटा करके फिर पूछें।';
+    : `माफ़ कीजिए, मैं अभी जवाब नहीं दे पा रहा हूँ। कृपया अपना सवाल थोड़ा छोटा करके फिर पूछें।${errorReason}`;
 }
 
 export async function classifyContent(content: string, languageCode: string, contentType: 'url' | 'message'): Promise<{verdict: 'safe' | 'suspicious', explanation: string}> {

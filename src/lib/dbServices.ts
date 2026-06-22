@@ -185,8 +185,8 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       unlockedBadges.push('Link Sentry');
     }
     
-    // Quiz Master requires an 80% score. Assuming 100 is max or standard 80 score
-    if (highestQuizScore >= 80) {
+    // Quiz Master requires an 80% score. The quiz has 5 questions, so 80% is 4 out of 5.
+    if (highestQuizScore >= 4) {
       unlockedBadges.push('Quiz Master');
     }
 
