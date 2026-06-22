@@ -123,7 +123,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
   };
 
   try {
-    console.log('[BADGES] Fetching stats for user_id:', userId);
+    console.log('[BADGES] fetchUserStats called with userId:', userId);
 
     // 1. Fetch user's level
     const { data: userData, error: userError } = await supabase
@@ -143,8 +143,8 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       .select('*')
       .eq('user_id', userId);
       
-    console.log('[BADGES] Quiz scores raw data:', JSON.stringify(quizData));
-    console.log('[BADGES] Quiz scores error:', quizError);
+    console.log('[BADGES] Quiz scores query result:', JSON.stringify(quizData));
+    console.log('[BADGES] Quiz scores query error:', JSON.stringify(quizError));
 
     let totalScore = 0;
     let highestQuizScore = 0;
@@ -160,7 +160,8 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       .eq('user_id', userId)
       .eq('source', 'simulator');
       
-    console.log('[BADGES] Simulator completions raw data:', JSON.stringify(simData));
+    console.log('[BADGES] Simulator completions query result:', JSON.stringify(simData));
+    console.log('[BADGES] Simulator completions query error:', JSON.stringify(simError));
 
     let simCount = 0;
     if (!simError && simData) {

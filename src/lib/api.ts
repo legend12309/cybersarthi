@@ -43,7 +43,7 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
   }
 }
 
-export async function submitScamReport(userId: string, phone: string, amount: number, description: string, scamType: string, fraudType: string = 'other', source: string = 'user_report'): Promise<void> {
+export async function submitScamReport(userId: string, phone: string, amount: number, description: string, scamType: string, fraudType: string = 'other', source: string = 'user_report', isVulnerable: boolean = false): Promise<void> {
   try {
     const { error } = await supabase
       .from('scam_reports')
@@ -55,7 +55,8 @@ export async function submitScamReport(userId: string, phone: string, amount: nu
           description: description,
           scam_type: scamType,
           fraud_type: fraudType,
-          source: source
+          source: source,
+          is_vulnerable: isVulnerable
         },
       ]);
 

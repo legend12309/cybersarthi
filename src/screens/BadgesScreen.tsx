@@ -27,6 +27,7 @@ export default function BadgesScreen() {
     let active = true;
     if (isFocused && deviceId) {
       setLoading(true);
+      console.log('[BADGES] About to call fetchUserStats with userId:', deviceId, 'type:', typeof deviceId);
       fetchUserStats(deviceId).then(data => {
         if (active) { setStats(data); setLoading(false); }
       });
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.surfaceHighlight || colors.primaryGlow,
+    backgroundColor: colors.surfaceHigh || colors.primaryGlow,
     justifyContent: 'center',
     alignItems: 'center',
   },
