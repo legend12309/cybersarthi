@@ -43,9 +43,9 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
   }
 }
 
-export async function submitScamReport(userId: string, phone: string, amount: number, description: string, scamType: string, fraudType: string = 'other', source: string = 'user_report', isVulnerable: boolean = false): Promise<void> {
+export async function submitScamReport(userId: string, phone: string, amount: number, description: string, scamType: string, fraudType: string = 'other', source: string = 'user_report', isVulnerable: boolean = false): Promise<{ data: any, error: any }> {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('scam_reports')
       .insert([
         {
@@ -58,17 +58,19 @@ export async function submitScamReport(userId: string, phone: string, amount: nu
           source: source,
           is_vulnerable: isVulnerable
         },
-      ]);
+      ])
+      .select();
 
-    if (error) console.warn('Supabase submitScamReport error:', error);
+    return { data, error };
   } catch (error) {
     console.error('Supabase submitScamReport unexpected error:', error);
+    return { data: null, error };
   }
 }
 
-export async function saveQuizScore(userId: string, topic: string, score: number, total: number): Promise<void> {
+export async function saveQuizScore(userId: string, topic: string, score: number, total: number): Promise<{ data: any, error: any }> {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('quiz_scores')
       .insert([
         {
@@ -77,11 +79,13 @@ export async function saveQuizScore(userId: string, topic: string, score: number
           score: score,
           total_questions: total
         },
-      ]);
+      ])
+      .select();
 
-    if (error) console.warn('Supabase saveQuizScore error:', error);
+    return { data, error };
   } catch (error) {
     console.error('Supabase saveQuizScore unexpected error:', error);
+    return { data: null, error };
   }
 }
 

@@ -58,7 +58,10 @@ export default function QuizScreen({ navigation }: any) {
     setIsFinished(true);
     if (deviceId) {
       try {
-        await saveQuizScore(deviceId, 'General', finalScore, quizData.length);
+        console.log('[QUIZ_SAVE] Attempting to save quiz score');
+        console.log('[QUIZ_SAVE] userId:', deviceId, 'score:', finalScore, 'total:', quizData.length);
+        const result = await saveQuizScore(deviceId, 'General', finalScore, quizData.length);
+        console.log('[QUIZ_SAVE] Result:', JSON.stringify(result));
       } catch (e) {
         console.warn('Failed to submit score', e);
       }

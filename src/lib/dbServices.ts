@@ -123,7 +123,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
   };
 
   try {
-    console.log('[BADGES] fetchUserStats called with userId:', userId);
+    console.log('[BADGES] fetchUserStats called with userId:', userId, 'type:', typeof userId);
 
     // 1. Fetch user's level
     const { data: userData, error: userError } = await supabase
@@ -143,8 +143,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       .select('*')
       .eq('user_id', userId);
       
-    console.log('[BADGES] Quiz scores query result:', JSON.stringify(quizData));
-    console.log('[BADGES] Quiz scores query error:', JSON.stringify(quizError));
+    console.log('[BADGES] Quiz scores result:', JSON.stringify(quizData), 'error:', JSON.stringify(quizError));
 
     let totalScore = 0;
     let highestQuizScore = 0;
@@ -160,8 +159,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       .eq('user_id', userId)
       .eq('source', 'simulator');
       
-    console.log('[BADGES] Simulator completions query result:', JSON.stringify(simData));
-    console.log('[BADGES] Simulator completions query error:', JSON.stringify(simError));
+    console.log('[BADGES] Simulator completions result:', JSON.stringify(simData), 'error:', JSON.stringify(simError));
 
     let simCount = 0;
     if (!simError && simData) {
@@ -169,6 +167,10 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       const uniqueScams = new Set(simData.map(s => s.scam_type));
       simCount = uniqueScams.size;
     }
+
+    console.log('[BADGES_CHECK] userId being used:', userId);
+    console.log('[BADGES_CHECK] simulator count found:', simCount);
+    console.log('[BADGES_CHECK] quiz best score found:', highestQuizScore);
 
     // 4. Calculate achievements/unlocked badges based on stats
     const unlockedBadges = ['Verified Protector']; // Always unlocked
