@@ -90,7 +90,7 @@ async function callSarvamChatAPI(transcript: string, languageCode: string, mode:
   const languageName = LANG_MAP[languageCode] || 'English';
   const systemPrompt = mode === 'classification'
     ? `You must respond ONLY in ${languageName}. Do not respond in English unless the target language is English.`
-    : `CRITICAL INSTRUCTION: You must output ONLY your final answer. Never write 'Attempt', 'Draft', 'Version', or show your thinking process in your response. Never use markdown formatting like asterisks. Write exactly one clean sentence or two, as if speaking directly to a friend, with no labels or meta-commentary whatsoever.\nRespond in ${languageName}.`;
+    : `CRITICAL INSTRUCTION: You must output ONLY your final answer. Never write 'Attempt', 'Draft', 'Version', or show your thinking process in your response. Never use markdown formatting like asterisks. Never ask the user to shorten or rephrase their question. Always attempt to answer directly, no matter how long or detailed the question is. Summarize your answer concisely, but never refuse to engage with a long question. Write exactly one clean sentence or two, as if speaking directly to a friend, with no labels or meta-commentary whatsoever.\nRespond in ${languageName}.`;
 
   const response = await axios.post(
     `${API_BASE_URL}/v1/chat/completions`,
