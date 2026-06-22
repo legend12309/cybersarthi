@@ -73,6 +73,19 @@ function isContaminated(text: string): boolean {
   return contaminationMarkers.some(pattern => pattern.test(text));
 }
 
+function isIncomplete(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return true;
+  const lastChar = trimmed[trimmed.length - 1];
+  const validEndings = ['.', '?', '!', '।', '"', ')'];
+  return !validEndings.includes(lastChar);
+}
+
+function truncateToLastSentence(text: string): string {
+  const matches = text.match(/[^.!?।]+[.!?।]/g);
+  return matches ? matches.join(' ').trim() : text;
+}
+
 async function callSarvamChatAPI(transcript: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<any> {
   const languageName = LANG_MAP[languageCode] || 'English';
   const systemPrompt = mode === 'classification'
@@ -84,7 +97,7 @@ async function callSarvamChatAPI(transcript: string, languageCode: string, mode:
     {
       model: 'sarvam-30b',
       temperature: mode === 'classification' ? 0 : 0.4,
-      max_tokens: mode === 'classification' ? 1500 : 400,
+      max_tokens: mode === 'classification' ? 1500 : 800,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: transcript },
@@ -103,18 +116,35 @@ async function callSarvamChatAPI(transcript: string, languageCode: string, mode:
 
 export async function chatWithSarvam(prompt: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<string> {
   const maxRetries = 3;
+  let lastIncompleteContent: string | null = null;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const response = await callSarvamChatAPI(prompt, languageCode, mode);
       const content = response?.data?.choices?.[0]?.message?.content;
+      const finishReason = response?.data?.choices?.[0]?.finish_reason;
       
-      // ONLY accept text from the 'content' field. NEVER fall back to reasoning_content.
-      if (content && content.trim().length > 0 && !isContaminated(content)) {
-        return content.trim();
+      if (content && content.trim().length > 0) {
+        const text = content.trim();
+        const contaminated = isContaminated(text);
+        const incomplete = isIncomplete(text);
+        
+        console.log('[CHAT] Final answer finish_reason:', finishReason);
+        console.log('[CHAT] Final answer length:', text.length);
+        console.log('[CHAT] Final answer last 20 chars:', text.slice(-20));
+
+        if (!contaminated && !incomplete) {
+          return text;
+        }
+
+        if (!contaminated && incomplete) {
+          lastIncompleteContent = text;
+          console.log('[CHAT] Rejected - incomplete ending:', incomplete, 'finish_reason:', finishReason);
+        } else {
+          console.log(`[CHAT] Attempt ${attempt + 1} rejected - content: '${text}', contaminated: ${contaminated}`);
+        }
       }
       
-      console.log(`[CHAT] Attempt ${attempt + 1} rejected - content: '${content}', contaminated: ${isContaminated(content || '')}`);
     } catch (error: any) {
       console.log(`[CHAT] Error on attempt ${attempt + 1}:`, error.message);
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
@@ -124,6 +154,10 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
   }
   
   // After all retries fail, return a clean, safe, hardcoded fallback - NEVER show raw model text
+  if (lastIncompleteContent && mode === 'conversation') {
+    return truncateToLastSentence(lastIncompleteContent);
+  }
+
   return mode === 'classification' 
     ? 'SUSPICIOUS: Unable to verify safely, please be cautious.'
     : 'माफ़ कीजिए, मैं अभी जवाब नहीं दे पा रहा हूँ। कृपया अपना सवाल थोड़ा छोटा करके फिर पूछें।';
