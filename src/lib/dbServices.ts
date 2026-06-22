@@ -123,6 +123,8 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
   };
 
   try {
+    console.log('[BADGES] Fetching stats for user_id:', userId);
+
     // 1. Fetch user's level
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -138,20 +140,27 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     // 2. Fetch sum of quiz scores
     const { data: quizData, error: quizError } = await supabase
       .from('quiz_scores')
-      .select('score')
+      .select('*')
       .eq('user_id', userId);
+      
+    console.log('[BADGES] Quiz scores raw data:', JSON.stringify(quizData));
+    console.log('[BADGES] Quiz scores error:', quizError);
 
     let totalScore = 0;
+    let highestQuizScore = 0;
     if (!quizError && quizData) {
       totalScore = quizData.reduce((acc, curr) => acc + (curr.score || 0), 0);
+      highestQuizScore = Math.max(0, ...quizData.map(q => q.score || 0));
     }
 
     // 3. Fetch completed simulations count
     const { data: simData, error: simError } = await supabase
       .from('scam_reports')
-      .select('scam_type')
+      .select('*')
       .eq('user_id', userId)
       .eq('source', 'simulator');
+      
+    console.log('[BADGES] Simulator completions raw data:', JSON.stringify(simData));
 
     let simCount = 0;
     if (!simError && simData) {
@@ -163,19 +172,19 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     // 4. Calculate achievements/unlocked badges based on stats
     const unlockedBadges = ['Verified Protector']; // Always unlocked
 
-    if (totalScore >= 5) {
-      unlockedBadges.push('Scam Spotter');
-    }
-    if (simCount >= 3) {
+    if (simCount >= 10) {
       unlockedBadges.push('Sim Hero');
     }
-    if (simCount >= 2) {
-      unlockedBadges.push('Call Guardian');
+    if (simCount >= 5) {
+      unlockedBadges.push('Scam Spotter');
     }
-    
-    // Additional rules for demo purposes
     if (simCount >= 1) {
       unlockedBadges.push('Link Sentry');
+    }
+    
+    // Quiz Master requires an 80% score. Assuming 100 is max or standard 80 score
+    if (highestQuizScore >= 80) {
+      unlockedBadges.push('Quiz Master');
     }
 
     // Update level in database if it changes

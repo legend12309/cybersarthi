@@ -59,7 +59,7 @@ export default function SplashScreen({ navigation }: any) {
     <View style={styles.container}>
       <Animated.View style={[styles.contentWrapper, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         {/* Shield badge with attached glowing halo */}
-        <View style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
           <Animated.View style={[styles.glowRing, { opacity: glowOpacity }]} />
           <Animated.View style={[styles.glowRingInner, { opacity: glowOpacity }]} />
           <View style={[styles.iconBadge, { marginBottom: 0 }]}>
@@ -67,11 +67,11 @@ export default function SplashScreen({ navigation }: any) {
           </View>
         </View>
 
-        <Text style={styles.title}>CyberSaathi</Text>
-
-        <View style={styles.divider} />
-
-        <Text style={styles.tagline}>{t('splash_tagline')}</Text>
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>CyberSaathi</Text>
+          <View style={styles.divider} />
+          <Text style={styles.tagline}>{t('splash_tagline')}</Text>
+        </View>
 
         {/* Dots loader */}
       </Animated.View>
@@ -102,7 +102,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56,189,248,0.12)',
   },
   contentWrapper: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  textContainer: {
+    position: 'absolute',
+    bottom: 80,
+    alignItems: 'center',
+    width: '100%',
   },
   iconBadge: {
     width: 112,

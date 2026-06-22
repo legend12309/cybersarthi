@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator, Share, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
@@ -55,9 +55,17 @@ export default function BadgesScreen() {
     { id: 'Verified Protector', titleKey: 'badges_protector_title', descKey: 'badges_protector_desc', icon: 'verified-user',  colorKey: 'success' },
     { id: 'Sim Hero',           titleKey: 'badges_hero_title',      descKey: 'badges_hero_desc',      icon: 'sports-esports', colorKey: 'primary' },
     { id: 'Link Sentry',        titleKey: 'badges_sentry_title',    descKey: 'badges_sentry_desc',    icon: 'link',           colorKey: 'primary' },
-    { id: 'Call Guardian',      titleKey: 'badges_guardian_title',  descKey: 'badges_guardian_desc',  icon: 'headset-mic',    colorKey: 'warning' },
-    { id: 'Family Shield',      titleKey: 'badges_shield_title',    descKey: 'badges_shield_desc',    icon: 'groups',         colorKey: 'error'   },
+    { id: 'Quiz Master',        titleKey: 'Quiz Master',            descKey: 'Score 80% or higher on any Quiz', icon: 'school', colorKey: 'warning' },
   ] as const;
+
+  const shareBadge = async (badgeName: string) => {
+    try {
+      const message = `मैंने CyberSaathi में "${badgeName}" बैज जीता! 🛡️ साइबर सुरक्षा सीखें: https://cybersaathi.in`;
+      await Share.share({ message });
+    } catch (error) {
+      console.warn('Error sharing badge:', error);
+    }
+  };
 
   const COLOR_MAP: Record<string, { bg: string; icon: string }> = {
     success: { bg: colors.successDim, icon: colors.success },
@@ -101,7 +109,7 @@ export default function BadgesScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statCell}>
-            <Text style={styles.statNum}>6</Text>
+            <Text style={styles.statNum}>5</Text>
             <Text style={styles.statLab}>{t('badges_stats_total')}</Text>
           </View>
           <View style={styles.statDivider} />
@@ -117,10 +125,20 @@ export default function BadgesScreen() {
           {BADGES.map(b => {
             const unlocked = isBadgeUnlocked(b.id);
             const c = COLOR_MAP[b.colorKey];
+            const displayTitle = t(b.titleKey);
             return (
               <View key={b.id} style={[styles.badgeCard, !unlocked && styles.badgeLocked]}>
+                {unlocked && (
+                  <TouchableOpacity
+                    style={styles.shareButton}
+                    onPress={() => shareBadge(displayTitle)}
+                    hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                  >
+                    <MaterialIcons name="share" size={20} color={colors.onSurfaceVariant} />
+                  </TouchableOpacity>
+                )}
                 <View style={[styles.badgeIconWrap, { backgroundColor: unlocked ? c.bg : colors.surfaceBorder + '50' }]}>
-                  <MaterialIcons name={b.icon} size={28} color={unlocked ? c.icon : colors.onSurfaceVariant + '60'} />
+                  <MaterialIcons name={b.icon as any} size={28} color={unlocked ? c.icon : colors.onSurfaceVariant + '60'} />
                   {!unlocked && (
                     <View style={styles.lockOverlay}>
                       <MaterialIcons name="lock" size={14} color={colors.onSurfaceVariant} />
@@ -128,7 +146,7 @@ export default function BadgesScreen() {
                   )}
                 </View>
                 <Text style={[styles.badgeTitle, !unlocked && styles.lockedText]} numberOfLines={2}>
-                  {t(b.titleKey)}
+                  {displayTitle}
                 </Text>
                 <Text style={styles.badgeDesc} numberOfLines={3}>{t(b.descKey)}</Text>
                 {unlocked && (
@@ -208,6 +226,18 @@ const styles = StyleSheet.create({
   badgeTitle: { fontFamily: 'Manrope_600SemiBold', fontSize: 13, color: colors.onSurface, textAlign: 'center' },
   lockedText: { color: colors.onSurfaceVariant },
   badgeDesc: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant, textAlign: 'center', lineHeight: 15 },
+  shareButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceHighlight || colors.primaryGlow,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   unlockedChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: colors.successDim, borderRadius: 8,
