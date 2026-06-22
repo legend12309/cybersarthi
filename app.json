@@ -38,12 +38,11 @@
       ],
       "expo-font",
       [
-        "expo-av",
+        "expo-audio",
         {
           "microphonePermission": "Allow CyberSaathi to access your microphone."
         }
-      ],
-      "expo-audio"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
