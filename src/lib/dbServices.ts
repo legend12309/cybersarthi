@@ -168,9 +168,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       simCount = uniqueScams.size;
     }
 
-    console.log('[BADGES_CHECK] userId being used:', userId);
-    console.log('[BADGES_CHECK] simulator count found:', simCount);
-    console.log('[BADGES_CHECK] quiz best score found:', highestQuizScore);
+    console.log('[BADGES_CHECK] userId:', userId, 'simCount:', simCount, 'bestQuizScore:', highestQuizScore);
 
     // 4. Calculate achievements/unlocked badges based on stats
     const unlockedBadges = ['Verified Protector']; // Always unlocked

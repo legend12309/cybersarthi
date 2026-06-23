@@ -21,7 +21,7 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
     const { data, error } = await supabase
       .from('users')
       .upsert(
-        { device_id: deviceId, preferred_language: languageCode },
+        { id: deviceId, device_id: deviceId, preferred_language: languageCode },
         { onConflict: 'device_id' }
       )
       .select('id, preferred_language')
@@ -76,6 +76,7 @@ export async function saveQuizScore(userId: string, topic: string, score: number
         {
           user_id: userId,
           quiz_topic: topic,
+          scam_topic: topic,
           score: score,
           total_questions: total
         },

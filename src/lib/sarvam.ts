@@ -89,15 +89,29 @@ function truncateToLastSentence(text: string): string {
 async function callSarvamChatAPI(transcript: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<any> {
   const languageName = LANG_MAP[languageCode] || 'English';
   const systemPrompt = mode === 'classification'
-    ? `You must respond ONLY in ${languageName}. Do not respond in English unless the target language is English.`
-    : `CRITICAL INSTRUCTION: You must output ONLY your final answer. Never write 'Attempt', 'Draft', 'Version', or show your thinking process in your response. Never use markdown formatting like asterisks. Never ask the user to shorten or rephrase their question. Always attempt to answer directly, no matter how long or detailed the question is. Summarize your answer concisely, but never refuse to engage with a long question. Write exactly one clean sentence or two, as if speaking directly to a friend, with no labels or meta-commentary whatsoever.\nRespond in ${languageName}.`;
+    ? `You must respond ONLY in ${languageName}. However, you MUST start your response with the English words "SAFE:" or "SUSPICIOUS:" followed by your explanation in ${languageName}. Do not translate the "SAFE:" or "SUSPICIOUS:" labels.`
+    : `You are CyberSaathi, a direct safety assistant analyzing real scenarios described by users.
+
+Common scenario patterns to recognize immediately:
+- Someone calling/messaging claiming to be from a known institution (college, bank, government) asking for payment to an unfamiliar number/account → Always recommend verifying directly with the institution through official channels, never paying based on the call/message alone
+- Someone asking to share OTP for any reason → Always recommend never sharing OTP
+- Unexpected prize/lottery/refund offers → Always recommend treating as suspicious
+
+When the user describes a situation involving money, payment, OTP, personal info, or an unfamiliar contact:
+1. Identify the core risk in ONE clause
+2. Give a clear recommendation: 'Do not do this' OR 'This seems safe' OR 'Verify first by [specific action]'
+3. Keep your ENTIRE response to maximum 2-3 sentences, regardless of how detailed the user's question was
+
+Do not re-explain the user's scenario back to them. Do not list multiple possibilities. Give ONE direct, confident answer.
+CRITICAL INSTRUCTION: You must output ONLY your final answer. Do not show your thinking process or write drafts.
+Respond in ${languageName}.`;
 
   const response = await axios.post(
     `${API_BASE_URL}/v1/chat/completions`,
     {
-      model: 'sarvam-30b',
+      model: 'sarvam-105b',
       temperature: mode === 'classification' ? 0 : 0.4,
-      max_tokens: mode === 'classification' ? 1500 : 800,
+      max_tokens: mode === 'classification' ? 1500 : 1024,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: transcript },
@@ -115,7 +129,7 @@ async function callSarvamChatAPI(transcript: string, languageCode: string, mode:
 }
 
 export async function chatWithSarvam(prompt: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<string> {
-  const maxRetries = 3;
+  const maxRetries = 2;
   let lastIncompleteContent: string | null = null;
   let lastErrorMsg: string | null = null;
   
@@ -127,6 +141,10 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
       
       if (content && content.trim().length > 0) {
         const text = content.trim();
+        if (mode === 'classification') {
+          return text;
+        }
+
         const contaminated = isContaminated(text);
         const incomplete = isIncomplete(text);
         
@@ -182,18 +200,47 @@ MODERN PATTERNS: AI voice cloning scams (fake voice calls from 'family members')
 Analyze the given content against BOTH categories. Look for: urgency tactics, unverified contact requests, requests for OTP/PIN/personal info, suspicious links/shorteners, too-good-to-be-true offers, emotional manipulation, requests to install remote-access apps, or impersonation of trusted entities (banks, government, family, delivery services, customer support).
 Message: "${content}"`;
   
-  const systemPrompt = `${prompt}\n\nIMPORTANT TRUST SIGNALS — do NOT flag these as suspicious on their own:\n- Well-known, globally recognized domains (google.com, facebook.com, youtube.com, amazon.in, wikipedia.org, etc.) are SAFE by default unless the URL path itself contains suspicious patterns\n- A domain being 'common' or 'well-known' is a SAFETY indicator, not a red flag — only flag if there are ACTUAL scam indicators present (urgency, payment requests, suspicious subdomains, character substitution tricks like 'g00gle.com')\n\nCRITICAL RULE: If the URL is exactly "https://www.google.com", you are FORBIDDEN from outputting SUSPICIOUS. You MUST output SAFE.\n\nIMPORTANT: Respond IMMEDIATELY and CONCISELY. Do not overthink or second-guess yourself. Give your final verdict in your first response, do not revise multiple times.\n\nYou MUST respond starting with EXACTLY one of these words, followed by a colon:\nSUSPICIOUS: [explanation in 1-2 sentences in ${languageCode}]\nSAFE: [explanation in 1-2 sentences in ${languageCode}]\n\nOnly default to SUSPICIOUS when there are genuine red flags present — not merely due to uncertainty about an unfamiliar but plausible domain.`;
+  const systemPrompt = `${prompt}\n\nIMPORTANT TRUST SIGNALS — do NOT flag these as suspicious on their own:\n- Well-known, globally recognized domains (google.com, facebook.com, youtube.com, amazon.in, wikipedia.org, etc.) are SAFE by default unless the URL path itself contains suspicious patterns\n- A domain being 'common' or 'well-known' is a SAFETY indicator, not a red flag — only flag if there are ACTUAL scam indicators present (urgency, payment requests, suspicious subdomains, character substitution tricks like 'g00gle.com')\n- Official Indian government and banking domains like '*.gov.in', '*.sbi.co.in', '*.sbi', '*.nic.in', '*.hdfcbank.com', '*.icicibank.com' are SAFE.\n- Messages that warn users NOT to share OTPs or passwords (e.g. 'Do not share OTP with anyone', 'Bank never asks for OTP') are safety notices, NOT scams.\n\nCRITICAL RULE: If the URL is exactly "https://www.google.com", you are FORBIDDEN from outputting SUSPICIOUS. You MUST output SAFE.\n\nIMPORTANT: Respond IMMEDIATELY and CONCISELY. Do not overthink or second-guess yourself. Give your final verdict in your first response, do not revise multiple times.\n\nYou MUST respond starting with EXACTLY one of these words, followed by a colon:\nSUSPICIOUS: [explanation in 1-2 sentences in ${languageCode}]\nSAFE: [explanation in 1-2 sentences in ${languageCode}]\n\nOnly default to SUSPICIOUS when there are genuine red flags present — not merely due to uncertainty about an unfamiliar but plausible domain.`;
   
   try {
     const response = await chatWithSarvam(systemPrompt, languageCode, 'classification');
     console.log('[CLASSIFY] Success, raw response:', response);
     
-    const normalized = response.trim().toUpperCase();
-    const isSuspicious = !normalized.startsWith('SAFE:') && !normalized.startsWith('SAFE ');
+    const trimmed = response.trim();
+    // Strip leading non-alphabetic/non-indic characters (e.g. **, ##, [, -, *, spaces)
+    const cleanText = trimmed.replace(/^[^a-zA-Z\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F\u0A80-\u0AFF]+/, '');
+    const upper = cleanText.toUpperCase();
+
+    const safePrefixes = [
+      'SAFE',
+      'सुरक्षित', // Hindi, Marathi
+      'સુરક્ષિત', // Gujarati
+      'பாதுகாப்பு', 'பாதுகாப்பானது', // Tamil
+      'సురక్షిత', 'సురక్షితం', 'సురక్షితమైనది' // Telugu
+    ];
+
+    const isSafe = safePrefixes.some(prefix => upper.startsWith(prefix.toUpperCase()));
+    const verdict = isSafe ? 'safe' : 'suspicious';
+
+    // Extract explanation: split at separator (colon/hyphen) if present, or strip the leading label
+    let explanation = trimmed;
+    const colonIndex = trimmed.indexOf(':');
+    const dashIndex = trimmed.indexOf('-');
+    const splitIndex = colonIndex !== -1 ? colonIndex : (dashIndex !== -1 ? dashIndex : -1);
+
+    if (splitIndex !== -1 && splitIndex < 25) {
+      explanation = trimmed.substring(splitIndex + 1).trim();
+    } else {
+      explanation = trimmed.replace(/^(\*\*|###)?\s*(SAFE|SUSPICIOUS|सुरक्षित|संदिग्ध|असुरक्षित|संशयास्पद|શંકાસ્પદ|பாதுகாப்பானது|சந்தேகத்திற்குரியது)\s*(\*\*|###)?\s*[:\-\s]*/i, '').trim();
+    }
+
+    if (!explanation) {
+      explanation = trimmed;
+    }
     
     return {
-      verdict: isSuspicious ? 'suspicious' : 'safe',
-      explanation: response.split(':').slice(1).join(':').trim()
+      verdict,
+      explanation
     };
   } catch (error: any) {
     console.log('[CLASSIFY] FAILED with error:', error);

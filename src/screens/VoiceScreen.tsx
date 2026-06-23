@@ -84,7 +84,9 @@ export default function VoiceScreen({ navigation }: any) {
       if (appState === 'recording' || appState === 'starting') {
         recorder.stop().catch((e) => console.warn('Recorder stop error', e));
       }
-      player.pause();
+      if (player.playing) {
+        player.pause();
+      }
       AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
     } catch (e) {
       console.warn('Cleanup error', e);
@@ -292,6 +294,18 @@ export default function VoiceScreen({ navigation }: any) {
     console.log('[PIPELINE] Starting recording process...');
     try {
       setAppState('starting');
+
+      // Request microphone permission first
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      if (!granted) {
+        console.log('[MIC] Permission denied by user');
+        if (isMounted.current) {
+          setMessages(prev => [...prev, { id: 'err_perm_' + Date.now(), sender: 'ai', text: t('err_mic_permission') || 'Microphone permission denied. Please allow microphone access in Settings.' }]);
+          setAppState('idle');
+        }
+        return;
+      }
+
       await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
       await recorder.prepareToRecordAsync();
       recorder.record();
@@ -352,7 +366,9 @@ export default function VoiceScreen({ navigation }: any) {
   };
 
   const handleStopSpeech = async () => {
-    player.pause();
+    if (player.playing) {
+      player.pause();
+    }
     setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
     setAppState('idle');
   };
