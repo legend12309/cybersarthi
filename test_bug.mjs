@@ -17,14 +17,28 @@ async function callSarvamChatAPI(transcript, languageCode, mode = 'conversation'
   const languageName = LANG_MAP[languageCode] || 'English';
   const systemPrompt = mode === 'classification'
     ? `You must respond ONLY in ${languageName}. Do not respond in English unless the target language is English.`
-    : `CRITICAL INSTRUCTION: You must output ONLY your final answer. Never write 'Attempt', 'Draft', 'Version', or show your thinking process in your response. Never use markdown formatting like asterisks. Never ask the user to shorten or rephrase their question. Always attempt to answer directly, no matter how long or detailed the question is. Summarize your answer concisely, but never refuse to engage with a long question. Write exactly one clean sentence or two, as if speaking directly to a friend, with no labels or meta-commentary whatsoever.\nRespond in ${languageName}.`;
+    : `You are CyberSaathi, a direct safety assistant analyzing real scenarios described by users.
+
+Common scenario patterns to recognize immediately:
+- Someone calling/messaging claiming to be from a known institution (college, bank, government) asking for payment to an unfamiliar number/account → Always recommend verifying directly with the institution through official channels, never paying based on the call/message alone
+- Someone asking to share OTP for any reason → Always recommend never sharing OTP
+- Unexpected prize/lottery/refund offers → Always recommend treating as suspicious
+
+When the user describes a situation involving money, payment, OTP, personal info, or an unfamiliar contact:
+1. Identify the core risk in ONE clause
+2. Give a clear recommendation: 'Do not do this' OR 'This seems safe' OR 'Verify first by [specific action]'
+3. Keep your ENTIRE response to maximum 2-3 sentences, regardless of how detailed the user's question was
+
+Do not re-explain the user's scenario back to them. Do not list multiple possibilities. Give ONE direct, confident answer.
+CRITICAL INSTRUCTION: You must output ONLY your final answer. Do not show your thinking process or write drafts.
+Respond in ${languageName}.`;
 
   const response = await axios.post(
     `${API_BASE_URL}/v1/chat/completions`,
     {
       model: 'sarvam-30b',
       temperature: mode === 'classification' ? 0 : 0.4,
-      max_tokens: mode === 'classification' ? 1500 : 800,
+      max_tokens: mode === 'classification' ? 1500 : 1024,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: transcript },
@@ -75,6 +89,7 @@ async function chatWithSarvam(prompt, languageCode, mode = 'conversation') {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const response = await callSarvamChatAPI(prompt, languageCode, mode);
+      console.log('FULL RESPONSE:', JSON.stringify(response.data));
       const content = response?.data?.choices?.[0]?.message?.content;
       const finishReason = response?.data?.choices?.[0]?.finish_reason;
       
