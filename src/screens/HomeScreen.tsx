@@ -30,6 +30,7 @@ export default function HomeScreen({ navigation }: any) {
   const [scanResult,   setScanResult]   = useState<'safe'|'suspicious'|null>(null);
   const [scanReason,   setScanReason]   = useState('');
   const [scanAdvice,   setScanAdvice]   = useState('');
+  const [scanSource,   setScanSource]   = useState('');
   const [fraudType,    setFraudType]    = useState<'otp_scam'|'kyc_scam'|'job_scam'|'lottery_scam'|'upi_scam'|'electricity_scam'|'love_scam'|'parcel_scam'|'screen_share_scam'|'police_scam'|'other'>('other');
   const [scammerDetails, setScammerDetails] = useState('');
   const [amountLost,   setAmountLost]   = useState('');
@@ -75,11 +76,12 @@ export default function HomeScreen({ navigation }: any) {
     setScanState('scanning');
     
     try {
-      const { verdict, explanation } = await classifyContent(url, languageCode, 'url');
+      const { verdict, explanation, source } = await classifyContent(url, languageCode, 'url');
       
       setScanResult(verdict);
       setScanReason(explanation);
       setScanAdvice(verdict === 'suspicious' ? t('scanner_suspicious_advice') : t('scanner_safe_advice'));
+      setScanSource(source || 'sarvam');
       
       // Save to Supabase
       if (deviceId) {
@@ -129,7 +131,7 @@ export default function HomeScreen({ navigation }: any) {
     } finally { setIsSubmitting(false); }
   };
 
-  const resetScanner = () => { setLinkInput(''); setScanState('idle'); setScanResult(null); };
+  const resetScanner = () => { setLinkInput(''); setScanState('idle'); setScanResult(null); setScanSource(''); };
   const resetReporter = () => { setFraudType('other'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); };
 
   const isSafe = scanResult === 'safe';
@@ -266,6 +268,13 @@ export default function HomeScreen({ navigation }: any) {
                     {isSafe ? t('scanner_result_safe') : t('scanner_result_suspicious')}
                   </Text>
                   <Text style={styles.resultReason}>{scanReason}</Text>
+
+                  {scanSource === 'google_safe_browsing' && (
+                    <View style={styles.safeBrowsingBadge}>
+                      <MaterialIcons name="security" size={14} color={colors.onSurface} />
+                      <Text style={styles.safeBrowsingText}>Confirmed by Google Safe Browsing</Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={styles.adviceHead}>{t('scanner_advice_header')}</Text>
                 <Text style={styles.adviceBody}>{scanAdvice}</Text>
@@ -510,6 +519,8 @@ const styles = StyleSheet.create({
   resultDanger: { backgroundColor: colors.errorDim, borderColor: colors.error + '40' },
   resultVerdict: { fontFamily: 'Manrope_700Bold', fontSize: 18 },
   resultReason: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center' },
+  safeBrowsingBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4, borderWidth: 1, borderColor: colors.surfaceBorder },
+  safeBrowsingText: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, color: colors.onSurface },
   adviceHead: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: colors.onSurface },
   adviceBody: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, lineHeight: 20 },
 
