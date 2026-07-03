@@ -65,51 +65,7 @@ export async function updateUserLanguage(deviceId: string, languageCode: string)
   }
 }
 
-/**
- * Submit a new quiz score.
- */
-export async function submitQuizScore(userId: string, scamTopic: string, score: number): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('quiz_scores')
-      .insert([
-        {
-          user_id: userId,
-          scam_topic: scamTopic,
-          score: score,
-        },
-      ]);
 
-    if (error) {
-      console.warn('Supabase submitQuizScore error:', error);
-    }
-  } catch (error) {
-    console.error('Supabase submitQuizScore unexpected error:', error);
-  }
-}
-
-/**
- * Submit a new scam report from the Simulator or Home screen.
- */
-export async function submitScamReport(userId: string, scamType: string, isVulnerable: boolean): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('scam_reports')
-      .insert([
-        {
-          user_id: userId,
-          scam_type: scamType,
-          is_vulnerable: isVulnerable,
-        },
-      ]);
-
-    if (error) {
-      console.warn('Supabase submitScamReport error:', error);
-    }
-  } catch (error) {
-    console.error('Supabase submitScamReport unexpected error:', error);
-  }
-}
 
 /**
  * Fetch a user's total accumulated score, completed simulations, level, and unlocked badges list.
@@ -163,9 +119,8 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
 
     let simCount = 0;
     if (!simError && simData) {
-      // Count unique scam simulations
-      const uniqueScams = new Set(simData.map(s => s.scam_type));
-      simCount = uniqueScams.size;
+      // Count ALL completed scam simulations
+      simCount = simData.length;
     }
 
     console.log('[BADGES_CHECK] userId:', userId, 'simCount:', simCount, 'bestQuizScore:', highestQuizScore);

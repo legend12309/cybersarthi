@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Share, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
@@ -126,7 +126,7 @@ export default function QuizScreen({ navigation }: any) {
         <Text style={styles.headerTitle}>Question {currentIndex + 1} of {quizData.length}</Text>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.questionText}>{question.question}</Text>
 
         <View style={styles.optionsList}>
@@ -169,7 +169,7 @@ export default function QuizScreen({ navigation }: any) {
             <Text style={styles.explanationText}>{question.explanation}</Text>
           </View>
         )}
-      </View>
+      </ScrollView>
     </Animated.View>
   );
 }
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   
-  content: { flex: 1, padding: 24 },
+  content: { flexGrow: 1, padding: 24, paddingBottom: 100 },
   questionText: { fontFamily: 'Manrope_700Bold', fontSize: 22, color: colors.onSurface, marginBottom: 32, lineHeight: 30 },
   
   optionsList: { gap: 12 },
