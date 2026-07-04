@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system/legacy';
+import { unzipSync } from 'fflate';
 import { checkSafeBrowsing } from './safeBrowsing';
 
 const API_BASE_URL = 'https://api.sarvam.ai';
@@ -313,4 +314,209 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
     }
   }
   throw new Error('err_tts_failed');
+}
+
+export async function analyzeScreenshot(imageUri: string, languageCode: string): Promise<string> {
+  console.log('[VISION] Starting screenshot analysis...');
+  
+  // 1. Create Job
+  const createRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1`, {
+    method: 'POST',
+    headers: {
+      'api-subscription-key': API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      job_parameters: {
+        language: languageCode,
+        output_format: 'md',
+      },
+    }),
+  });
+  
+  if (!createRes.ok) {
+    const errText = await createRes.text();
+    throw new Error(`Job creation failed: ${errText}`);
+  }
+  
+  const createData = await createRes.json();
+  const jobId = createData.job_id;
+  console.log('[VISION] Job initialized:', jobId);
+  
+  const ext = imageUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'png';
+  const isJpg = ext === 'jpg' || ext === 'jpeg';
+  const fileName = `screenshot.${isJpg ? 'jpg' : 'png'}`;
+  const mimeType = isJpg ? 'image/jpeg' : 'image/png';
+
+  // 2. Get Upload URL
+  const uploadRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/upload-files`, {
+    method: 'POST',
+    headers: {
+      'api-subscription-key': API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      job_id: jobId,
+      files: [fileName],
+    }),
+  });
+  
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text();
+    throw new Error(`Failed to get upload URLs: ${errText}`);
+  }
+  
+  const uploadData = await uploadRes.json();
+  const uploadUrlObj = uploadData.upload_urls?.[fileName];
+  const uploadUrl = typeof uploadUrlObj === 'string' ? uploadUrlObj : (uploadUrlObj?.file_url || uploadUrlObj?.url);
+  
+  if (!uploadUrl) {
+    throw new Error('Upload URL not found in response');
+  }
+  
+  // 3. Upload File
+  const fileResp = await fetch(imageUri);
+  const blob = await fileResp.blob();
+  
+  const uploadHeaders: Record<string, string> = {
+    'Content-Type': mimeType,
+  };
+  if (uploadUrl.includes('windows.net') || uploadUrl.includes('blob.core.windows.net')) {
+    uploadHeaders['x-ms-blob-type'] = 'BlockBlob';
+  }
+  
+  const putRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    body: blob,
+    headers: uploadHeaders,
+  });
+  
+  if (!putRes.ok) {
+    const errText = await putRes.text();
+    throw new Error(`File upload failed: ${errText}`);
+  }
+  
+  console.log('[VISION] Upload complete');
+  
+  // 4. Start Job
+  const startRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/start`, {
+    method: 'POST',
+    headers: {
+      'api-subscription-key': API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      job_id: jobId,
+    }),
+  });
+  
+  if (!startRes.ok) {
+    const errText = await startRes.text();
+    throw new Error(`Failed to start job: ${errText}`);
+  }
+  
+  // 5. Poll Status
+  let status = 'processing';
+  let attempts = 0;
+  let jobDetails: any = null;
+  
+  while (attempts < 15) {
+    attempts++;
+    // Wait 2 seconds
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    
+    const statusRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/status`, {
+      method: 'GET',
+      headers: {
+        'api-subscription-key': API_KEY,
+      },
+    });
+    
+    if (!statusRes.ok) {
+      console.warn(`[VISION] Status poll failed (attempt ${attempts})`);
+      continue;
+    }
+    
+    const statusData = await statusRes.json();
+    status = statusData.job_state?.toLowerCase() || statusData.status?.toLowerCase();
+    jobDetails = statusData.job_details;
+    
+    console.log('[VISION] Polling attempt:', attempts, 'status:', status);
+    
+    if (status === 'completed' || status === 'failed') {
+      break;
+    }
+  }
+  
+  if (status !== 'completed') {
+    throw new Error(status === 'failed' ? 'Job failed on server' : 'Job timed out');
+  }
+  
+  // 6. Get Download URLs
+  let outputFiles: string[] = [];
+  if (jobDetails && Array.isArray(jobDetails.outputs)) {
+    outputFiles = jobDetails.outputs.map((o: any) => o.file_name);
+  } else if (jobDetails && Array.isArray(jobDetails)) {
+    for (const d of jobDetails) {
+      if (d.outputs && Array.isArray(d.outputs)) {
+        outputFiles.push(...d.outputs.map((o: any) => o.file_name));
+      }
+    }
+  }
+  
+  if (outputFiles.length === 0) {
+    outputFiles = ['screenshot.md'];
+  }
+  
+  const downloadRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/download-files`, {
+    method: 'POST',
+    headers: {
+      'api-subscription-key': API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      job_id: jobId,
+      files: outputFiles,
+    }),
+  });
+  
+  if (!downloadRes.ok) {
+    const errText = await downloadRes.text();
+    throw new Error(`Failed to get download URLs: ${errText}`);
+  }
+  
+  const downloadData = await downloadRes.json();
+  const downloadUrlObj = downloadData.download_urls?.[outputFiles[0]];
+  const downloadUrl = typeof downloadUrlObj === 'string' ? downloadUrlObj : (downloadUrlObj?.file_url || downloadUrlObj?.url);
+  
+  if (!downloadUrl) {
+    throw new Error('Download URL not found in response');
+  }
+  
+  // 7. Fetch Extracted Text
+  const textRes = await fetch(downloadUrl);
+  if (!textRes.ok) {
+    throw new Error('Failed to download result text');
+  }
+  
+  const arrayBuffer = await textRes.arrayBuffer();
+  const zipUint8 = new Uint8Array(arrayBuffer);
+  
+  const unzipped = unzipSync(zipUint8);
+  const mdFileName = Object.keys(unzipped).find(name => name.endsWith('.md'));
+  if (!mdFileName) {
+    throw new Error('No .md file found in zip archive');
+  }
+  
+  const mdBuffer = unzipped[mdFileName];
+  let extractedText = '';
+  if (typeof TextDecoder !== 'undefined') {
+    extractedText = new TextDecoder('utf-8').decode(mdBuffer);
+  } else {
+    // Simple fallback decoding for UTF-8 Uint8Array
+    extractedText = Array.from(mdBuffer).map(c => String.fromCharCode(c)).join('');
+  }
+  
+  console.log('[VISION] Extracted text:', extractedText);
+  return extractedText;
 }

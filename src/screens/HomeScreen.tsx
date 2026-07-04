@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, theme } from '../lib/colors';
 import { useLanguage } from '../context/LanguageContext';
 import { submitScamReport, saveLinkScan } from '../lib/api';
@@ -134,6 +135,29 @@ export default function HomeScreen({ navigation }: any) {
   const resetScanner = () => { setLinkInput(''); setScanState('idle'); setScanResult(null); setScanSource(''); };
   const resetReporter = () => { setFraudType('other'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); };
 
+  const handlePickScreenshot = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'We need camera roll permission to scan screenshots.');
+        return;
+      }
+      
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 1,
+      });
+      
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        navigation.navigate('ScreenshotScanner', { imageUri: result.assets[0].uri });
+      }
+    } catch (err) {
+      console.error('Image picker error:', err);
+      Alert.alert('Error', 'Could not select image.');
+    }
+  };
+
   const isSafe = scanResult === 'safe';
 
   // Pick one alert based on day-of-month modulo 10
@@ -205,6 +229,16 @@ export default function HomeScreen({ navigation }: any) {
               <MaterialIcons name="report" size={26} color={colors.error} />
             </View>
             <Text style={styles.actionLabel}>{t('home_report_fraud')}</Text>
+            <MaterialIcons name="chevron-right" size={18} color={colors.onSurfaceVariant} style={styles.actionChevron} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.actionsRow, { marginTop: 12 }]}>
+          <TouchableOpacity style={styles.actionCard} onPress={handlePickScreenshot} activeOpacity={0.8}>
+            <View style={[styles.actionIconBg, { backgroundColor: colors.warningDim }]}>
+              <MaterialIcons name="image-search" size={26} color={colors.warning} />
+            </View>
+            <Text style={styles.actionLabel}>{t('home_scan_screenshot')}</Text>
             <MaterialIcons name="chevron-right" size={18} color={colors.onSurfaceVariant} style={styles.actionChevron} />
           </TouchableOpacity>
         </View>

@@ -26,6 +26,7 @@ import LanguageSelectionScreen from './src/screens/LanguageSelectionScreen';
 import CustomSplashScreen      from './src/screens/SplashScreen';
 import ScamDetailScreen        from './src/screens/ScamDetailScreen';
 import QuizScreen              from './src/screens/QuizScreen';
+import ScreenshotScannerScreen from './src/screens/ScreenshotScannerScreen';
 import { colors }              from './src/lib/colors';
 import { LanguageProvider, useLanguage } from './src/context/LanguageContext';
 
@@ -146,6 +147,7 @@ export default function App() {
             <Stack.Screen name="Main"       component={MainTabs} />
             <Stack.Screen name="ScamDetail" component={ScamDetailScreen} />
             <Stack.Screen name="Quiz"       component={QuizScreen} />
+            <Stack.Screen name="ScreenshotScanner" component={ScreenshotScannerScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </LanguageProvider>

@@ -32,6 +32,11 @@ export const translations: TranslationsDictionary = {
     home_mic_subtitle: 'I\'m here to help you verify messages, links, or callers instantly.',
     home_scan_link: 'Scan Link',
     home_report_fraud: 'Report Fraud',
+    home_scan_screenshot: 'Scan a Screenshot',
+    scanner_reading_screenshot: 'Reading screenshot...',
+    scanner_analyzing_scam: 'Analyzing for scams...',
+    scanner_err_image: 'Could not read this image clearly. Try a clearer screenshot.',
+    scanner_err_no_text: 'No readable text found in this image.',
 
     // VoiceScreen
     voice_status_idle: 'CyberSaathi Assistant',
@@ -205,6 +210,11 @@ export const translations: TranslationsDictionary = {
     home_mic_subtitle: 'मैं संदेशों, लिंक या कॉल को तुरंत सत्यापित करने में आपकी मदद के लिए यहाँ हूँ।',
     home_scan_link: 'लिंक स्कैन करें',
     home_report_fraud: 'धोखाधड़ी रिपोर्ट करें',
+    home_scan_screenshot: 'स्क्रीनशॉट स्कैन करें',
+    scanner_reading_screenshot: 'स्क्रीनशॉट पढ़ा जा रहा है...',
+    scanner_analyzing_scam: 'स्कैम के लिए विश्लेषण किया जा रहा है...',
+    scanner_err_image: 'इस छवि को स्पष्ट रूप से नहीं पढ़ा जा सका। कृपया स्पष्ट स्क्रीनशॉट का प्रयास करें।',
+    scanner_err_no_text: 'इस छवि में कोई पठनीय पाठ नहीं मिला।',
 
     // VoiceScreen
     voice_status_idle: 'साइबरसाथी सहायक',
@@ -378,6 +388,11 @@ export const translations: TranslationsDictionary = {
     home_mic_subtitle: 'मी मेसेज, लिंक किंवा कॉल त्वरित तपासण्यासाठी येथे आहे.',
     home_scan_link: 'लिंक स्कॅन करा',
     home_report_fraud: 'फसवणूक रिपोर्ट करा',
+    home_scan_screenshot: 'स्क्रीनशॉट स्कॅन करा',
+    scanner_reading_screenshot: 'स्क्रीनशॉट वाचत आहे...',
+    scanner_analyzing_scam: 'स्कॅमसाठी विश्लेषण करत आहे...',
+    scanner_err_image: 'ही प्रतिमा स्पष्टपणे वाचता आली नाही. कृपया स्पष्ट स्क्रीनशॉटचा प्रयत्न करा.',
+    scanner_err_no_text: 'या प्रतिमेमध्ये कोणताही वाचनीय मजकूर आढळला नाही.',
 
     // VoiceScreen
     voice_status_idle: 'सायबरसाथी सहाय्यक',
@@ -551,6 +566,11 @@ export const translations: TranslationsDictionary = {
     home_mic_subtitle: 'செய்திகள், இணைப்புகள் அல்லது அழைப்பாளர்களை உடனடியாக சரிபார்க்க நான் இங்கு இருக்கிறேன்.',
     home_scan_link: 'இணைப்பை ஸ்கேன் செய்',
     home_report_fraud: 'மோசடியை புகாரளி',
+    home_scan_screenshot: 'ஸ்கிரீன்ஷாட்டை ஸ்கேன் செய்',
+    scanner_reading_screenshot: 'ஸ்கிரீன்ஷாட் வாசிக்கப்படுகிறது...',
+    scanner_analyzing_scam: 'ஸ்கேம்களை பகுப்பாய்வு செய்கிறது...',
+    scanner_err_image: 'இந்த படத்தை தெளிவாக வாசிக்க முடியவில்லை. தெளிவான ஸ்கிரீன்ஷாட்டை முயற்சிக்கவும்.',
+    scanner_err_no_text: 'இந்த படத்தில் வாசிக்கக்கூடிய உரை எதுவும் இல்லை.',
 
     // VoiceScreen
     voice_status_idle: 'சைபர்சாதி உதவியாளர்',
@@ -724,6 +744,11 @@ export const translations: TranslationsDictionary = {
     home_mic_subtitle: 'సందేశాలు, లింకులు లేదా కాలర్‌లను వెంటనే ధృవీకరించడానికి నేను ఇక్కడ ఉన్నాను.',
     home_scan_link: 'లింక్ స్కాన్ చేయండి',
     home_report_fraud: 'మోసాన్ని నివేదించండి',
+    home_scan_screenshot: 'స్క్రీన్‌షాట్‌ను స్కాన్ చేయండి',
+    scanner_reading_screenshot: 'స్క్రీన్‌షాట్ చదవబడుతోంది...',
+    scanner_analyzing_scam: 'స్కామ్‌ల కోసం విశ్లేషిస్తోంది...',
+    scanner_err_image: 'ఈ చిత్రాన్ని స్పష్టంగా చదవలేకపోయాము. దయచేసి స్పష్టమైన స్క్రీన్‌షాట్‌ను ప్రయత్నించండి.',
+    scanner_err_no_text: 'ఈ చిత్రంలో చదవదగిన వచనం ఏదీ కనుగొనబడలేదు.',
 
     // VoiceScreen
     voice_status_idle: 'సైబర్‌సాథీ సహాయకుడు',
@@ -897,6 +922,11 @@ export const translations: TranslationsDictionary = {
     home_mic_subtitle: 'હું મેસેજ, લિંક અથવા કોલરને તરત જ ચકાસવામાં તમારી મદદ માટે અહીં છું.',
     home_scan_link: 'લિંક સ્કેન કરો',
     home_report_fraud: 'ફ્રોડ રિપોર્ટ કરો',
+    home_scan_screenshot: 'સ્ક્રીનશોટ સ્કેન કરો',
+    scanner_reading_screenshot: 'સ્ક્રીનશોટ વાંચી રહ્યા છીએ...',
+    scanner_analyzing_scam: 'સ્કેમ માટે વિશ્લેષણ કરી રહ્યા છીએ...',
+    scanner_err_image: 'આ ચિત્ર સ્પષ્ટ રીતે વાંચી શકાયું નથી. કૃપા કરીને સ્પષ્ટ સ્ક્રીનશોટનો પ્રયાસ કરો.',
+    scanner_err_no_text: 'આ ચિત્રમાં કોઈ વાંચનયોગ્ય લખાણ મળ્યું નથી.',
 
     // VoiceScreen
     voice_status_idle: 'સાયબરસાથી સહાયક',
