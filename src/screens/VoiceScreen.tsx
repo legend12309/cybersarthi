@@ -33,6 +33,7 @@ export default function VoiceScreen({ navigation }: any) {
 
   const isMounted = useRef(true);
   const flatListRef = useRef<FlatList>(null);
+  const recordingTimeoutRef = useRef<any>(null);
 
   // Animations for mic pulse
   const pulseScale = useRef(new Animated.Value(1)).current;
@@ -81,6 +82,10 @@ export default function VoiceScreen({ navigation }: any) {
 
   const cleanupAudioAndRecording = () => {
     try {
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+      }
       if (appState === 'recording' || appState === 'starting') {
         recorder.stop().catch((e) => console.warn('Recorder stop error', e));
       }
@@ -311,6 +316,16 @@ export default function VoiceScreen({ navigation }: any) {
       recorder.record();
       setAppState('recording');
       console.log('[PIPELINE] Recording started.');
+
+      // Auto-stop recording at 28 seconds to prevent exceeding 30-second API limit
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+      }
+      recordingTimeoutRef.current = setTimeout(() => {
+        console.log('[MIC] Auto-stopping recording (28s limit reached)');
+        stopRecordingAndProcess();
+      }, 28000);
+
     } catch (error) {
       console.log('[MIC] error:', error);
       if (isMounted.current) {
@@ -324,6 +339,12 @@ export default function VoiceScreen({ navigation }: any) {
     if (appState !== 'recording') return;
     console.log('[PIPELINE] Stopping recording...');
     setAppState('thinking');
+
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+
     try {
       await recorder.stop();
       const uri = recorder.uri;
@@ -334,10 +355,22 @@ export default function VoiceScreen({ navigation }: any) {
       try { 
         userText = await speechToText(uri, languageCode); 
         console.log('[PIPELINE] STT result:', userText);
-      } catch (sttError) {
+      } catch (sttError: any) {
         console.log('[STT] error:', sttError);
         if (isMounted.current) {
-          setMessages(prev => [...prev, { id: 'err_stt_' + Date.now(), sender: 'ai', text: t('err_stt_failed') || 'Could not recognize speech.' }]);
+          const isDurationError = sttError.message?.toLowerCase().includes('duration') || 
+                                  sttError.message?.toLowerCase().includes('30 second') ||
+                                  sttError.message?.toLowerCase().includes('400');
+          let errorMsg = t('err_stt_failed') || 'Could not recognize speech.';
+          if (isDurationError) {
+            if (languageCode === 'hi-IN') errorMsg = 'ऑडियो रिकॉर्डिंग 30 सेकंड से कम होनी चाहिए। कृपया छोटा संदेश आज़माएं।';
+            else if (languageCode === 'mr-IN') errorMsg = 'ऑडिओ रेकॉर्डिंग ३० सेकंदांपेक्षा कमी असावे. कृपया लहान मेसेज रेकॉर्ड करा.';
+            else if (languageCode === 'ta-IN') errorMsg = 'ஆடியோ பதிவு 30 வினாடிகளுக்கு குறைவாக இருக்க வேண்டும். தயவுசெய்து சிறிய செய்தியை முயற்சிக்கவும்.';
+            else if (languageCode === 'te-IN') errorMsg = 'ఆడియో రికార్డింగ్ 30 సెకన్ల కంటే తక్కువ ఉండాలి. దయచేసి చిన్న సందేశాన్ని ప్రయత్నించండి.';
+            else if (languageCode === 'gu-IN') errorMsg = 'ઓડિયો રેકોર્ડિંગ 30 સેકન્ડથી ઓછું હોવું જોઈએ. કૃપા કરીને ટૂંકો સંદેશ અજમાવો.';
+            else errorMsg = 'Audio recording must be less than 30 seconds. Please try a shorter message.';
+          }
+          setMessages(prev => [...prev, { id: 'err_stt_' + Date.now(), sender: 'ai', text: errorMsg }]);
           setAppState('idle');
         }
         return;
