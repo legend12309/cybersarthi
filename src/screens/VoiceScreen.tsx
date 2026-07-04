@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator,
   TouchableOpacity, FlatList, Animated, Easing,
@@ -30,6 +30,8 @@ export default function VoiceScreen({ navigation }: any) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const insets = useSafeAreaInsets();
+
+  const micContainerStyle = React.useMemo(() => [styles.micContainer, { paddingBottom: Math.max(20, insets.bottom + 10) }], [insets.bottom]);
 
   const isMounted = useRef(true);
   const flatListRef = useRef<FlatList>(null);
@@ -398,37 +400,17 @@ export default function VoiceScreen({ navigation }: any) {
     else if (appState === 'recording') stopRecordingAndProcess();
   };
 
-  const handleStopSpeech = async () => {
+  const handleStopSpeech = useCallback(async () => {
     if (player.playing) {
       player.pause();
     }
     setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
     setAppState('idle');
-  };
+  }, [player]);
 
-  const renderMessage = ({ item }: { item: Message }) => {
-    const isAI = item.sender === 'ai';
-    return (
-      <View style={[styles.msgRow, isAI ? styles.aiRow : styles.userRow]}>
-        {isAI && (
-          <View style={styles.avatar}>
-            <MaterialIcons name="security" size={16} color={colors.onPrimary} />
-          </View>
-        )}
-        <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
-          <Text style={[styles.bubbleText, isAI ? styles.aiText : styles.userText]}>
-            {item.text}
-          </Text>
-          {item.isAudioPlaying && (
-            <TouchableOpacity style={styles.stopSpeech} onPress={handleStopSpeech}>
-              <MaterialIcons name="volume-off" size={14} color={colors.primary} />
-              <Text style={styles.stopSpeechLabel}>{t('voice_status_speaking')}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    );
-  };
+  const renderMessage = useCallback(({ item }: { item: Message }) => {
+    return <MessageItem item={item} onStopSpeech={handleStopSpeech} t={t} />;
+  }, [handleStopSpeech, t]);
 
   const statusInfo = {
     idle:      { color: colors.success,  label: t('voice_status_ready') },
@@ -463,7 +445,7 @@ export default function VoiceScreen({ navigation }: any) {
         data={messages}
         renderItem={renderMessage}
         keyExtractor={item => item.id}
-        style={{ flex: 1 }}
+        style={styles.flex1}
         contentContainerStyle={styles.chatList}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         showsVerticalScrollIndicator={false}
@@ -471,7 +453,7 @@ export default function VoiceScreen({ navigation }: any) {
 
 
       {/* ── Input Area (Voice-first) ─────────────────────────── */}
-      <View style={[styles.micContainer, { paddingBottom: Math.max(20, insets.bottom + 10) }]}>
+      <View style={micContainerStyle}>
         
         {/* Secondary Text Input */}
         <View style={styles.textInputContainer}>
@@ -493,7 +475,7 @@ export default function VoiceScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <View style={{ position: 'relative', marginBottom: 16 }}>
+        <View style={styles.micRingWrap}>
           {appState === 'recording' && (
             <Animated.View style={[styles.pulseRing, { top: 0, left: 0, transform: [{ scale: pulseScale }], opacity: pulseOpacity }]} />
           )}
@@ -501,7 +483,7 @@ export default function VoiceScreen({ navigation }: any) {
           <TouchableOpacity
             style={[
               styles.heroMicBtn,
-              { marginBottom: 0 },
+              styles.mb0,
               appState === 'recording' && styles.heroMicBtnRec,
               appState === 'thinking' && styles.heroMicBtnThinking,
               appState === 'playing' && styles.heroMicBtnPlaying
@@ -531,6 +513,30 @@ export default function VoiceScreen({ navigation }: any) {
     </KeyboardAvoidingView>
   );
 }
+
+const MessageItem = React.memo(({ item, onStopSpeech, t }: { item: Message, onStopSpeech: () => void, t: any }) => {
+  const isAI = item.sender === 'ai';
+  return (
+    <View style={[styles.msgRow, isAI ? styles.aiRow : styles.userRow]}>
+      {isAI && (
+        <View style={styles.avatar}>
+          <MaterialIcons name="security" size={16} color={colors.onPrimary} />
+        </View>
+      )}
+      <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
+        <Text style={[styles.bubbleText, isAI ? styles.aiText : styles.userText]}>
+          {item.text}
+        </Text>
+        {item.isAudioPlaying && (
+          <TouchableOpacity style={styles.stopSpeech} onPress={onStopSpeech}>
+            <MaterialIcons name="volume-off" size={14} color={colors.primary} />
+            <Text style={styles.stopSpeechLabel}>{t('voice_status_speaking')}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
@@ -643,4 +649,7 @@ const styles = StyleSheet.create({
   heroMicBtnThinking: { backgroundColor: colors.warning, shadowColor: colors.warning },
   heroMicBtnPlaying: { backgroundColor: colors.success, shadowColor: colors.success },
   micHelperText: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: colors.onSurfaceVariant },
+  flex1: { flex: 1 },
+  micRingWrap: { position: 'relative', marginBottom: 16 },
+  mb0: { marginBottom: 0 },
 });

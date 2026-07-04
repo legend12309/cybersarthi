@@ -24,6 +24,9 @@ export default function ScamDetailScreen({ route, navigation }: any) {
   const [customAnalysisVerdict, setCustomAnalysisVerdict] = useState<'safe'|'suspicious'|null>(null);
   const [customAnalysisReason, setCustomAnalysisReason] = useState('');
 
+  const btnTextStyle = React.useMemo(() => [styles.sheetBtnText, { color: colors.onPrimary, opacity: customMsgInput.trim() ? 1 : 0.5 }], [customMsgInput]);
+  const resultVerdictStyle = React.useMemo(() => [styles.resultVerdict, { color: customAnalysisVerdict === 'safe' ? colors.success : colors.error }], [customAnalysisVerdict]);
+
   useEffect(() => {
     return () => { isMounted.current = false; };
   }, []);
@@ -144,7 +147,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
                 size={38}
                 color={isCorrect ? colors.success : colors.error}
               />
-              <View style={{ flex: 1 }}>
+              <View style={styles.flex1}>
                 <Text style={[styles.verdictTitle, { color: isCorrect ? colors.success : colors.error }]}>
                   {isCorrect ? t('scam_detail_verdict_correct') : t('scam_detail_verdict_incorrect')}
                 </Text>
@@ -157,7 +160,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
             {/* Red flags */}
             <View style={styles.analysisCard}>
               <Text style={styles.analysisTitle}>{t('scam_detail_analysis_title')}</Text>
-              <View style={{ gap: 12 }}>
+              <View style={styles.gap12}>
                 {scamInfo.redFlags.map((flag, i) => (
                   <View key={i} style={styles.flagRow}>
                     <View style={styles.flagIconBg}>
@@ -181,12 +184,12 @@ export default function ScamDetailScreen({ route, navigation }: any) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.continueBtn, { backgroundColor: colors.surfaceHigh, marginTop: 12, borderWidth: 1, borderColor: colors.primary }]}
+              style={[styles.continueBtn, styles.customMsgBtn]}
               onPress={() => setCustomAnalysisModalVisible(true)}
               activeOpacity={0.9}
             >
               <MaterialIcons name="search" size={20} color={colors.primary} />
-              <Text style={[styles.continueBtnText, { color: colors.primary }]}>Analyze Custom Message</Text>
+              <Text style={[styles.continueBtnText, styles.primaryText]}>Analyze Custom Message</Text>
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -208,7 +211,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
               <View style={styles.sheetBody}>
                 <Text style={styles.inputLabel}>Paste a suspicious message to analyze:</Text>
                 <TextInput
-                  style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+                  style={[styles.input, styles.multiInput]}
                   placeholder="Paste message here..."
                   placeholderTextColor={colors.onSurfaceVariant + '70'}
                   value={customMsgInput}
@@ -218,11 +221,11 @@ export default function ScamDetailScreen({ route, navigation }: any) {
                   autoCorrect={false}
                 />
                 <TouchableOpacity
-                  style={[styles.sheetBtn, { backgroundColor: colors.primary }]}
+                  style={styles.sheetBtnPrimary}
                   disabled={!customMsgInput.trim()}
                   onPress={handleAnalyzeCustomMessage}
                 >
-                  <Text style={[styles.sheetBtnText, { color: colors.onPrimary, opacity: customMsgInput.trim() ? 1 : 0.5 }]}>
+                  <Text style={btnTextStyle}>
                     Analyze Message
                   </Text>
                 </TouchableOpacity>
@@ -240,7 +243,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
               <View style={styles.sheetBody}>
                 <View style={[styles.resultCard, customAnalysisVerdict === 'safe' ? styles.resultSafe : styles.resultDanger]}>
                   <MaterialIcons name={customAnalysisVerdict === 'safe' ? 'verified-user' : 'gpp-bad'} size={40} color={customAnalysisVerdict === 'safe' ? colors.success : colors.error} />
-                  <Text style={[styles.resultVerdict, { color: customAnalysisVerdict === 'safe' ? colors.success : colors.error }]}>
+                  <Text style={resultVerdictStyle}>
                     {customAnalysisVerdict === 'safe' ? 'Looks Safe' : 'Suspicious'}
                   </Text>
                   <Text style={styles.resultReason}>{customAnalysisReason}</Text>
@@ -404,4 +407,15 @@ const styles = StyleSheet.create({
   resultDanger: { backgroundColor: colors.errorDim, borderColor: colors.error + '40' },
   resultVerdict: { fontFamily: 'Manrope_700Bold', fontSize: 18 },
   resultReason: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center' },
+  flex1: { flex: 1 },
+  gap12: { gap: 12 },
+  customMsgBtn: { backgroundColor: colors.surfaceHigh, marginTop: 12, borderWidth: 1, borderColor: colors.primary },
+  primaryText: { color: colors.primary },
+  multiInput: { height: 100, textAlignVertical: 'top' },
+  sheetBtnPrimary: {
+    height: 52, borderRadius: 26, backgroundColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+    marginTop: 4,
+  }
 });

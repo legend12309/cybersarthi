@@ -86,7 +86,7 @@ export default function SimulatorScreen({ navigation }: any) {
           onPress={() => navigation.navigate('Quiz')}
           activeOpacity={0.85}
         >
-          <View style={{ flex: 1 }}>
+          <View style={styles.flex1}>
             <Text style={styles.quizBannerTitle}>{t('sim_quiz_title') || 'Test Your Knowledge'}</Text>
             <Text style={styles.quizBannerDesc}>{t('sim_quiz_desc') || 'Take a quick 5-question quiz to earn points!'}</Text>
           </View>
@@ -107,7 +107,7 @@ export default function SimulatorScreen({ navigation }: any) {
               <View style={[styles.scenarioIconBg, { backgroundColor: c.bg }]}>
                 <MaterialIcons name={s.icon as any} size={22} color={c.text} />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={styles.flex1}>
                 <Text style={styles.scenarioTitle}>{s.title}</Text>
                 <Text style={styles.scenarioDesc} numberOfLines={1}>{s.content}</Text>
               </View>
@@ -179,4 +179,5 @@ const styles = StyleSheet.create({
   scenarioIconBg: { width: 46, height: 46, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   scenarioTitle: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: colors.onSurface, marginBottom: 3 },
   scenarioDesc: { fontFamily: 'PublicSans_400Regular', fontSize: 12, color: colors.onSurfaceVariant },
+  flex1: { flex: 1 },
 });

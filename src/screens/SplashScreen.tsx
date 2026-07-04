@@ -59,10 +59,10 @@ export default function SplashScreen({ navigation }: any) {
     <View style={styles.container}>
       <Animated.View style={[styles.contentWrapper, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         {/* Shield badge with attached glowing halo */}
-        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <View style={styles.centerWrap}>
           <Animated.View style={[styles.glowRing, { opacity: glowOpacity }]} />
           <Animated.View style={[styles.glowRingInner, { opacity: glowOpacity }]} />
-          <View style={[styles.iconBadge, { marginBottom: 0 }]}>
+          <View style={[styles.iconBadge, styles.mb0]}>
             <MaterialIcons name="security" size={56} color={colors.primary} />
           </View>
         </View>
@@ -148,7 +148,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.onSurfaceVariant,
     textAlign: 'center',
+    paddingHorizontal: 32,
     lineHeight: 22,
     maxWidth: width * 0.72,
   },
+  centerWrap: { alignItems: 'center', justifyContent: 'center' },
+  mb0: { marginBottom: 0 },
 });

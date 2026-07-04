@@ -74,16 +74,22 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const changeLanguage = async (code: string) => {
+    const prevCode = languageCode;
+    const prevSelected = hasSelectedLanguage;
     setLanguageCode(code);
     setHasSelectedLanguage(true);
     try {
       await AsyncStorage.setItem('cybersaathi.language', code);
       if (deviceId) {
         // Sync language to Supabase backend database profile
-        await supabase.from('users').update({ preferred_language: code }).eq('device_id', deviceId);
+        const { error } = await supabase.from('users').update({ preferred_language: code }).eq('device_id', deviceId);
+        if (error) throw error;
       }
     } catch (error) {
-      console.error('Failed to change language:', error);
+      console.error('Failed to change language, rolling back local state:', error);
+      setLanguageCode(prevCode);
+      setHasSelectedLanguage(prevSelected);
+      await AsyncStorage.setItem('cybersaathi.language', prevCode);
     }
   };
 

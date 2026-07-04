@@ -169,6 +169,11 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
     } catch (error: any) {
       console.log(`[CHAT] Error on attempt ${attempt + 1}:`, error.message);
       lastErrorMsg = error.response?.data?.message || error.response?.data?.error?.message || error.message;
+      const status = error.response?.status;
+      if (status === 500 || status === 403 || status === 429) {
+        console.log(`[CHAT] Fatal API Error ${status}, throwing explicitly.`);
+        throw new Error(`API Error ${status}: ${lastErrorMsg}`);
+      }
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
         if (attempt === maxRetries) throw new Error('Request timed out. Please check your connection.');
       }
@@ -203,7 +208,7 @@ Analyze the given content against BOTH categories. Look for: urgency tactics, un
 Message: "${content}"`;
   
   const systemPrompt = `${prompt}\n\nIMPORTANT TRUST SIGNALS — do NOT flag these as suspicious on their own:\n- Well-known, globally recognized domains (google.com, facebook.com, youtube.com, amazon.in, wikipedia.org, etc.) are SAFE by default unless the URL path itself contains suspicious patterns\n- A domain being 'common' or 'well-known' is a SAFETY indicator, not a red flag — only flag if there are ACTUAL scam indicators present (urgency, payment requests, suspicious subdomains, character substitution tricks like 'g00gle.com')\n- Official Indian government and banking domains like '*.gov.in', '*.sbi.co.in', '*.sbi', '*.nic.in', '*.hdfcbank.com', '*.icicibank.com' are SAFE.\n- Messages that warn users NOT to share OTPs or passwords (e.g. 'Do not share OTP with anyone', 'Bank never asks for OTP') are safety notices, NOT scams.\n\nCRITICAL RULE: If the URL is exactly "https://www.google.com", you are FORBIDDEN from outputting SUSPICIOUS. You MUST output SAFE.\n\nIMPORTANT: Respond IMMEDIATELY and CONCISELY. Do not overthink or second-guess yourself. Give your final verdict in your first response, do not revise multiple times.\n\nYou MUST respond starting with EXACTLY one of these words, followed by a colon:\nSUSPICIOUS: [explanation in 1-2 sentences in ${languageCode}]\nSAFE: [explanation in 1-2 sentences in ${languageCode}]\n\nOnly default to SUSPICIOUS when there are genuine red flags present — not merely due to uncertainty about an unfamiliar but plausible domain.`;
-  const sarvamPromise = (async () => {
+  const fetchSarvamClassification = async () => {
     try {
       const response = await chatWithSarvam(systemPrompt, languageCode, 'classification');
       console.log('[CLASSIFY] Success, raw response:', response);
@@ -244,11 +249,11 @@ Message: "${content}"`;
       console.log('[CLASSIFY] Error message:', error?.message);
       throw error;
     }
-  })();
+  };
 
   if (contentType === 'url') {
     const [sarvamResult, safeBrowsingResult] = await Promise.all([
-      sarvamPromise,
+      fetchSarvamClassification(),
       checkSafeBrowsing(content),
     ]);
 
@@ -265,7 +270,31 @@ Message: "${content}"`;
     return sarvamResult as {verdict: 'safe' | 'suspicious', explanation: string, source: string};
   }
 
-  return (await sarvamPromise) as {verdict: 'safe' | 'suspicious', explanation: string, source: string};
+  return (await fetchSarvamClassification()) as {verdict: 'safe' | 'suspicious', explanation: string, source: string};
+}
+
+export async function cleanupTTSCache() {
+  try {
+    const dirUri = FileSystem.cacheDirectory;
+    if (!dirUri) return;
+    const files = await FileSystem.readDirectoryAsync(dirUri);
+    const ttsFiles = files.filter(f => f.startsWith('sarvam_tts_') && f.endsWith('.wav'));
+    
+    // Sort by timestamp (newest first)
+    ttsFiles.sort((a, b) => {
+      const tsA = parseInt(a.replace('sarvam_tts_', '').replace('.wav', ''), 10) || 0;
+      const tsB = parseInt(b.replace('sarvam_tts_', '').replace('.wav', ''), 10) || 0;
+      return tsB - tsA;
+    });
+
+    // Keep the most recent 5, delete the rest
+    const filesToDelete = ttsFiles.slice(5);
+    for (const file of filesToDelete) {
+      await FileSystem.deleteAsync(dirUri + file, { idempotent: true });
+    }
+  } catch (err) {
+    console.log('[TTS] Cleanup error:', err);
+  }
 }
 
 export async function textToSpeech(text: string, languageCode: string): Promise<string> {
@@ -276,6 +305,7 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
   const maxRetries = 2;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
+      await cleanupTTSCache();
       // Sarvam TTS limit is 500 chars
       const safeText = text.length > 500 ? text.substring(0, 497) + '...' : text;
       const response = await axios.post(
@@ -385,15 +415,28 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
     uploadHeaders['x-ms-blob-type'] = 'BlockBlob';
   }
   
-  const putRes = await fetch(uploadUrl, {
-    method: 'PUT',
-    body: blob,
-    headers: uploadHeaders,
-  });
-  
-  if (!putRes.ok) {
-    const errText = await putRes.text();
-    throw new Error(`File upload failed: ${errText}`);
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), 30000); // 30s timeout
+
+  try {
+    const putRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: blob,
+      headers: uploadHeaders,
+      signal: abortController.signal as any,
+    });
+    
+    if (!putRes.ok) {
+      const errText = await putRes.text();
+      throw new Error(`File upload failed: ${errText}`);
+    }
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Upload timed out. Please check your network connection.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
   
   console.log('[VISION] Upload complete');

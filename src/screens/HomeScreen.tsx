@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Animated, Easing, Modal, TextInput, ActivityIndicator,
@@ -14,6 +14,31 @@ import { chatWithSarvam, classifyContent } from '../lib/sarvam';
 import dailyAlerts from '../data/dailyAlerts.json';
 
 const { width } = Dimensions.get('window');
+
+const SCAM_TYPES = [
+  { id: 'otp_scam', label: 'OTP / Bank' },
+  { id: 'kyc_scam', label: 'KYC Update' },
+  { id: 'job_scam', label: 'Fake Job' },
+  { id: 'lottery_scam', label: 'Lottery / Prize' },
+  { id: 'upi_scam', label: 'UPI Fraud' },
+  { id: 'electricity_scam', label: 'Electricity Bill' },
+  { id: 'love_scam', label: 'Romance / Love' },
+  { id: 'parcel_scam', label: 'Customs / Parcel' },
+  { id: 'screen_share_scam', label: 'Screen Share' },
+  { id: 'police_scam', label: 'Fake Police/CBI' },
+  { id: 'other', label: 'Other' }
+] as const;
+
+const TypeChip = React.memo(({ type, isSelected, onPress }: any) => (
+  <TouchableOpacity
+    style={[styles.typeChip, isSelected && styles.typeChipActive]}
+    onPress={() => onPress(type.id)}
+  >
+    <Text style={[styles.typeChipText, isSelected && styles.typeChipTextActive]}>
+      {type.label}
+    </Text>
+  </TouchableOpacity>
+));
 
 export default function HomeScreen({ navigation }: any) {
   const { t, deviceId, languageCode } = useLanguage();
@@ -40,19 +65,13 @@ export default function HomeScreen({ navigation }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError,  setSubmitError]  = useState(false);
 
-  const SCAM_TYPES = [
-    { id: 'otp_scam', label: 'OTP / Bank' },
-    { id: 'kyc_scam', label: 'KYC Update' },
-    { id: 'job_scam', label: 'Fake Job' },
-    { id: 'lottery_scam', label: 'Lottery / Prize' },
-    { id: 'upi_scam', label: 'UPI Fraud' },
-    { id: 'electricity_scam', label: 'Electricity Bill' },
-    { id: 'love_scam', label: 'Romance / Love' },
-    { id: 'parcel_scam', label: 'Customs / Parcel' },
-    { id: 'screen_share_scam', label: 'Screen Share' },
-    { id: 'police_scam', label: 'Fake Police/CBI' },
-    { id: 'other', label: 'Other' }
-  ] as const;
+  const isSafe = scanResult === 'safe';
+
+  // Memoized dynamic styles to prevent GC stutters on low-end devices
+  const sheetStyle = React.useMemo(() => [styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 10) }], [insets.bottom]);
+  const reportSheetStyle = React.useMemo(() => [styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(20, insets.bottom + 10) }], [insets.bottom]);
+  const sheetBtnTextStyle = React.useMemo(() => [styles.sheetBtnText, { color: colors.onPrimary, opacity: linkInput.trim() ? 1 : 0.5 }], [linkInput]);
+  const resultVerdictStyle = React.useMemo(() => [styles.resultVerdict, { color: isSafe ? colors.success : colors.error }], [isSafe]);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -71,7 +90,7 @@ export default function HomeScreen({ navigation }: any) {
     return () => { pulse.stop(); pulse2.stop(); };
   }, []);
 
-  const handleScanLink = async () => {
+  const handleScanLink = useCallback(async () => {
     const url = linkInput.trim().toLowerCase();
     if (!url) return;
     setScanState('scanning');
@@ -95,9 +114,12 @@ export default function HomeScreen({ navigation }: any) {
     } finally {
       setScanState('result');
     }
-  };
+  }, [linkInput, languageCode, t, deviceId]);
 
-  const handleSubmitReport = async () => {
+  const resetScanner = useCallback(() => { setLinkInput(''); setScanState('idle'); setScanResult(null); setScanSource(''); }, []);
+  const resetReporter = useCallback(() => { setFraudType('other'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); }, []);
+
+  const handleSubmitReport = useCallback(async () => {
     if (!scammerDetails.trim() && !description.trim()) {
       setReportError('Please provide either phone number/link/UPI or a description.');
       return;
@@ -130,12 +152,11 @@ export default function HomeScreen({ navigation }: any) {
       console.log('Report submission error:', error);
       setSubmitError(true);
     } finally { setIsSubmitting(false); }
-  };
+  }, [scammerDetails, description, amountLost, fraudType, deviceId, resetReporter]);
 
-  const resetScanner = () => { setLinkInput(''); setScanState('idle'); setScanResult(null); setScanSource(''); };
-  const resetReporter = () => { setFraudType('other'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); };
+  const handleSelectFraudType = useCallback((id: any) => setFraudType(id), []);
 
-  const handlePickScreenshot = async () => {
+  const handlePickScreenshot = useCallback(async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -156,9 +177,8 @@ export default function HomeScreen({ navigation }: any) {
       console.error('Image picker error:', err);
       Alert.alert('Error', 'Could not select image.');
     }
-  };
+  }, [navigation]);
 
-  const isSafe = scanResult === 'safe';
 
   // Pick one alert based on day-of-month modulo 10
   const alertIndex = new Date().getDate() % 10;
@@ -188,10 +208,10 @@ export default function HomeScreen({ navigation }: any) {
           <View style={styles.alertIconWrap}>
             <MaterialIcons name="warning-amber" size={20} color={colors.warning} />
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={styles.flex1}>
             <Text style={styles.alertTitle}>{activeAlertData.title}</Text>
             <Text style={styles.alertBody} numberOfLines={2}>
-              <Text style={{ fontFamily: 'Manrope_700Bold', color: colors.onSurface }}>{activeAlertData.highlight}</Text>
+              <Text style={styles.alertHighlight}>{activeAlertData.highlight}</Text>
               {activeAlertData.text}
             </Text>
           </View>
@@ -225,7 +245,7 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionCard} onPress={() => { resetReporter(); setReportModalVisible(true); }} activeOpacity={0.8}>
-            <View style={[styles.actionIconBg, { backgroundColor: colors.errorDim }]}>
+            <View style={[styles.actionIconBg, styles.bgErrorDim]}>
               <MaterialIcons name="report" size={26} color={colors.error} />
             </View>
             <Text style={styles.actionLabel}>{t('home_report_fraud')}</Text>
@@ -233,9 +253,9 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <View style={[styles.actionsRow, { marginTop: 12 }]}>
+        <View style={[styles.actionsRow, styles.mt12]}>
           <TouchableOpacity style={styles.actionCard} onPress={handlePickScreenshot} activeOpacity={0.8}>
-            <View style={[styles.actionIconBg, { backgroundColor: colors.warningDim }]}>
+            <View style={[styles.actionIconBg, styles.bgWarningDim]}>
               <MaterialIcons name="image-search" size={26} color={colors.warning} />
             </View>
             <Text style={styles.actionLabel}>{t('home_scan_screenshot')}</Text>
@@ -246,14 +266,14 @@ export default function HomeScreen({ navigation }: any) {
         {/* ── Quick tip card ─────────────────────────────────── */}
         <View style={styles.tipCard}>
           <MaterialIcons name="lightbulb" size={18} color={colors.warning} />
-          <Text style={styles.tipText}>🇮🇳  National Cyber Helpline: <Text style={{ color: colors.primary, fontFamily: 'Manrope_700Bold' }}>1930</Text></Text>
+          <Text style={styles.tipText}>🇮🇳  National Cyber Helpline: <Text style={styles.primaryBold}>1930</Text></Text>
         </View>
       </ScrollView>
 
       {/* ══ LINK SCANNER MODAL ══════════════════════════════════════════ */}
       <Modal animationType="slide" transparent visible={scanModalVisible} onRequestClose={() => setScanModalVisible(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
-          <View style={[styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 10) }]}>
+          <View style={sheetStyle}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{t('home_scan_link')}</Text>
@@ -276,11 +296,11 @@ export default function HomeScreen({ navigation }: any) {
                   autoCorrect={false}
                 />
                 <TouchableOpacity
-                  style={[styles.sheetBtn, { backgroundColor: colors.primary }]}
+                  style={styles.sheetBtnPrimary}
                   disabled={!linkInput.trim()}
                   onPress={handleScanLink}
                 >
-                  <Text style={[styles.sheetBtnText, { color: colors.onPrimary, opacity: linkInput.trim() ? 1 : 0.5 }]}>
+                  <Text style={sheetBtnTextStyle}>
                     {t('scanner_scan_btn')}
                   </Text>
                 </TouchableOpacity>
@@ -298,7 +318,7 @@ export default function HomeScreen({ navigation }: any) {
               <View style={styles.sheetBody}>
                 <View style={[styles.resultCard, isSafe ? styles.resultSafe : styles.resultDanger]}>
                   <MaterialIcons name={isSafe ? 'verified-user' : 'gpp-bad'} size={40} color={isSafe ? colors.success : colors.error} />
-                  <Text style={[styles.resultVerdict, { color: isSafe ? colors.success : colors.error }]}>
+                  <Text style={resultVerdictStyle}>
                     {isSafe ? t('scanner_result_safe') : t('scanner_result_suspicious')}
                   </Text>
                   <Text style={styles.resultReason}>{scanReason}</Text>
@@ -324,7 +344,7 @@ export default function HomeScreen({ navigation }: any) {
       {/* ══ FRAUD REPORTER MODAL ════════════════════════════════════════ */}
       <Modal animationType="slide" transparent visible={reportModalVisible} onRequestClose={() => setReportModalVisible(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
-          <View style={[styles.sheet, { maxHeight: '92%', paddingBottom: Math.max(20, insets.bottom + 10) }]}>
+          <View style={reportSheetStyle}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{t('home_report_fraud')}</Text>
@@ -333,22 +353,19 @@ export default function HomeScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false}>
               {!isSubmitted ? (
                 <>
                   {reportError ? <Text style={{ color: colors.error, fontFamily: 'Manrope_600SemiBold', marginBottom: -4 }}>{reportError}</Text> : null}
                   <Text style={styles.inputLabel}>{t('report_type_label')}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                     {SCAM_TYPES.map(type => (
-                      <TouchableOpacity
-                        key={type.id}
-                        style={[styles.typeChip, fraudType === type.id && styles.typeChipActive]}
-                        onPress={() => setFraudType(type.id)}
-                      >
-                        <Text style={[styles.typeChipText, fraudType === type.id && styles.typeChipTextActive]}>
-                          {type.label}
-                        </Text>
-                      </TouchableOpacity>
+                      <TypeChip 
+                        key={type.id} 
+                        type={type} 
+                        isSelected={fraudType === type.id} 
+                        onPress={handleSelectFraudType} 
+                      />
                     ))}
                   </ScrollView>
 
@@ -420,9 +437,9 @@ export default function HomeScreen({ navigation }: any) {
                   <Text style={styles.successDesc}>{t('report_success_desc')}</Text>
                   <View style={styles.helplineBox}>
                     <Text style={styles.helplineHead}>{t('report_helpline_header')}</Text>
-                    <TouchableOpacity style={styles.callBtn} onPress={() => Linking.openURL('tel:1930')}>
+                    <TouchableOpacity style={styles.callBtnPrimary} onPress={() => Linking.openURL('tel:1930')}>
                       <MaterialIcons name="call" size={20} color={colors.onPrimary} />
-                      <Text style={styles.callBtnText}>{t('report_helpline_btn')}</Text>
+                      <Text style={styles.callBtnText}>{t('home_call_helpline')}</Text>
                     </TouchableOpacity>
                     <Text style={styles.helplineSub}>{t('report_helpline_support')}</Text>
                   </View>
@@ -590,4 +607,23 @@ const styles = StyleSheet.create({
   },
   callBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 15, color: colors.onPrimary },
   helplineSub: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant, textAlign: 'center' },
+  flex1: { flex: 1 },
+  alertHighlight: { fontFamily: 'Manrope_700Bold', color: colors.onSurface },
+  bgErrorDim: { backgroundColor: colors.errorDim },
+  bgWarningDim: { backgroundColor: colors.warningDim },
+  mt12: { marginTop: 12 },
+  primaryBold: { color: colors.primary, fontFamily: 'Manrope_700Bold' },
+  reportScroll: { gap: 16, paddingBottom: 32 },
+  sheetBtnPrimary: {
+    height: 52, borderRadius: 26, backgroundColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+    marginTop: 4,
+  },
+  callBtnPrimary: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 48, borderRadius: 24, backgroundColor: colors.primary,
+    paddingHorizontal: 24, gap: 8,
+    shadowColor: colors.error, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
+  }
 });

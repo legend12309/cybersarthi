@@ -17,6 +17,21 @@ const LEVEL_PROGRESS: Record<string, number> = {
   'Level 5: Guardian': 1.0,
 };
 
+const BADGES = [
+  { id: 'Scam Spotter',       titleKey: 'badges_spotter_title',   descKey: 'badges_spotter_desc',   icon: 'remove-red-eye', colorKey: 'success' },
+  { id: 'Verified Protector', titleKey: 'badges_protector_title', descKey: 'badges_protector_desc', icon: 'verified-user',  colorKey: 'success' },
+  { id: 'Sim Hero',           titleKey: 'badges_hero_title',      descKey: 'badges_hero_desc',      icon: 'sports-esports', colorKey: 'primary' },
+  { id: 'Link Sentry',        titleKey: 'badges_sentry_title',    descKey: 'badges_sentry_desc',    icon: 'link',           colorKey: 'primary' },
+  { id: 'Quiz Master',        titleKey: 'Quiz Master',            descKey: 'Score 80% or higher on any Quiz', icon: 'school', colorKey: 'warning' },
+] as const;
+
+const COLOR_MAP: Record<string, { bg: string; icon: string }> = {
+  success: { bg: colors.successDim, icon: colors.success },
+  primary: { bg: colors.primaryGlow, icon: colors.primary },
+  warning: { bg: colors.warningDim, icon: colors.warning },
+  error:   { bg: colors.errorDim,   icon: colors.error   },
+};
+
 export default function BadgesScreen() {
   const { t, deviceId } = useLanguage();
   const isFocused = useIsFocused();
@@ -48,17 +63,6 @@ export default function BadgesScreen() {
     return map[l] || l;
   };
 
-  const isBadgeUnlocked = (name: string) => stats?.unlockedBadges.includes(name) || false;
-  const progress = LEVEL_PROGRESS[stats?.level || 'Level 2: Vigilant'] || 0.25;
-
-  const BADGES = [
-    { id: 'Scam Spotter',       titleKey: 'badges_spotter_title',   descKey: 'badges_spotter_desc',   icon: 'remove-red-eye', colorKey: 'success' },
-    { id: 'Verified Protector', titleKey: 'badges_protector_title', descKey: 'badges_protector_desc', icon: 'verified-user',  colorKey: 'success' },
-    { id: 'Sim Hero',           titleKey: 'badges_hero_title',      descKey: 'badges_hero_desc',      icon: 'sports-esports', colorKey: 'primary' },
-    { id: 'Link Sentry',        titleKey: 'badges_sentry_title',    descKey: 'badges_sentry_desc',    icon: 'link',           colorKey: 'primary' },
-    { id: 'Quiz Master',        titleKey: 'Quiz Master',            descKey: 'Score 80% or higher on any Quiz', icon: 'school', colorKey: 'warning' },
-  ] as const;
-
   const shareBadge = async (badgeName: string) => {
     try {
       const message = `मैंने CyberSaathi में "${badgeName}" बैज जीता! 🛡️ साइबर सुरक्षा सीखें: https://cybersaathi.in`;
@@ -68,12 +72,13 @@ export default function BadgesScreen() {
     }
   };
 
-  const COLOR_MAP: Record<string, { bg: string; icon: string }> = {
-    success: { bg: colors.successDim, icon: colors.success },
-    primary: { bg: colors.primaryGlow, icon: colors.primary },
-    warning: { bg: colors.warningDim, icon: colors.warning },
-    error:   { bg: colors.errorDim,   icon: colors.error   },
-  };
+  const isBadgeUnlocked = (name: string) => stats?.unlockedBadges.includes(name) || false;
+  const progress = LEVEL_PROGRESS[stats?.level || 'Level 2: Vigilant'] || 0.25;
+
+
+
+  const progressStyle = React.useMemo(() => ({ flex: progress }), [progress]);
+  const remainingStyle = React.useMemo(() => ({ flex: Math.max(0, 1 - progress) }), [progress]);
 
   if (loading && !stats) {
     return (
@@ -96,8 +101,8 @@ export default function BadgesScreen() {
 
           {/* Progress bar */}
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { flex: progress }]} />
-            <View style={{ flex: Math.max(0, 1 - progress) }} />
+            <View style={[styles.progressFill, progressStyle]} />
+            <View style={remainingStyle} />
           </View>
           <Text style={styles.progressLabel}>{Math.round(progress * 100)}{t('badges_progress_suffix') || '% to next level'}</Text>
         </View>
