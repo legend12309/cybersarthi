@@ -11,7 +11,7 @@ const getHeaders = () => ({
 });
 
 export async function speechToText(audioUri: string, languageCode: string): Promise<string> {
-  console.log('API Key length:', API_KEY?.length);
+  // console.log('API Key length:', API_KEY?.length);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000);
   try {
@@ -45,7 +45,7 @@ export async function speechToText(audioUri: string, languageCode: string): Prom
     if (error.name === 'AbortError') {
       throw new Error('Request timed out. Please check your connection.');
     }
-    console.error('STT Error Details:', error);
+    // console.error('STT Error Details:', error);
     throw new Error('err_stt_failed');
   } finally {
     clearTimeout(timeoutId);
@@ -124,7 +124,7 @@ Respond in ${languageName}.`;
         ...getHeaders(),
         'Content-Type': 'application/json',
       },
-      timeout: 45000
+      timeout: 15000
     }
   );
   return response;
@@ -150,9 +150,9 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
         const contaminated = isContaminated(text);
         const incomplete = isIncomplete(text);
         
-        console.log('[CHAT] Final answer finish_reason:', finishReason);
-        console.log('[CHAT] Final answer length:', text.length);
-        console.log('[CHAT] Final answer last 20 chars:', text.slice(-20));
+        // console.log('[CHAT] Final answer finish_reason:', finishReason);
+        // console.log('[CHAT] Final answer length:', text.length);
+        // console.log('[CHAT] Final answer last 20 chars:', text.slice(-20));
 
         if (!contaminated && !incomplete) {
           return text;
@@ -160,18 +160,18 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
 
         if (!contaminated && incomplete) {
           lastIncompleteContent = text;
-          console.log('[CHAT] Rejected - incomplete ending:', incomplete, 'finish_reason:', finishReason);
+          // console.log('[CHAT] Rejected - incomplete ending:', incomplete, 'finish_reason:', finishReason);
         } else {
-          console.log(`[CHAT] Attempt ${attempt + 1} rejected - content: '${text}', contaminated: ${contaminated}`);
+          // console.log(`[CHAT] Attempt ${attempt + 1} rejected - content: '${text}', contaminated: ${contaminated}`);
         }
       }
       
     } catch (error: any) {
-      console.log(`[CHAT] Error on attempt ${attempt + 1}:`, error.message);
+      // console.log(`[CHAT] Error on attempt ${attempt + 1}:`, error.message);
       lastErrorMsg = error.response?.data?.message || error.response?.data?.error?.message || error.message;
       const status = error.response?.status;
       if (status === 500 || status === 403 || status === 429) {
-        console.log(`[CHAT] Fatal API Error ${status}, throwing explicitly.`);
+        // console.log(`[CHAT] Fatal API Error ${status}, throwing explicitly.`);
         throw new Error(`API Error ${status}: ${lastErrorMsg}`);
       }
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
@@ -211,7 +211,7 @@ Message: "${content}"`;
   const fetchSarvamClassification = async () => {
     try {
       const response = await chatWithSarvam(systemPrompt, languageCode, 'classification');
-      console.log('[CLASSIFY] Success, raw response:', response);
+      // console.log('[CLASSIFY] Success, raw response:', response);
       
       const trimmed = response.trim();
       const cleanText = trimmed.replace(/^[^a-zA-Z\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F\u0A80-\u0AFF]+/, '');
@@ -245,8 +245,8 @@ Message: "${content}"`;
       
       return { verdict, explanation, source: 'sarvam' };
     } catch (error: any) {
-      console.log('[CLASSIFY] FAILED with error:', error);
-      console.log('[CLASSIFY] Error message:', error?.message);
+      // console.log('[CLASSIFY] FAILED with error:', error);
+      // console.log('[CLASSIFY] Error message:', error?.message);
       throw error;
     }
   };
@@ -257,7 +257,7 @@ Message: "${content}"`;
       checkSafeBrowsing(content),
     ]);
 
-    console.log('[CLASSIFY] Sarvam verdict:', sarvamResult.verdict, '| Safe Browsing threat:', safeBrowsingResult.isThreat);
+    // console.log('[CLASSIFY] Sarvam verdict:', sarvamResult.verdict, '| Safe Browsing threat:', safeBrowsingResult.isThreat);
 
     if (safeBrowsingResult.isThreat) {
       return {
@@ -293,7 +293,7 @@ export async function cleanupTTSCache() {
       await FileSystem.deleteAsync(dirUri + file, { idempotent: true });
     }
   } catch (err) {
-    console.log('[TTS] Cleanup error:', err);
+    // console.log('[TTS] Cleanup error:', err);
   }
 }
 
@@ -336,18 +336,18 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
       });
       return uri;
     } catch (error: any) {
-      console.log('[TTS] Network error details:', error.message, error.code);
+      // console.log('[TTS] Network error details:', error.message, error.code);
       if (attempt === maxRetries) {
         throw new Error('err_tts_failed');
       }
-      console.log(`[TTS] Retrying attempt ${attempt + 1}...`);
+      // console.log(`[TTS] Retrying attempt ${attempt + 1}...`);
     }
   }
   throw new Error('err_tts_failed');
 }
 
 export async function analyzeScreenshot(imageUri: string, languageCode: string): Promise<string> {
-  console.log('[VISION] Starting screenshot analysis...');
+  // console.log('[VISION] Starting screenshot analysis...');
   
   // 1. Create Job
   const createRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1`, {
@@ -371,7 +371,7 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
   
   const createData = await createRes.json();
   const jobId = createData.job_id;
-  console.log('[VISION] Job initialized:', jobId);
+  // console.log('[VISION] Job initialized:', jobId);
   
   const ext = imageUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'png';
   const isJpg = ext === 'jpg' || ext === 'jpeg';
@@ -439,7 +439,7 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
     clearTimeout(timeoutId);
   }
   
-  console.log('[VISION] Upload complete');
+  // console.log('[VISION] Upload complete');
   
   // 4. Start Job
   const startRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/start`, {
@@ -476,7 +476,7 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
     });
     
     if (!statusRes.ok) {
-      console.warn(`[VISION] Status poll failed (attempt ${attempts})`);
+      // console.warn(`[VISION] Status poll failed (attempt ${attempts})`);
       continue;
     }
     
@@ -484,7 +484,7 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
     status = statusData.job_state?.toLowerCase() || statusData.status?.toLowerCase();
     jobDetails = statusData.job_details;
     
-    console.log('[VISION] Polling attempt:', attempts, 'status:', status);
+    // console.log('[VISION] Polling attempt:', attempts, 'status:', status);
     
     if (status === 'completed' || status === 'failed') {
       break;
@@ -560,6 +560,6 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
     extractedText = Array.from(mdBuffer).map(c => String.fromCharCode(c)).join('');
   }
   
-  console.log('[VISION] Extracted text:', extractedText);
+  // console.log('[VISION] Extracted text:', extractedText);
   return extractedText;
 }

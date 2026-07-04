@@ -96,7 +96,7 @@ export default function VoiceScreen({ navigation }: any) {
       }
       AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
     } catch (e) {
-      console.warn('Cleanup error', e);
+      // console.warn('Cleanup error', e);
     }
   };
 
@@ -142,7 +142,7 @@ export default function VoiceScreen({ navigation }: any) {
     if (!msgText) return;
 
     try {
-      console.log('[PIPELINE] Starting chat...');
+      // console.log('[PIPELINE] Starting chat...');
       const userMsgId = 'u_' + Date.now();
       setMessages(prev => [...prev, { id: userMsgId, sender: 'user', text: msgText }]);
       setAppState('thinking');
@@ -151,11 +151,11 @@ export default function VoiceScreen({ navigation }: any) {
       let aiText = '';
       try { 
         aiText = await chatWithSarvam(msgText, languageCode); 
-        console.log('[PIPELINE] Chat result:', aiText);
+        // console.log('[PIPELINE] Chat result:', aiText);
       } catch (chatError) { 
-        console.log('[CHAT] error:', chatError);
+        // console.log('[CHAT] error:', chatError);
         aiText = getOfflineAIReply(msgText, languageCode); 
-        console.log('[PIPELINE] Chat fallback result:', aiText);
+        // console.log('[PIPELINE] Chat fallback result:', aiText);
       }
       
       if (!isMounted.current) return;
@@ -164,32 +164,32 @@ export default function VoiceScreen({ navigation }: any) {
       setMessages(prev => [...prev, { id: aiMsgId, sender: 'ai', text: aiText }]);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
-      console.log('[PIPELINE] Starting TTS...');
+      // console.log('[PIPELINE] Starting TTS...');
       setAppState('playing');
       setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, isAudioPlaying: true } : m));
       
       let audio = '';
       try {
         audio = await textToSpeech(aiText, languageCode);
-        console.log('[PIPELINE] TTS result length:', audio?.length);
+        // console.log('[PIPELINE] TTS result length:', audio?.length);
       } catch (ttsError) {
-        console.log('[TTS] error:', ttsError);
+        // console.log('[TTS] error:', ttsError);
         if (isMounted.current) {
           setMessages(prev => [...prev, { id: 'err_tts_' + Date.now(), sender: 'ai', text: t('err_audio_failed') || 'Could not generate audio.' }]);
         }
         throw new Error('TTS failed'); // Skip playback
       }
 
-      console.log('[PIPELINE] Starting Audio Playback...');
+      // console.log('[PIPELINE] Starting Audio Playback...');
       try {
         if (isMounted.current && audio) {
           player.replace(audio);
           player.play();
-          console.log('[PIPELINE] Audio Playback started.');
+          // console.log('[PIPELINE] Audio Playback started.');
           // State transition to idle is handled by the player playbackStatusUpdate listener
         }
       } catch (playbackError) {
-        console.log('[AUDIO PLAYBACK] error:', playbackError);
+        // console.log('[AUDIO PLAYBACK] error:', playbackError);
         if (isMounted.current) {
           setMessages(prev => [...prev, { id: 'err_play_' + Date.now(), sender: 'ai', text: t('err_audio_failed') || 'Could not play audio.' }]);
           setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
@@ -198,7 +198,7 @@ export default function VoiceScreen({ navigation }: any) {
       }
 
     } catch (globalError) {
-      console.log('[PIPELINE] Global Chat/TTS error:', globalError);
+      // console.log('[PIPELINE] Global Chat/TTS error:', globalError);
       if (isMounted.current) {
         setMessages(prev => [...prev, { id: 'err_global_' + Date.now(), sender: 'ai', text: 'An unexpected error occurred during chat.' }]);
         setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
@@ -213,7 +213,7 @@ export default function VoiceScreen({ navigation }: any) {
     setInputText('');
 
     try {
-      console.log('[PIPELINE] Starting text classification...');
+      // console.log('[PIPELINE] Starting text classification...');
       const userMsgId = 'u_' + Date.now();
       setMessages(prev => [...prev, { id: userMsgId, sender: 'user', text: `🔗 Checking: ${text}` }]);
       setAppState('thinking');
@@ -233,16 +233,16 @@ export default function VoiceScreen({ navigation }: any) {
 
         aiText = `[${verdictLabel}]\n${explanation}`;
         audioText = explanation; // Only read the explanation aloud
-        console.log('[PIPELINE] Classification result:', aiText);
+        // console.log('[PIPELINE] Classification result:', aiText);
       } catch (chatError) { 
-        console.log('[CHAT] error:', chatError);
+        // console.log('[CHAT] error:', chatError);
         const fallbackLabel = languageCode === 'hi-IN' ? 'ख़तरा (SUSPICIOUS)' : 'SUSPICIOUS';
         const fallbackExp = languageCode === 'hi-IN' 
           ? 'नेटवर्क समस्या के कारण लिंक/संदेश की जाँच नहीं हो सकी। कृपया सावधान रहें।' 
           : 'Could not analyze the content due to a network issue. Please be cautious.';
         aiText = `[${fallbackLabel}]\n${fallbackExp}`; 
         audioText = fallbackExp;
-        console.log('[PIPELINE] Fallback result:', aiText);
+        // console.log('[PIPELINE] Fallback result:', aiText);
       }
       
       if (!isMounted.current) return;
@@ -251,31 +251,31 @@ export default function VoiceScreen({ navigation }: any) {
       setMessages(prev => [...prev, { id: aiMsgId, sender: 'ai', text: aiText }]);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
-      console.log('[PIPELINE] Starting TTS...');
+      // console.log('[PIPELINE] Starting TTS...');
       setAppState('playing');
       setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, isAudioPlaying: true } : m));
       
       let audio = '';
       try {
         audio = await textToSpeech(audioText, languageCode);
-        console.log('[PIPELINE] TTS result length:', audio?.length);
+        // console.log('[PIPELINE] TTS result length:', audio?.length);
       } catch (ttsError) {
-        console.log('[TTS] error:', ttsError);
+        // console.log('[TTS] error:', ttsError);
         if (isMounted.current) {
           setMessages(prev => [...prev, { id: 'err_tts_' + Date.now(), sender: 'ai', text: t('err_audio_failed') || 'Could not generate audio.' }]);
         }
         throw new Error('TTS failed');
       }
 
-      console.log('[PIPELINE] Starting Audio Playback...');
+      // console.log('[PIPELINE] Starting Audio Playback...');
       try {
         if (isMounted.current && audio) {
           player.replace(audio);
           player.play();
-          console.log('[PIPELINE] Audio Playback started.');
+          // console.log('[PIPELINE] Audio Playback started.');
         }
       } catch (playbackError) {
-        console.log('[AUDIO PLAYBACK] error:', playbackError);
+        // console.log('[AUDIO PLAYBACK] error:', playbackError);
         if (isMounted.current) {
           setMessages(prev => [...prev, { id: 'err_play_' + Date.now(), sender: 'ai', text: t('err_audio_failed') || 'Could not play audio.' }]);
           setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
@@ -284,7 +284,7 @@ export default function VoiceScreen({ navigation }: any) {
       }
 
     } catch (globalError) {
-      console.log('[PIPELINE] Global Chat/TTS error:', globalError);
+      // console.log('[PIPELINE] Global Chat/TTS error:', globalError);
       if (isMounted.current) {
         setMessages(prev => [...prev, { id: 'err_global_' + Date.now(), sender: 'ai', text: 'An unexpected error occurred during chat.' }]);
         setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
@@ -295,17 +295,17 @@ export default function VoiceScreen({ navigation }: any) {
 
   const startRecording = async () => {
     if (appState !== 'idle') {
-      console.log('[MIC] Ignored press, appState is not idle:', appState);
+      // console.log('[MIC] Ignored press, appState is not idle:', appState);
       return;
     }
-    console.log('[PIPELINE] Starting recording process...');
+    // console.log('[PIPELINE] Starting recording process...');
     try {
       setAppState('starting');
 
       // Request microphone permission first
       const { granted } = await AudioModule.requestRecordingPermissionsAsync();
       if (!granted) {
-        console.log('[MIC] Permission denied by user');
+        // console.log('[MIC] Permission denied by user');
         if (isMounted.current) {
           setMessages(prev => [...prev, { id: 'err_perm_' + Date.now(), sender: 'ai', text: t('err_mic_permission') || 'Microphone permission denied. Please allow microphone access in Settings.' }]);
           setAppState('idle');
@@ -317,19 +317,19 @@ export default function VoiceScreen({ navigation }: any) {
       await recorder.prepareToRecordAsync();
       recorder.record();
       setAppState('recording');
-      console.log('[PIPELINE] Recording started.');
+      // console.log('[PIPELINE] Recording started.');
 
       // Auto-stop recording at 28 seconds to prevent exceeding 30-second API limit
       if (recordingTimeoutRef.current) {
         clearTimeout(recordingTimeoutRef.current);
       }
       recordingTimeoutRef.current = setTimeout(() => {
-        console.log('[MIC] Auto-stopping recording (28s limit reached)');
+        // console.log('[MIC] Auto-stopping recording (28s limit reached)');
         stopRecordingAndProcess();
       }, 28000);
 
     } catch (error) {
-      console.log('[MIC] error:', error);
+      // console.log('[MIC] error:', error);
       if (isMounted.current) {
         setMessages(prev => [...prev, { id: 'err_' + Date.now(), sender: 'ai', text: t('err_mic_permission') || 'Could not start microphone.' }]);
         setAppState('idle');
@@ -339,7 +339,7 @@ export default function VoiceScreen({ navigation }: any) {
 
   const stopRecordingAndProcess = async () => {
     if (appState !== 'recording') return;
-    console.log('[PIPELINE] Stopping recording...');
+    // console.log('[PIPELINE] Stopping recording...');
     setAppState('thinking');
 
     if (recordingTimeoutRef.current) {
@@ -352,13 +352,13 @@ export default function VoiceScreen({ navigation }: any) {
       const uri = recorder.uri;
       if (!uri) throw new Error('No audio URI found from recording');
       
-      console.log('[PIPELINE] Starting STT...');
+      // console.log('[PIPELINE] Starting STT...');
       let userText = '';
       try { 
         userText = await speechToText(uri, languageCode); 
-        console.log('[PIPELINE] STT result:', userText);
+        // console.log('[PIPELINE] STT result:', userText);
       } catch (sttError: any) {
-        console.log('[STT] error:', sttError);
+        // console.log('[STT] error:', sttError);
         if (isMounted.current) {
           const isDurationError = sttError.message?.toLowerCase().includes('duration') || 
                                   sttError.message?.toLowerCase().includes('30 second') ||
@@ -382,12 +382,12 @@ export default function VoiceScreen({ navigation }: any) {
         if (userText.trim()) {
           await handleSendMessage(userText);
         } else {
-          console.log('[PIPELINE] STT result was empty. Resetting to idle.');
+          // console.log('[PIPELINE] STT result was empty. Resetting to idle.');
           setAppState('idle');
         }
       }
     } catch (globalError) { 
-      console.log('[PIPELINE] Global STT/Processing error:', globalError);
+      // console.log('[PIPELINE] Global STT/Processing error:', globalError);
       if (isMounted.current) {
         setMessages(prev => [...prev, { id: 'err_global_stt_' + Date.now(), sender: 'ai', text: 'An unexpected error occurred processing your audio.' }]);
         setAppState('idle'); 

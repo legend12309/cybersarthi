@@ -42,7 +42,7 @@ export default function BadgesScreen() {
     let active = true;
     if (isFocused && deviceId) {
       setLoading(true);
-      console.log('[BADGES] About to call fetchUserStats with userId:', deviceId, 'type:', typeof deviceId);
+      // console.log('[BADGES] About to call fetchUserStats with userId:', deviceId, 'type:', typeof deviceId);
       fetchUserStats(deviceId).then(data => {
         if (active) { setStats(data); setLoading(false); }
       });
@@ -68,7 +68,7 @@ export default function BadgesScreen() {
       const message = `मैंने CyberSaathi में "${badgeName}" बैज जीता! 🛡️ साइबर सुरक्षा सीखें: https://cybersaathi.in`;
       await Share.share({ message });
     } catch (error) {
-      console.warn('Error sharing badge:', error);
+      // console.warn('Error sharing badge:', error);
     }
   };
 

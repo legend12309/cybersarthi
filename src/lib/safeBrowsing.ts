@@ -1,7 +1,7 @@
 export async function checkSafeBrowsing(url: string): Promise<{ isThreat: boolean; threatType?: string }> {
   const apiKey = process.env.EXPO_PUBLIC_SAFE_BROWSING_API_KEY;
   if (!apiKey) {
-    console.log('[SAFE_BROWSING] API Key missing, skipping check');
+    // console.log('[SAFE_BROWSING] API Key missing, skipping check');
     return { isThreat: false };
   }
 
@@ -29,14 +29,14 @@ export async function checkSafeBrowsing(url: string): Promise<{ isThreat: boolea
     }
     
     const data = await response.json();
-    console.log('[SAFE_BROWSING] Response:', JSON.stringify(data));
+    // console.log('[SAFE_BROWSING] Response:', JSON.stringify(data));
 
     if (data.matches && data.matches.length > 0) {
       return { isThreat: true, threatType: data.matches[0].threatType };
     }
     return { isThreat: false };
   } catch (error) {
-    console.log('[SAFE_BROWSING] Error:', error);
+    // console.log('[SAFE_BROWSING] Error:', error);
     // If this check fails, don't block the whole flow — fall back to Sarvam's verdict alone
     return { isThreat: false };
   }

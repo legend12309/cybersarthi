@@ -39,12 +39,12 @@ export default function ScamDetailScreen({ route, navigation }: any) {
     setIsSubmitting(true);
     try {
       if (deviceId) {
-        console.log('[SIM_SAVE] userId:', deviceId, 'scenarioId:', scamId);
+        // console.log('[SIM_SAVE] userId:', deviceId, 'scenarioId:', scamId);
         const { data, error } = await submitScamReport(deviceId, '', 0, choice === 'safe' ? 'safe' : 'scam', scamId, scamId, 'simulator', choice === 'safe');
-        console.log('[SIM_SAVE] Result data:', JSON.stringify(data), 'error:', JSON.stringify(error));
+        // console.log('[SIM_SAVE] Result data:', JSON.stringify(data), 'error:', JSON.stringify(error));
       }
     } catch (e) {
-      console.warn('Failed to submit simulator telemetry:', e);
+      // console.warn('Failed to submit simulator telemetry:', e);
     }
     finally {
       if (isMounted.current) {

@@ -149,7 +149,7 @@ export default function HomeScreen({ navigation }: any) {
       );
       resetReporter();
     } catch (error) { 
-      console.log('Report submission error:', error);
+      // console.log('Report submission error:', error);
       setSubmitError(true);
     } finally { setIsSubmitting(false); }
   }, [scammerDetails, description, amountLost, fraudType, deviceId, resetReporter]);
@@ -174,7 +174,7 @@ export default function HomeScreen({ navigation }: any) {
         navigation.navigate('ScreenshotScanner', { imageUri: result.assets[0].uri });
       }
     } catch (err) {
-      console.error('Image picker error:', err);
+      // console.error('Image picker error:', err);
       Alert.alert('Error', 'Could not select image.');
     }
   }, [navigation]);

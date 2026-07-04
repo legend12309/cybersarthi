@@ -55,7 +55,7 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
       setAdvice(result.verdict === 'suspicious' ? t('scanner_suspicious_advice') : t('scanner_safe_advice'));
       setLoadingState('done');
     } catch (err: any) {
-      console.error('[VISION] Analysis Error:', err);
+      // console.error('[VISION] Analysis Error:', err);
       setLoadingState('error');
       if (err.message?.includes('No readable text') || err.message?.includes('no text')) {
         setErrorMessage(t('scanner_err_no_text'));

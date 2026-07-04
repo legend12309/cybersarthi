@@ -58,11 +58,11 @@ export default function QuizScreen({ navigation }: any) {
     setIsFinished(true);
     if (deviceId) {
       try {
-        console.log('[QUIZ_SAVE] userId:', deviceId, 'score:', finalScore, 'total:', quizData.length);
+        // console.log('[QUIZ_SAVE] userId:', deviceId, 'score:', finalScore, 'total:', quizData.length);
         const result = await saveQuizScore(deviceId, 'General', finalScore, quizData.length);
-        console.log('[QUIZ_SAVE] Result:', JSON.stringify(result));
+        // console.log('[QUIZ_SAVE] Result:', JSON.stringify(result));
       } catch (e) {
-        console.warn('Failed to submit score', e);
+        // console.warn('Failed to submit score', e);
       }
     }
   };
@@ -79,7 +79,7 @@ export default function QuizScreen({ navigation }: any) {
       // If we had a local badge image, we would do:
       // await Sharing.shareAsync(localFileUri, { dialogTitle: 'My CyberSaathi Badge' });
     } catch (error) {
-      console.log('Error sharing', error);
+      // console.log('Error sharing', error);
     }
   };
 

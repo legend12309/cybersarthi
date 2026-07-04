@@ -1,157 +1,73 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-
-import { colors } from '../lib/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../context/LanguageContext';
+import { colors } from '../lib/colors';
 
-const { width } = Dimensions.get('window');
+// Clean, minimalist splash screen inspired by Zomato/Swiggy.
+// Uses the app's primary brand color as a solid background and white text for high contrast.
+// The design stays dark and smooth to avoid a non‑trusted feel.
 
 export default function SplashScreen({ navigation }: any) {
   const { t, isInitialized, hasSelectedLanguage } = useLanguage();
-  const fadeAnim   = useRef(new Animated.Value(0)).current;
-  const scaleAnim  = useRef(new Animated.Value(0.7)).current;
-  const glowAnim   = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
 
+  const fadeAnim = useRef(new Animated.Value(0)).current; // Fade‑in logo & text
+
+  // Fade‑in on mount
   useEffect(() => {
-    if (isInitialized) {
-      setTimeout(() => {
-        if (hasSelectedLanguage) {
-          navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
-        } else {
-          navigation.reset({ index: 0, routes: [{ name: 'Language' }] });
-        }
-      }, 1500);
-    }
-  }, [isInitialized, hasSelectedLanguage, navigation]);
-
-  useEffect(() => {
-
-    // Entrance animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 900,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Pulsing glow loop
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 1600, useNativeDriver: true }),
-        Animated.timing(glowAnim, { toValue: 0.3, duration: 1600, useNativeDriver: true }),
-      ])
-    ).start();
-
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
   }, []);
 
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.65] });
+  // Transition after exactly 2 seconds (2000 ms) for a crisp experience.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      navigation.reset({ index: 0, routes: [{ name: hasSelectedLanguage ? 'Main' : 'Language' }] });
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [hasSelectedLanguage, navigation]);
 
   return (
-    <View style={styles.container}>
-      <Animated.View style={[styles.contentWrapper, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        {/* Shield badge with attached glowing halo */}
-        <View style={styles.centerWrap}>
-          <Animated.View style={[styles.glowRing, { opacity: glowOpacity }]} />
-          <Animated.View style={[styles.glowRingInner, { opacity: glowOpacity }]} />
-          <View style={[styles.iconBadge, styles.mb0]}>
-            <MaterialIcons name="security" size={56} color={colors.primary} />
-          </View>
-        </View>
-
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>CyberSaathi</Text>
-          <View style={styles.divider} />
-          <Text style={styles.tagline}>{t('splash_tagline')}</Text>
-        </View>
-
-        {/* Dots loader */}
-      </Animated.View>
-    </View>
+    <Animated.View style={[styles.container, { opacity: fadeAnim, paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 24) }]}>
+      <View style={styles.logoContainer}>
+        <MaterialIcons name="security" size={120} color={colors.onPrimary} />
+        <Text style={styles.title}>CyberSaathi</Text>
+        <Text style={styles.tagline}>{t('splash_tagline') || 'Bharat ka Digital Suraksha Kavach'}</Text>
+      </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.primary, // solid brand blue – clean & eye‑friendly
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
   },
-  glowRing: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: colors.primaryGlow,
-  },
-  glowRingInner: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(56,189,248,0.12)',
-  },
-  contentWrapper: {
-    flex: 1,
+  logoContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  textContainer: {
-    position: 'absolute',
-    bottom: 80,
-    alignItems: 'center',
-    width: '100%',
-  },
-  iconBadge: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 2,
-    borderColor: colors.primary + '40',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    elevation: 12,
+    gap: 12,
   },
   title: {
     fontFamily: 'Manrope_700Bold',
-    fontSize: 34,
-    color: colors.onSurface,
+    fontSize: 32,
+    color: colors.onPrimary,
     letterSpacing: -0.5,
-    marginBottom: 16,
-  },
-  divider: {
-    width: 48,
-    height: 3,
-    backgroundColor: colors.primary,
-    borderRadius: 2,
-    marginBottom: 16,
+    marginTop: 12,
   },
   tagline: {
     fontFamily: 'PublicSans_400Regular',
-    fontSize: 15,
-    color: colors.onSurfaceVariant,
+    fontSize: 16,
+    color: colors.onPrimary,
+    opacity: 0.9,
     textAlign: 'center',
-    paddingHorizontal: 32,
-    lineHeight: 22,
-    maxWidth: width * 0.72,
+    marginTop: 4,
   },
-  centerWrap: { alignItems: 'center', justifyContent: 'center' },
-  mb0: { marginBottom: 0 },
 });

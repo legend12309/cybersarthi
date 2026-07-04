@@ -97,7 +97,12 @@ export const translations: TranslationsDictionary = {
     common_ok: 'OK',
 
     // Splash Screen
-    splash_tagline: 'Your Trusted Friend in Digital Safety',
+    splash_tagline: 'Bharat ka Digital Suraksha Kavach',
+    splash_trusted: 'Trusted by 10,000+ Indians',
+    splash_load_1: 'Verifying app integrity...',
+    splash_load_2: 'Loading scam database...',
+    splash_load_3: 'Securing connection...',
+    splash_footer: 'Built with ❤️ to protect every Indian digital citizen',
 
     // Error Messages
     err_mic_permission: 'Failed to start recording. Please check microphone permissions.',
@@ -275,7 +280,12 @@ export const translations: TranslationsDictionary = {
     common_ok: 'ठीक है',
 
     // Splash Screen
-    splash_tagline: 'डिजिटल सुरक्षा में आपका विश्वसनीय मित्र',
+    splash_tagline: 'भारत का डिजिटल सुरक्षा कवच',
+    splash_trusted: '१०,०००+ भारतीयों द्वारा भरोसा किया गया',
+    splash_load_1: 'ऐप अखंडता की पुष्टि की जा रही है...',
+    splash_load_2: 'स्कैम डेटाबेस लोड किया जा रहा है...',
+    splash_load_3: 'कनेक्शन सुरक्षित किया जा रहा है...',
+    splash_footer: 'हर भारतीय डिजिटल नागरिक की सुरक्षा के लिए ❤️ से बनाया गया',
 
     // Error Messages
     err_mic_permission: 'रिकॉर्डिंग शुरू करने में विफल। कृपया माइक्रोफ़ोन अनुमतियों की जांच करें।',

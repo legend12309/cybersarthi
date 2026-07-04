@@ -36,13 +36,13 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
       .single();
 
     if (error) {
-      console.warn('Supabase getOrCreateUser upsert error:', error);
+      // console.warn('Supabase getOrCreateUser upsert error:', error);
       return fallbackProfile;
     }
 
     return data as UserProfile;
   } catch (error) {
-    console.error('Supabase getOrCreateUser unexpected error:', error);
+    // console.error('Supabase getOrCreateUser unexpected error:', error);
     return fallbackProfile;
   }
 }
@@ -58,10 +58,10 @@ export async function updateUserLanguage(deviceId: string, languageCode: string)
       .eq('id', deviceId);
 
     if (error) {
-      console.warn('Supabase updateUserLanguage error:', error);
+      // console.warn('Supabase updateUserLanguage error:', error);
     }
   } catch (error) {
-    console.error('Supabase updateUserLanguage unexpected error:', error);
+    // console.error('Supabase updateUserLanguage unexpected error:', error);
   }
 }
 
@@ -79,7 +79,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
   };
 
   try {
-    console.log('[BADGES] fetchUserStats called with userId:', userId, 'type:', typeof userId);
+    // console.log('[BADGES] fetchUserStats called with userId:', userId, 'type:', typeof userId);
 
     // 1. Fetch user's level
     const { data: userData, error: userError } = await supabase
@@ -99,7 +99,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       .select('*')
       .eq('user_id', userId);
       
-    console.log('[BADGES] Quiz scores result:', JSON.stringify(quizData), 'error:', JSON.stringify(quizError));
+    // console.log('[BADGES] Quiz scores result:', JSON.stringify(quizData), 'error:', JSON.stringify(quizError));
 
     let totalScore = 0;
     let highestQuizScore = 0;
@@ -115,7 +115,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       .eq('user_id', userId)
       .eq('source', 'simulator');
       
-    console.log('[BADGES] Simulator completions result:', JSON.stringify(simData), 'error:', JSON.stringify(simError));
+    // console.log('[BADGES] Simulator completions result:', JSON.stringify(simData), 'error:', JSON.stringify(simError));
 
     let simCount = 0;
     if (!simError && simData) {
@@ -123,7 +123,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       simCount = simData.length;
     }
 
-    console.log('[BADGES_CHECK] userId:', userId, 'simCount:', simCount, 'bestQuizScore:', highestQuizScore);
+    // console.log('[BADGES_CHECK] userId:', userId, 'simCount:', simCount, 'bestQuizScore:', highestQuizScore);
 
     // 4. Calculate achievements/unlocked badges based on stats
     const unlockedBadges = ['Verified Protector']; // Always unlocked
@@ -164,7 +164,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
             if (error) console.warn('Supabase async level update error:', error);
           },
           (err: any) => {
-            console.error('Supabase async level update rejection:', err);
+            // console.error('Supabase async level update rejection:', err);
           }
         );
       userLevel = computedLevel;
@@ -177,7 +177,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       unlockedBadges,
     };
   } catch (error) {
-    console.error('Supabase fetchUserStats unexpected error:', error);
+    // console.error('Supabase fetchUserStats unexpected error:', error);
     return fallbackStats;
   }
 }
