@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ToastAndroid, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, theme } from '../lib/colors';
@@ -11,7 +11,11 @@ import scamsData from '../data/scams.json';
 export default function ScamDetailScreen({ route, navigation }: any) {
   const { scamId } = route.params || { scamId: 'electricity_bill' };
   const { t, deviceId, languageCode } = useLanguage();
+  const [roleplayMode, setRoleplayMode] = useState<'text' | 'voice'>('text');
   const [userChoice,   setUserChoice]   = useState<'scam' | 'safe' | null>(null);
+  
+  const ROLEPLAY_ENABLED_SCENARIOS = ['electricity_bill'];
+  const showRoleplayOption = ROLEPLAY_ENABLED_SCENARIOS.includes(scamId);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -58,6 +62,19 @@ export default function ScamDetailScreen({ route, navigation }: any) {
     }
   };
 
+  const handleRoleplayPress = () => {
+    if (scamId !== 'electricity_bill') {
+      const msg = t('roleplay_unavailable') || 'Roleplay coming soon';
+      if (Platform.OS === 'android') {
+        ToastAndroid.showWithGravity(msg, ToastAndroid.LONG, ToastAndroid.CENTER);
+      } else {
+        Alert.alert('Coming Soon', msg);
+      }
+      return;
+    }
+    navigation.navigate('ScamRoleplay', { scamId, mode: roleplayMode });
+  };
+
   const isCorrect = userChoice === 'scam';
 
   const handleAnalyzeCustomMessage = async () => {
@@ -82,7 +99,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
@@ -91,6 +108,45 @@ export default function ScamDetailScreen({ route, navigation }: any) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* ── Roleplay Start Section ─────────────────────────────── */}
+        {!showAnalysis && userChoice === null && (
+          <View style={styles.roleplaySection}>
+            <Text style={styles.roleplayTitle}>Live Scam Simulator</Text>
+            <Text style={styles.roleplaySub}>Experience this scenario in a safe environment before you decide.</Text>
+            
+            <View style={styles.toggleRow}>
+              <TouchableOpacity 
+                style={[styles.toggleBtn, roleplayMode === 'text' && styles.toggleBtnActive]} 
+                onPress={() => setRoleplayMode('text')}
+              >
+                <MaterialIcons name="chat" size={18} color={roleplayMode === 'text' ? colors.onPrimary : colors.onSurface} />
+                <Text style={[styles.toggleText, roleplayMode === 'text' && styles.toggleTextActive]}>Text</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.toggleBtn, roleplayMode === 'voice' && styles.toggleBtnActive]} 
+                onPress={() => setRoleplayMode('voice')}
+              >
+                <MaterialIcons name="mic" size={18} color={roleplayMode === 'voice' ? colors.onPrimary : colors.onSurface} />
+                <Text style={[styles.toggleText, roleplayMode === 'voice' && styles.toggleTextActive]}>Voice</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.startRoleplayBtn}
+              onPress={handleRoleplayPress}
+            >
+              <MaterialIcons name="play-arrow" size={24} color={colors.onPrimary} />
+              <Text style={styles.startRoleplayBtnText}>Start Live Roleplay</Text>
+            </TouchableOpacity>
+
+            <View style={styles.orDivider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.orText}>OR skip to static version</Text>
+              <View style={styles.dividerLine} />
+            </View>
+          </View>
+        )}
+
         {/* ── SMS Card ─────────────────────────────── */}
         <View style={styles.smsCard}>
           <View style={styles.smsHeader}>
@@ -285,7 +341,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  scroll: { padding: 20, paddingBottom: 40, gap: 20 },
+  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40, gap: 20 },
 
   // SMS mockup
   smsCard: {
@@ -417,5 +473,20 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
     marginTop: 4,
-  }
+  },
+  
+  // Roleplay section
+  roleplaySection: { backgroundColor: colors.surfaceHigh, padding: 20, borderRadius: theme.cardRadius, borderWidth: 1, borderColor: colors.primary + '40', alignItems: 'center', gap: 12 },
+  roleplayTitle: { fontFamily: 'Manrope_700Bold', fontSize: 18, color: colors.onSurface },
+  roleplaySub: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: 4 },
+  toggleRow: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 20, padding: 4, borderWidth: 1, borderColor: colors.surfaceBorder },
+  toggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 20, borderRadius: 16 },
+  toggleBtnActive: { backgroundColor: colors.primary },
+  toggleText: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: colors.onSurface },
+  toggleTextActive: { color: colors.onPrimary },
+  startRoleplayBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 24, width: '100%', justifyContent: 'center', marginTop: 8 },
+  startRoleplayBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onPrimary },
+  orDivider: { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 12, marginTop: 12 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.surfaceBorder },
+  orText: { fontFamily: 'PublicSans_400Regular', fontSize: 12, color: colors.onSurfaceVariant }
 });

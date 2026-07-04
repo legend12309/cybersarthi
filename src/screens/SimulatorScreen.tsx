@@ -48,7 +48,7 @@ export default function SimulatorScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -122,7 +122,7 @@ export default function SimulatorScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scroll: { padding: 20, paddingBottom: 100, gap: 16 },
+  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100, gap: 20 },
 
   header: { gap: 8, marginBottom: 4 },
   levelPill: {

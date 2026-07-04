@@ -8,7 +8,7 @@ interface LanguageContextProps {
   languageCode: string;
   deviceId: string | null;
   changeLanguage: (code: string) => Promise<void>;
-  t: (key: string) => string;
+  t: (key: string, fallback?: string) => string;
   isInitialized: boolean;
   hasSelectedLanguage: boolean;
 }
@@ -96,7 +96,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   /**
    * Translate a key into the active language, falling back to English if missing.
    */
-  const t = (key: string): string => {
+  const t = (key: string, fallback?: string): string => {
     const languageTranslations = translations[languageCode];
     if (languageTranslations && languageTranslations[key]) {
       return languageTranslations[key];
@@ -106,7 +106,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (englishTranslations && englishTranslations[key]) {
       return englishTranslations[key];
     }
-    return key;
+    return fallback || key;
   };
 
   return (

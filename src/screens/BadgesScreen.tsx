@@ -65,7 +65,8 @@ export default function BadgesScreen() {
 
   const shareBadge = async (badgeName: string) => {
     try {
-      const message = `मैंने CyberSaathi में "${badgeName}" बैज जीता! 🛡️ साइबर सुरक्षा सीखें: https://cybersaathi.in`;
+      const message = t('badge_share_msg', `I just earned the "${badgeName}" badge on CyberSaathi! 🛡️ Learn cyber safety: https://cybersaathi.in`)
+        .replace('{badgeName}', badgeName);
       await Share.share({ message });
     } catch (error) {
       // console.warn('Error sharing badge:', error);
@@ -82,14 +83,14 @@ export default function BadgesScreen() {
 
   if (loading && !stats) {
     return (
-      <SafeAreaView style={[styles.container, styles.center]}>
+      <SafeAreaView edges={['top']} style={[styles.container, styles.center]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* ── Profile Hero ─────────────────────────────────── */}
         <View style={styles.heroCard}>
@@ -110,7 +111,7 @@ export default function BadgesScreen() {
         {/* ── Stats row ─────────────────────────────────────── */}
         <View style={styles.statsRow}>
           <View style={styles.statCell}>
-            <Text style={styles.statNum}>{stats?.unlockedBadges.length || 1}</Text>
+            <Text style={styles.statNum}>{stats?.unlockedBadges?.length || 0}</Text>
             <Text style={styles.statLab}>{t('badges_stats_unlocked')}</Text>
           </View>
           <View style={styles.statDivider} />
@@ -127,6 +128,14 @@ export default function BadgesScreen() {
 
         {/* ── Badge Grid ─────────────────────────────────────── */}
         <Text style={styles.sectionTitle}>{t('badges_section_title')}</Text>
+        
+        {(!stats?.unlockedBadges || stats.unlockedBadges.length === 0) && (
+          <View style={styles.emptyStateContainer}>
+            <MaterialIcons name="info-outline" size={24} color={colors.primary} />
+            <Text style={styles.emptyStateText}>{t('badges_empty_state', 'You have not unlocked any badges yet. Try taking a quiz or scanning a link!')}</Text>
+          </View>
+        )}
+
         <View style={styles.grid}>
           {BADGES.map(b => {
             const unlocked = isBadgeUnlocked(b.id);
@@ -173,7 +182,7 @@ export default function BadgesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { justifyContent: 'center', alignItems: 'center' },
-  scroll: { padding: 20, paddingBottom: 100, gap: 16 },
+  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100, gap: 16 },
 
   // Hero card
   heroCard: {
@@ -181,6 +190,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.surfaceBorder,
     padding: 24, alignItems: 'center', gap: 8,
   },
+  badgeLockOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.surface + 'B3', justifyContent: 'center', alignItems: 'center', borderRadius: 16, zIndex: 10 },
+  lockIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceHigh, justifyContent: 'center', alignItems: 'center', shadowColor: colors.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+  
+  emptyStateContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary + '15', padding: 16, borderRadius: 12, marginBottom: 16 },
+  emptyStateText: { flex: 1, marginLeft: 12, fontSize: 14, fontFamily: 'PublicSans_400Regular', color: colors.onSurface, lineHeight: 20 },
+
   medalCircle: {
     width: 88, height: 88, borderRadius: 44,
     backgroundColor: colors.primaryGlow, borderWidth: 1.5, borderColor: colors.primary + '40',

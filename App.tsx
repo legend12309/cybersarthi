@@ -25,6 +25,7 @@ import BadgesScreen            from './src/screens/BadgesScreen';
 import LanguageSelectionScreen from './src/screens/LanguageSelectionScreen';
 import CustomSplashScreen      from './src/screens/SplashScreen';
 import ScamDetailScreen        from './src/screens/ScamDetailScreen';
+import ScamRoleplayScreen      from './src/screens/ScamRoleplayScreen';
 import QuizScreen              from './src/screens/QuizScreen';
 import ScreenshotScannerScreen from './src/screens/ScreenshotScannerScreen';
 import { colors }              from './src/lib/colors';
@@ -146,6 +147,7 @@ export default function App() {
             <Stack.Screen name="Language"   component={LanguageSelectionScreen} />
             <Stack.Screen name="Main"       component={MainTabs} />
             <Stack.Screen name="ScamDetail" component={ScamDetailScreen} />
+            <Stack.Screen name="ScamRoleplay" component={ScamRoleplayScreen} />
             <Stack.Screen name="Quiz"       component={QuizScreen} />
             <Stack.Screen name="ScreenshotScanner" component={ScreenshotScannerScreen} />
           </Stack.Navigator>

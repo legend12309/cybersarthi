@@ -29,13 +29,13 @@ const SCAM_TYPES = [
   { id: 'other', label: 'Other' }
 ] as const;
 
-const TypeChip = React.memo(({ type, isSelected, onPress }: any) => (
+const TypeChip = React.memo(({ type, isSelected, onPress, localizedLabel }: any) => (
   <TouchableOpacity
     style={[styles.typeChip, isSelected && styles.typeChipActive]}
     onPress={() => onPress(type.id)}
   >
     <Text style={[styles.typeChipText, isSelected && styles.typeChipTextActive]}>
-      {type.label}
+      {localizedLabel}
     </Text>
   </TouchableOpacity>
 ));
@@ -64,6 +64,11 @@ export default function HomeScreen({ navigation }: any) {
   const [isSubmitted,  setIsSubmitted]  = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError,  setSubmitError]  = useState(false);
+
+  const isMounted = useRef(true);
+  useEffect(() => {
+    return () => { isMounted.current = false; };
+  }, []);
 
   const isSafe = scanResult === 'safe';
 
@@ -98,6 +103,7 @@ export default function HomeScreen({ navigation }: any) {
     try {
       const { verdict, explanation, source } = await classifyContent(url, languageCode, 'url');
       
+      if (!isMounted.current) return;
       setScanResult(verdict);
       setScanReason(explanation);
       setScanAdvice(verdict === 'suspicious' ? t('scanner_suspicious_advice') : t('scanner_safe_advice'));
@@ -108,11 +114,14 @@ export default function HomeScreen({ navigation }: any) {
         await saveLinkScan(deviceId, url, verdict, explanation);
       }
     } catch (e) {
+      if (!isMounted.current) return;
       setScanResult('suspicious');
-      setScanReason('Could not analyze the link right now. Please be cautious.');
+      setScanReason(t('scanner_error_reason', 'Could not analyze the link right now. Please be cautious.'));
       setScanAdvice(t('scanner_unknown_advice'));
     } finally {
-      setScanState('result');
+      if (isMounted.current) {
+        setScanState('result');
+      }
     }
   }, [linkInput, languageCode, t, deviceId]);
 
@@ -138,21 +147,23 @@ export default function HomeScreen({ navigation }: any) {
           'user_report' // source column
         );
       }
+      if (!isMounted.current) return;
       setReportModalVisible(false);
       Alert.alert(
-        'Report Saved',
-        'Your report has been saved. For urgent action, also call National Cyber Helpline 1930.',
+        t('report_saved', 'Report Saved'),
+        t('report_saved_desc', 'Your report has been saved. For urgent action, also call National Cyber Helpline 1930.'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Call 1930', onPress: () => Linking.openURL('tel:1930') }
+          { text: t('common_cancel', 'Cancel'), style: 'cancel' },
+          { text: t('call_1930', 'Call 1930'), onPress: () => Linking.openURL('tel:1930') }
         ]
       );
       resetReporter();
     } catch (error) { 
-      // console.log('Report submission error:', error);
-      setSubmitError(true);
-    } finally { setIsSubmitting(false); }
-  }, [scammerDetails, description, amountLost, fraudType, deviceId, resetReporter]);
+      if (isMounted.current) setSubmitError(true);
+    } finally { 
+      if (isMounted.current) setIsSubmitting(false); 
+    }
+  }, [scammerDetails, description, amountLost, fraudType, deviceId, resetReporter, t]);
 
   const handleSelectFraudType = useCallback((id: any) => setFraudType(id), []);
 
@@ -186,7 +197,7 @@ export default function HomeScreen({ navigation }: any) {
   const activeAlertData = (currentAlert as any)[languageCode] || (currentAlert as any)['en-IN'];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* ── Header ─────────────────────────────────────────── */}
         <View style={styles.header}>
@@ -365,6 +376,7 @@ export default function HomeScreen({ navigation }: any) {
                         type={type} 
                         isSelected={fraudType === type.id} 
                         onPress={handleSelectFraudType} 
+                        localizedLabel={t(type.id, type.label)}
                       />
                     ))}
                   </ScrollView>
@@ -409,8 +421,8 @@ export default function HomeScreen({ navigation }: any) {
                         <MaterialIcons name="error-outline" size={20} color={colors.error} />
                       </View>
                       <View style={{ flex: 1, paddingRight: 8 }}>
-                        <Text style={[styles.alertTitle, { color: colors.error }]}>Error / त्रुटि</Text>
-                        <Text style={[styles.alertBody, { color: colors.onSurface }]}>रिपोर्ट सबमिट नहीं हो सकी। कृपया पुनः प्रयास करें।</Text>
+                        <Text style={[styles.alertTitle, { color: colors.error }]}>{t('error', 'Error')}</Text>
+                        <Text style={[styles.alertBody, { color: colors.onSurface }]}>{t('report_submit_error', 'Could not submit report. Please try again.')}</Text>
                       </View>
                     </View>
                   )}
@@ -423,7 +435,7 @@ export default function HomeScreen({ navigation }: any) {
                     {isSubmitting
                       ? <ActivityIndicator size="small" color={colors.onPrimary} />
                       : <Text style={[styles.sheetBtnText, { color: colors.onPrimary }]}>
-                          {submitError ? 'Retry / पुनः प्रयास करें' : t('report_submit_btn')}
+                          {submitError ? t('report_submit_retry', 'Retry') : t('report_submit_btn')}
                         </Text>
                     }
                   </TouchableOpacity>
@@ -458,7 +470,7 @@ export default function HomeScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scroll: { padding: 20, paddingBottom: 100, gap: 16 },
+  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100, gap: 16 },
 
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

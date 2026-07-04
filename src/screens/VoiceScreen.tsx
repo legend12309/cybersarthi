@@ -29,9 +29,6 @@ export default function VoiceScreen({ navigation }: any) {
   const player = useAudioPlayer();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const insets = useSafeAreaInsets();
-
-  const micContainerStyle = React.useMemo(() => [styles.micContainer, { paddingBottom: Math.max(20, insets.bottom + 10) }], [insets.bottom]);
 
   const isMounted = useRef(true);
   const flatListRef = useRef<FlatList>(null);
@@ -60,11 +57,18 @@ export default function VoiceScreen({ navigation }: any) {
       subscription.remove();
       cleanupAudioAndRecording(); 
     };
-  }, [languageCode]);
+  }, [languageCode, player]);
 
   useEffect(() => {
     if (!isFocused) { cleanupAudioAndRecording(); setAppState('idle'); }
   }, [isFocused]);
+
+  useEffect(() => {
+    // Auto-scroll when messages change
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [messages]);
 
   useEffect(() => {
     if (appState === 'recording') {
@@ -422,10 +426,10 @@ export default function VoiceScreen({ navigation }: any) {
 
   return (
     <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* ── Header ───────────────────────────────────────────── */}
       <View style={styles.header}>
         <View style={styles.brand}>
@@ -453,7 +457,7 @@ export default function VoiceScreen({ navigation }: any) {
 
 
       {/* ── Input Area (Voice-first) ─────────────────────────── */}
-      <View style={micContainerStyle}>
+      <View style={styles.micContainer}>
         
         {/* Secondary Text Input */}
         <View style={styles.textInputContainer}>
@@ -580,7 +584,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4,
   },
-  bubbleText: { fontFamily: 'PublicSans_400Regular', fontSize: 14, lineHeight: 21 },
+  bubbleText: { fontFamily: 'PublicSans_400Regular', fontSize: 14, lineHeight: 21, flexWrap: 'wrap' },
   aiText: { color: colors.onSurface },
   userText: { color: colors.onPrimary },
   stopSpeech: {
@@ -596,7 +600,7 @@ const styles = StyleSheet.create({
 
   micContainer: {
     alignItems: 'center', justifyContent: 'center',
-    paddingTop: 16,
+    paddingTop: 16, paddingBottom: 20,
     backgroundColor: colors.surface,
     borderTopWidth: 1, borderColor: colors.surfaceBorder,
     shadowColor: colors.shadow, shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 10,

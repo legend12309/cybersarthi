@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Share, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Share, ScrollView, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
@@ -11,15 +11,20 @@ import { saveQuizScore } from '../lib/api';
 
 export default function QuizScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { deviceId } = useLanguage();
+  const { deviceId, t } = useLanguage();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isFinished, setIsFinished] = useState(false);
   
+  const isMounted = useRef(true);
+  useEffect(() => {
+    return () => { isMounted.current = false; };
+  }, []);
+
   // Animation values
-  const [bgColorAnim] = useState(new Animated.Value(0));
+  const bgColorAnim = useRef(new Animated.Value(0)).current;
 
   const question = quizData[currentIndex];
 
@@ -45,6 +50,7 @@ export default function QuizScreen({ navigation }: any) {
         useNativeDriver: false,
       })
     ]).start(() => {
+      if (!isMounted.current) return;
       if (currentIndex < quizData.length - 1) {
         setCurrentIndex(i => i + 1);
         setSelectedOption(null);
@@ -58,17 +64,17 @@ export default function QuizScreen({ navigation }: any) {
     setIsFinished(true);
     if (deviceId) {
       try {
-        // console.log('[QUIZ_SAVE] userId:', deviceId, 'score:', finalScore, 'total:', quizData.length);
-        const result = await saveQuizScore(deviceId, 'General', finalScore, quizData.length);
-        // console.log('[QUIZ_SAVE] Result:', JSON.stringify(result));
+        await saveQuizScore(deviceId, 'General', finalScore, quizData.length);
       } catch (e) {
-        // console.warn('Failed to submit score', e);
+        Alert.alert(t('error', 'Error'), t('submit_failed', 'Could not save your score.'));
       }
     }
   };
 
   const shareBadge = async () => {
-    const message = `🛡️ I just scored ${score}/${quizData.length} on the CyberSaathi Security Quiz! Can you beat my score?`;
+    const message = t('badge_share_msg_quiz', `🛡️ I just scored ${score}/${quizData.length} on the CyberSaathi Security Quiz! Can you beat my score?`)
+      .replace('{score}', score.toString())
+      .replace('{total}', quizData.length.toString());
     
     try {
       // Try using React Native Share first for rich text
@@ -94,23 +100,23 @@ export default function QuizScreen({ navigation }: any) {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.resultContainer}>
           <MaterialIcons name="emoji-events" size={80} color={colors.primary} />
-          <Text style={styles.resultTitle}>Quiz Completed!</Text>
+          <Text style={styles.resultTitle}>{t('quiz_completed', 'Quiz Completed!')}</Text>
           <Text style={styles.scoreText}>{score} / {quizData.length}</Text>
           
           <View style={styles.badgeCard}>
             <MaterialIcons name="security" size={40} color={colors.success} />
             <Text style={styles.badgeName}>
-              {score === quizData.length ? 'Cyber Guardian' : score >= 3 ? 'Vigilant Citizen' : 'Trainee'}
+              {score === quizData.length ? t('badge_cyber_guardian', 'Cyber Guardian') : score >= 3 ? t('badge_vigilant_citizen', 'Vigilant Citizen') : t('badge_trainee', 'Trainee')}
             </Text>
           </View>
 
           <TouchableOpacity style={styles.shareBtn} onPress={shareBadge}>
             <MaterialIcons name="share" size={20} color={colors.onPrimary} />
-            <Text style={styles.shareBtnText}>Share Badge</Text>
+            <Text style={styles.shareBtnText}>{t('share_badge', 'Share Badge')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.shareBtn, styles.homeBtn]} onPress={() => navigation.goBack()}>
-            <Text style={[styles.shareBtnText, { color: colors.primary }]}>Return Home</Text>
+            <Text style={[styles.shareBtnText, { color: colors.primary }]}>{t('return_home', 'Return Home')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

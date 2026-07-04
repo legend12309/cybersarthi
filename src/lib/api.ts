@@ -61,10 +61,11 @@ export async function submitScamReport(userId: string, phone: string, amount: nu
       ])
       .select();
 
-    return { data, error };
+    if (error) throw error;
+    return { data, error: null };
   } catch (error) {
     console.error('Supabase submitScamReport unexpected error:', error);
-    return { data: null, error };
+    throw error;
   }
 }
 
@@ -83,10 +84,11 @@ export async function saveQuizScore(userId: string, topic: string, score: number
       ])
       .select();
 
-    return { data, error };
+    if (error) throw error;
+    return { data, error: null };
   } catch (error) {
     console.error('Supabase saveQuizScore unexpected error:', error);
-    return { data: null, error };
+    throw error;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, ActivityIndicator, Dimensions
@@ -23,23 +23,21 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
   const [explanation, setExplanation] = useState('');
   const [advice, setAdvice] = useState('');
 
+  const isMounted = useRef(true);
   useEffect(() => {
-    if (imageUri) {
-      startAnalysis();
-    } else {
-      setLoadingState('error');
-      setErrorMessage(t('scanner_err_image'));
-    }
-  }, [imageUri]);
+    return () => { isMounted.current = false; };
+  }, []);
 
-  const startAnalysis = async () => {
+  const startAnalysis = useCallback(async () => {
     try {
+      if (!isMounted.current) return;
       setLoadingState('reading');
       setErrorMessage('');
 
       // Step 1: Sarvam Vision OCR
       const extractedText = await analyzeScreenshot(imageUri, languageCode);
       
+      if (!isMounted.current) return;
       if (!extractedText || extractedText.trim().length === 0) {
         setLoadingState('error');
         setErrorMessage(t('scanner_err_no_text'));
@@ -50,11 +48,13 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
       setLoadingState('classifying');
       const result = await classifyContent(extractedText, languageCode, 'message');
       
+      if (!isMounted.current) return;
       setVerdict(result.verdict);
       setExplanation(result.explanation);
       setAdvice(result.verdict === 'suspicious' ? t('scanner_suspicious_advice') : t('scanner_safe_advice'));
       setLoadingState('done');
     } catch (err: any) {
+      if (!isMounted.current) return;
       // console.error('[VISION] Analysis Error:', err);
       setLoadingState('error');
       if (err.message?.includes('No readable text') || err.message?.includes('no text')) {
@@ -63,7 +63,16 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
         setErrorMessage(t('scanner_err_image'));
       }
     }
-  };
+  }, [imageUri, languageCode, t]);
+
+  useEffect(() => {
+    if (imageUri) {
+      startAnalysis();
+    } else {
+      setLoadingState('error');
+      setErrorMessage(t('scanner_err_image'));
+    }
+  }, [imageUri, startAnalysis, t]);
 
   const isSafe = verdict === 'safe';
 
@@ -101,7 +110,7 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
             <MaterialIcons name="error-outline" size={48} color={colors.error} />
             <Text style={styles.errorText}>{errorMessage}</Text>
             <TouchableOpacity style={styles.retryBtn} onPress={startAnalysis}>
-              <Text style={styles.retryBtnText}>Try Again</Text>
+              <Text style={styles.retryBtnText}>{t('retry', 'Try Again')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -121,7 +130,7 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
             <Text style={styles.adviceBody}>{advice}</Text>
 
             <TouchableOpacity style={styles.backHomeBtn} onPress={() => navigation.goBack()}>
-              <Text style={styles.backHomeBtnText}>Go Back</Text>
+              <Text style={styles.backHomeBtnText}>{t('go_back', 'Go Back')}</Text>
             </TouchableOpacity>
           </View>
         )}
