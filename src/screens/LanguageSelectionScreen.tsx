@@ -46,7 +46,7 @@ export default function LanguageSelectionScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.canGoBack() ? navigation.goBack() : null} style={styles.backButton}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.canGoBack() ? navigation.goBack() : null} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('lang_welcome_title')}</Text>
@@ -63,7 +63,7 @@ export default function LanguageSelectionScreen({ navigation }: any) {
           {LANGUAGES.map(lang => {
             const active = selected === lang.code;
             return (
-              <TouchableOpacity
+              <TouchableOpacity activeOpacity={0.7}
                 key={lang.code}
                 style={[styles.card, active && styles.cardActive]}
                 onPress={() => setSelected(lang.code)}

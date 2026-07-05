@@ -470,7 +470,7 @@ export default function VoiceScreen({ navigation }: any) {
             multiline
             maxLength={500}
           />
-          <TouchableOpacity 
+          <TouchableOpacity activeOpacity={0.7} 
             style={[styles.sendButton, (!inputText.trim() || appState !== 'idle') && styles.sendButtonDisabled]} 
             onPress={handleTextSubmit}
             disabled={appState !== 'idle' || !inputText.trim()}
@@ -532,7 +532,7 @@ const MessageItem = React.memo(({ item, onStopSpeech, t }: { item: Message, onSt
           {item.text}
         </Text>
         {item.isAudioPlaying && (
-          <TouchableOpacity style={styles.stopSpeech} onPress={onStopSpeech}>
+          <TouchableOpacity activeOpacity={0.7} style={styles.stopSpeech} onPress={onStopSpeech}>
             <MaterialIcons name="volume-off" size={14} color={colors.primary} />
             <Text style={styles.stopSpeechLabel}>{t('voice_status_speaking')}</Text>
           </TouchableOpacity>

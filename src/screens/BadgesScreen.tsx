@@ -144,7 +144,7 @@ export default function BadgesScreen() {
             return (
               <View key={b.id} style={[styles.badgeCard, !unlocked && styles.badgeLocked]}>
                 {unlocked && (
-                  <TouchableOpacity
+                  <TouchableOpacity activeOpacity={0.7}
                     style={styles.shareButton}
                     onPress={() => shareBadge(displayTitle)}
                     hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
