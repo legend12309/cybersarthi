@@ -106,21 +106,17 @@ export default function VoiceScreen({ navigation }: any) {
   }, [appState]);
 
   const cleanupAudioAndRecording = () => {
-    try {
-      if (recordingTimeoutRef.current) {
-        clearTimeout(recordingTimeoutRef.current);
-        recordingTimeoutRef.current = null;
-      }
-      if (appState === 'recording' || appState === 'starting') {
-        recorder.stop().catch((e) => console.warn('Recorder stop error', e));
-      }
-      if (player.playing) {
-        player.pause();
-      }
-      AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
-    } catch (e) {
-      // console.warn('Cleanup error', e);
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
     }
+    if (appState === 'recording' || appState === 'starting') {
+      try { recorder.stop().catch((e) => console.warn('Recorder stop error', e)); } catch(e) {}
+    }
+    try { if (player.playing) player.pause(); } catch(e) {}
+    try {
+      AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
+    } catch(e) {}
   };
 
   const getOfflineAIReply = (text: string, lang: string): string => {

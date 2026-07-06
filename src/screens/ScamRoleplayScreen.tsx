@@ -86,14 +86,12 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   }, [isRecording]);
 
   const cleanupAudioAndRecording = () => {
+    if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+    try { recorder.stop().catch(() => {}); } catch(e) {}
+    try { if (player.playing) player.pause(); } catch(e) {}
     try {
-      if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
-      recorder.stop().catch(() => {});
-      if (player.playing) player.pause();
       AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch(() => {});
-    } catch (e) {
-      console.warn('Error during audio cleanup:', e);
-    }
+    } catch(e) {}
   };
 
   const getInitialScammerMessage = (lang: string) => {
