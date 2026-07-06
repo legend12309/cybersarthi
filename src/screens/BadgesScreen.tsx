@@ -22,7 +22,7 @@ const BADGES = [
   { id: 'Verified Protector', titleKey: 'badges_protector_title', descKey: 'badges_protector_desc', icon: 'verified-user',  colorKey: 'success' },
   { id: 'Sim Hero',           titleKey: 'badges_hero_title',      descKey: 'badges_hero_desc',      icon: 'sports-esports', colorKey: 'primary' },
   { id: 'Link Sentry',        titleKey: 'badges_sentry_title',    descKey: 'badges_sentry_desc',    icon: 'link',           colorKey: 'primary' },
-  { id: 'Quiz Master',        titleKey: 'Quiz Master',            descKey: 'Score 80% or higher on any Quiz', icon: 'school', colorKey: 'warning' },
+  { id: 'Quiz Master',        titleKey: 'badges_quiz_title',      descKey: 'badges_quiz_desc',      icon: 'school', colorKey: 'warning' },
 ] as const;
 
 const COLOR_MAP: Record<string, { bg: string; icon: string }> = {
@@ -144,8 +144,7 @@ export default function BadgesScreen() {
             return (
               <View key={b.id} style={[styles.badgeCard, !unlocked && styles.badgeLocked]}>
                 {unlocked && (
-                  <TouchableOpacity activeOpacity={0.7}
-                    style={styles.shareButton}
+                  <TouchableOpacity style={styles.shareButton}
                     onPress={() => shareBadge(displayTitle)}
                     hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
                   >

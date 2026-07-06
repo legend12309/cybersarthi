@@ -110,12 +110,12 @@ export default function QuizScreen({ navigation }: any) {
             </Text>
           </View>
 
-          <TouchableOpacity activeOpacity={0.7} style={styles.shareBtn} onPress={shareBadge}>
+          <TouchableOpacity style={styles.shareBtn} onPress={shareBadge}>
             <MaterialIcons name="share" size={20} color={colors.onPrimary} />
             <Text style={styles.shareBtnText}>{t('share_badge', 'Share Badge')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.7} style={[styles.shareBtn, styles.homeBtn]} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={[styles.shareBtn, styles.homeBtn]} onPress={() => navigation.goBack()}>
             <Text style={[styles.shareBtnText, { color: colors.primary }]}>{t('return_home', 'Return Home')}</Text>
           </TouchableOpacity>
         </View>
@@ -126,7 +126,7 @@ export default function QuizScreen({ navigation }: any) {
   return (
     <Animated.View style={[styles.container, { backgroundColor, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
-        <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Question {currentIndex + 1} of {quizData.length}</Text>
@@ -154,8 +154,7 @@ export default function QuizScreen({ navigation }: any) {
             }
 
             return (
-              <TouchableOpacity activeOpacity={0.7}
-                key={i}
+              <TouchableOpacity key={i}
                 style={btnStyle}
                 onPress={() => handleSelect(i)}
                 activeOpacity={0.8}

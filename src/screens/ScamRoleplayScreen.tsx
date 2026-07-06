@@ -260,7 +260,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       >
         
         <View style={styles.header}>
-          <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
           </TouchableOpacity>
           <View>
@@ -270,7 +270,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         </View>
 
         {!evaluation && (
-          <TouchableOpacity activeOpacity={0.7} style={styles.revealBtn} onPress={forceReveal} disabled={isTyping}>
+          <TouchableOpacity style={styles.revealBtn} onPress={forceReveal} disabled={isTyping}>
             <MaterialIcons name="security" size={18} color={colors.warning} />
             <Text style={styles.revealBtnText}>{t('i_think_this_is_scam', 'I think this is a scam')}</Text>
           </TouchableOpacity>
@@ -295,7 +295,9 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
                 {msg.role === 'assistant' && (
                   <Text style={styles.scammerLabel}>{scamInfo?.sender || t('unknown_number', 'Unknown Number')}</Text>
                 )}
-                <Text style={styles.bubbleText}>{msg.content}</Text>
+                <Text style={[styles.bubbleText, msg.role === 'user' && { color: colors.onPrimary }]}>
+                  {msg.content}
+                </Text>
               </View>
             );
           })}
@@ -313,7 +315,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
               </Text>
               <Text style={styles.evalFeedback}>{evaluation.feedback}</Text>
               
-              <TouchableOpacity activeOpacity={0.7} style={styles.continueBtn} onPress={() => navigation.goBack()}>
+              <TouchableOpacity style={styles.continueBtn} onPress={() => navigation.goBack()}>
                 <Text style={styles.continueBtnText}>{t('complete_scenario', 'Complete Scenario')}</Text>
               </TouchableOpacity>
             </View>
@@ -332,7 +334,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
                   placeholderTextColor={colors.onSurfaceVariant}
                   editable={!isTyping}
                 />
-                <TouchableOpacity activeOpacity={0.7} style={[styles.sendBtn, !inputText.trim() && { opacity: 0.5 }]} onPress={handleSendText} disabled={isTyping || !inputText.trim()}>
+                <TouchableOpacity style={[styles.sendBtn, !inputText.trim() && { opacity: 0.5 }]} onPress={handleSendText} disabled={isTyping || !inputText.trim()}>
                   <MaterialIcons name="send" size={24} color={colors.onPrimary} />
                 </TouchableOpacity>
               </>
@@ -344,8 +346,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
                     { transform: [{ scale: pulseScale }], opacity: pulseOpacity }
                   ]} />
                 )}
-                <TouchableOpacity activeOpacity={0.7} 
-                  style={[styles.micBtn, isRecording && styles.micBtnActive, isTyping && { opacity: 0.5 }]} 
+                <TouchableOpacity style={[styles.micBtn, isRecording && styles.micBtnActive, isTyping && { opacity: 0.5 }]} 
                   onPress={toggleRecord} 
                   disabled={isTyping}
                 >

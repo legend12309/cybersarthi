@@ -80,7 +80,7 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
     <SafeAreaView style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {/* ── Header ─────────────────────────────────────────── */}
       <View style={styles.header}>
-        <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('home_scan_screenshot')}</Text>
@@ -109,7 +109,7 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
           <View style={styles.errorBlock}>
             <MaterialIcons name="error-outline" size={48} color={colors.error} />
             <Text style={styles.errorText}>{errorMessage}</Text>
-            <TouchableOpacity activeOpacity={0.7} style={styles.retryBtn} onPress={startAnalysis}>
+            <TouchableOpacity style={styles.retryBtn} onPress={startAnalysis}>
               <Text style={styles.retryBtnText}>{t('retry', 'Try Again')}</Text>
             </TouchableOpacity>
           </View>
@@ -129,7 +129,7 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
             <Text style={styles.adviceHead}>{t('scanner_advice_header')}</Text>
             <Text style={styles.adviceBody}>{advice}</Text>
 
-            <TouchableOpacity activeOpacity={0.7} style={styles.backHomeBtn} onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.backHomeBtn} onPress={() => navigation.goBack()}>
               <Text style={styles.backHomeBtnText}>{t('go_back', 'Go Back')}</Text>
             </TouchableOpacity>
           </View>

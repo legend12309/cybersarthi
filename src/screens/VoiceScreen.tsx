@@ -50,8 +50,27 @@ export default function VoiceScreen({ navigation }: any) {
       }
     });
 
-    setMessages([{ id: 'welcome', sender: 'ai', text: t('voice_default_instruction') }]);
+    const welcomeText = t('voice_default_instruction');
+    setMessages([{ id: 'welcome', sender: 'ai', text: welcomeText }]);
     
+    // Auto-speak the greeting
+    const speakWelcome = async () => {
+      try {
+        setAppState('playing');
+        setMessages(prev => prev.map(m => m.id === 'welcome' ? { ...m, isAudioPlaying: true } : m));
+        const audioUri = await textToSpeech(welcomeText, languageCode);
+        if (isMounted.current && audioUri) {
+          player.replace(audioUri);
+          player.play();
+        }
+      } catch (err) {
+        if (isMounted.current) {
+          setAppState('idle');
+          setMessages(prev => prev.map(m => m.id === 'welcome' ? { ...m, isAudioPlaying: false } : m));
+        }
+      }
+    };
+    speakWelcome();
     return () => { 
       isMounted.current = false; 
       subscription.remove();
@@ -204,7 +223,7 @@ export default function VoiceScreen({ navigation }: any) {
     } catch (globalError) {
       // console.log('[PIPELINE] Global Chat/TTS error:', globalError);
       if (isMounted.current) {
-        setMessages(prev => [...prev, { id: 'err_global_' + Date.now(), sender: 'ai', text: 'An unexpected error occurred during chat.' }]);
+        setMessages(prev => [...prev, { id: 'err_global_' + Date.now(), sender: 'ai', text: t('err_unexpected', 'An unexpected error occurred.') }]);
         setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
         setAppState('idle');
       }
@@ -290,7 +309,7 @@ export default function VoiceScreen({ navigation }: any) {
     } catch (globalError) {
       // console.log('[PIPELINE] Global Chat/TTS error:', globalError);
       if (isMounted.current) {
-        setMessages(prev => [...prev, { id: 'err_global_' + Date.now(), sender: 'ai', text: 'An unexpected error occurred during chat.' }]);
+        setMessages(prev => [...prev, { id: 'err_global_' + Date.now(), sender: 'ai', text: t('err_unexpected', 'An unexpected error occurred.') }]);
         setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
         setAppState('idle');
       }
@@ -393,7 +412,7 @@ export default function VoiceScreen({ navigation }: any) {
     } catch (globalError) { 
       // console.log('[PIPELINE] Global STT/Processing error:', globalError);
       if (isMounted.current) {
-        setMessages(prev => [...prev, { id: 'err_global_stt_' + Date.now(), sender: 'ai', text: 'An unexpected error occurred processing your audio.' }]);
+        setMessages(prev => [...prev, { id: 'err_global_stt_' + Date.now(), sender: 'ai', text: t('err_unexpected', 'An unexpected error occurred processing your audio.') }]);
         setAppState('idle'); 
       }
     }
@@ -470,8 +489,7 @@ export default function VoiceScreen({ navigation }: any) {
             multiline
             maxLength={500}
           />
-          <TouchableOpacity activeOpacity={0.7} 
-            style={[styles.sendButton, (!inputText.trim() || appState !== 'idle') && styles.sendButtonDisabled]} 
+          <TouchableOpacity style={[styles.sendButton, (!inputText.trim() || appState !== 'idle') && styles.sendButtonDisabled]} 
             onPress={handleTextSubmit}
             disabled={appState !== 'idle' || !inputText.trim()}
           >
@@ -532,7 +550,7 @@ const MessageItem = React.memo(({ item, onStopSpeech, t }: { item: Message, onSt
           {item.text}
         </Text>
         {item.isAudioPlaying && (
-          <TouchableOpacity activeOpacity={0.7} style={styles.stopSpeech} onPress={onStopSpeech}>
+          <TouchableOpacity style={styles.stopSpeech} onPress={onStopSpeech}>
             <MaterialIcons name="volume-off" size={14} color={colors.primary} />
             <Text style={styles.stopSpeechLabel}>{t('voice_status_speaking')}</Text>
           </TouchableOpacity>

@@ -30,8 +30,7 @@ const SCAM_TYPES = [
 ] as const;
 
 const TypeChip = React.memo(({ type, isSelected, onPress, localizedLabel }: any) => (
-  <TouchableOpacity activeOpacity={0.7}
-    style={[styles.typeChip, isSelected && styles.typeChipActive]}
+  <TouchableOpacity style={[styles.typeChip, isSelected && styles.typeChipActive]}
     onPress={() => onPress(type.id)}
   >
     <Text style={[styles.typeChipText, isSelected && styles.typeChipTextActive]}>
@@ -205,7 +204,7 @@ export default function HomeScreen({ navigation }: any) {
             <MaterialIcons name="security" size={24} color={colors.primary} />
             <Text style={styles.brandText}>CyberSaathi</Text>
           </View>
-          <TouchableOpacity activeOpacity={0.7} style={styles.profileBtn} onPress={() => navigation.navigate('Language')}>
+          <TouchableOpacity style={styles.profileBtn} onPress={() => navigation.navigate('Language')}>
             <MaterialIcons name="person" size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
@@ -230,8 +229,7 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* ── Mic Hero ───────────────────────────────────────── */}
         <View style={styles.heroWrap}>
-          <TouchableOpacity activeOpacity={0.7}
-            style={styles.micOuter}
+          <TouchableOpacity style={styles.micOuter}
             onPress={() => navigation.navigate('Chat')}
             activeOpacity={0.85}
           >
@@ -247,7 +245,7 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* ── Quick Actions ──────────────────────────────────── */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity activeOpacity={0.7} style={styles.actionCard} onPress={() => { resetScanner(); setScanModalVisible(true); }} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.actionCard} onPress={() => { resetScanner(); setScanModalVisible(true); }} activeOpacity={0.8}>
             <View style={styles.actionIconBg}>
               <MaterialIcons name="qr-code-scanner" size={26} color={colors.primary} />
             </View>
@@ -255,7 +253,7 @@ export default function HomeScreen({ navigation }: any) {
             <MaterialIcons name="chevron-right" size={18} color={colors.onSurfaceVariant} style={styles.actionChevron} />
           </TouchableOpacity>
 
-          <TouchableOpacity activeOpacity={0.7} style={styles.actionCard} onPress={() => { resetReporter(); setReportModalVisible(true); }} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.actionCard} onPress={() => { resetReporter(); setReportModalVisible(true); }} activeOpacity={0.8}>
             <View style={[styles.actionIconBg, styles.bgErrorDim]}>
               <MaterialIcons name="report" size={26} color={colors.error} />
             </View>
@@ -288,7 +286,7 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{t('home_scan_link')}</Text>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => setScanModalVisible(false)} style={styles.closeBtn}>
+              <TouchableOpacity onPress={() => setScanModalVisible(false)} style={styles.closeBtn}>
                 <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
               </TouchableOpacity>
             </View>
@@ -306,8 +304,7 @@ export default function HomeScreen({ navigation }: any) {
                   keyboardType="url"
                   autoCorrect={false}
                 />
-                <TouchableOpacity activeOpacity={0.7}
-                  style={styles.sheetBtnPrimary}
+                <TouchableOpacity style={styles.sheetBtnPrimary}
                   disabled={!linkInput.trim()}
                   onPress={handleScanLink}
                 >
@@ -343,7 +340,7 @@ export default function HomeScreen({ navigation }: any) {
                 </View>
                 <Text style={styles.adviceHead}>{t('scanner_advice_header')}</Text>
                 <Text style={styles.adviceBody}>{scanAdvice}</Text>
-                <TouchableOpacity activeOpacity={0.7} style={styles.sheetBtn} onPress={resetScanner}>
+                <TouchableOpacity style={styles.sheetBtn} onPress={resetScanner}>
                   <Text style={styles.sheetBtnText}>{t('scanner_scan_another')}</Text>
                 </TouchableOpacity>
               </View>
@@ -359,7 +356,7 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{t('home_report_fraud')}</Text>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => setReportModalVisible(false)} style={styles.closeBtn}>
+              <TouchableOpacity onPress={() => setReportModalVisible(false)} style={styles.closeBtn}>
                 <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
               </TouchableOpacity>
             </View>
@@ -427,8 +424,7 @@ export default function HomeScreen({ navigation }: any) {
                     </View>
                   )}
 
-                  <TouchableOpacity activeOpacity={0.7}
-                    style={[styles.sheetBtn, { backgroundColor: colors.error, shadowColor: colors.error }]}
+                  <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: colors.error, shadowColor: colors.error }]}
                     disabled={isSubmitting}
                     onPress={handleSubmitReport}
                   >
@@ -449,13 +445,13 @@ export default function HomeScreen({ navigation }: any) {
                   <Text style={styles.successDesc}>{t('report_success_desc')}</Text>
                   <View style={styles.helplineBox}>
                     <Text style={styles.helplineHead}>{t('report_helpline_header')}</Text>
-                    <TouchableOpacity activeOpacity={0.7} style={styles.callBtnPrimary} onPress={() => Linking.openURL('tel:1930')}>
+                    <TouchableOpacity style={styles.callBtnPrimary} onPress={() => Linking.openURL('tel:1930')}>
                       <MaterialIcons name="call" size={20} color={colors.onPrimary} />
                       <Text style={styles.callBtnText}>{t('home_call_helpline') || '1930 Helpline'}</Text>
                     </TouchableOpacity>
                     <Text style={styles.helplineSub}>{t('report_helpline_support')}</Text>
                   </View>
-                  <TouchableOpacity activeOpacity={0.7} style={styles.sheetBtn} onPress={() => setReportModalVisible(false)}>
+                  <TouchableOpacity style={styles.sheetBtn} onPress={() => setReportModalVisible(false)}>
                     <Text style={styles.sheetBtnText}>{t('common_ok')}</Text>
                   </TouchableOpacity>
                 </View>

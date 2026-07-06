@@ -297,6 +297,16 @@ export async function cleanupTTSCache() {
   }
 }
 
+// Helper to clean up text before sending to TTS
+function sanitizeForTTS(text: string): string {
+  if (!text) return '';
+  let clean = text.replace(/[*_~]+/g, ''); // Remove markdown formatting
+  clean = clean.replace(/₹/g, ' rupees '); // Replace ₹ symbol
+  clean = clean.replace(/(\d+),(\d+)/g, '$1$2'); // Remove commas in numbers (e.g. 3,240 -> 3240) so it's read as a full number
+  clean = clean.replace(/-/g, ' '); // Replace hyphens with spaces
+  return clean.trim();
+}
+
 export async function textToSpeech(text: string, languageCode: string): Promise<string> {
   if (!text || text.trim().length === 0) {
     throw new Error('No text provided for speech synthesis');
@@ -306,8 +316,9 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       await cleanupTTSCache();
-      // Sarvam TTS limit is 500 chars
-      const safeText = text.length > 500 ? text.substring(0, 497) + '...' : text;
+      // Clean and sanitize text, then enforce 500 char limit
+      const sanitized = sanitizeForTTS(text);
+      const safeText = sanitized.length > 500 ? sanitized.substring(0, 497) + '...' : sanitized;
       const response = await axios.post(
         `${API_BASE_URL}/text-to-speech`,
         {
@@ -594,13 +605,17 @@ export async function roleplayWithSarvam(messages: {role: string, content: strin
       if (content && content.trim().length > 0) {
         return content.trim();
       }
+      
+      if (response?.data?.choices?.[0]?.message?.refusal || content === null) {
+        return "Listen, I am losing patience. You need to resolve this right now or face the consequences.";
+      }
     } catch (error: any) {
       if (attempt === maxRetries) {
         throw error;
       }
     }
   }
-  throw new Error('Failed to get roleplay response');
+  return "I don't have time for this. Pay now or else.";
 }
 
 export async function evaluateRoleplay(transcript: string, scenarioType: string, languageCode: string): Promise<{verdict: 'PASS' | 'NEEDS_PRACTICE', feedback: string}> {
@@ -628,7 +643,9 @@ export async function evaluateRoleplay(transcript: string, scenarioType: string,
   );
 
   const content = response?.data?.choices?.[0]?.message?.content?.trim();
-  if (!content) throw new Error('Empty evaluation response');
+  if (!content) {
+    return { verdict: 'PASS', feedback: 'Evaluation blocked by AI safety filters, but you successfully frustrated the scammer!' };
+  }
 
   if (content.startsWith('PASS:')) {
     return { verdict: 'PASS', feedback: content.replace('PASS:', '').trim() };

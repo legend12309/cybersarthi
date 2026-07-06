@@ -115,7 +115,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <LanguageProvider>
         <NavigationContainer
           theme={{

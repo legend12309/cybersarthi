@@ -102,7 +102,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{scamInfo.title}</Text>
@@ -116,15 +116,13 @@ export default function ScamDetailScreen({ route, navigation }: any) {
             <Text style={styles.roleplaySub}>Experience this scenario in a safe environment before you decide.</Text>
             
             <View style={styles.toggleRow}>
-              <TouchableOpacity activeOpacity={0.7} 
-                style={[styles.toggleBtn, roleplayMode === 'text' && styles.toggleBtnActive]} 
+              <TouchableOpacity style={[styles.toggleBtn, roleplayMode === 'text' && styles.toggleBtnActive]} 
                 onPress={() => setRoleplayMode('text')}
               >
                 <MaterialIcons name="chat" size={18} color={roleplayMode === 'text' ? colors.onPrimary : colors.onSurface} />
                 <Text style={[styles.toggleText, roleplayMode === 'text' && styles.toggleTextActive]}>Text</Text>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} 
-                style={[styles.toggleBtn, roleplayMode === 'voice' && styles.toggleBtnActive]} 
+              <TouchableOpacity style={[styles.toggleBtn, roleplayMode === 'voice' && styles.toggleBtnActive]} 
                 onPress={() => setRoleplayMode('voice')}
               >
                 <MaterialIcons name="mic" size={18} color={roleplayMode === 'voice' ? colors.onPrimary : colors.onSurface} />
@@ -132,8 +130,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity activeOpacity={0.7} 
-              style={styles.startRoleplayBtn}
+            <TouchableOpacity style={styles.startRoleplayBtn}
               onPress={handleRoleplayPress}
             >
               <MaterialIcons name="play-arrow" size={24} color={colors.onPrimary} />
@@ -175,8 +172,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
           <View style={styles.choiceSection}>
             <Text style={styles.promptText}>{t('scam_detail_prompt')}</Text>
             <View style={styles.choiceRow}>
-              <TouchableOpacity activeOpacity={0.7}
-                style={[styles.choiceBtn, styles.safeBtn]}
+              <TouchableOpacity style={[styles.choiceBtn, styles.safeBtn]}
                 onPress={() => handleChoice('safe')}
                 disabled={userChoice !== null}
               >
@@ -184,8 +180,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
                 <Text style={styles.choiceBtnText}>{t('scam_detail_trust_btn')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity activeOpacity={0.7}
-                style={[styles.choiceBtn, styles.scamBtn]}
+              <TouchableOpacity style={[styles.choiceBtn, styles.scamBtn]}
                 onPress={() => handleChoice('scam')}
                 disabled={userChoice !== null}
               >
@@ -235,13 +230,12 @@ export default function ScamDetailScreen({ route, navigation }: any) {
             </View>
 
             {/* Continue */}
-            <TouchableOpacity activeOpacity={0.7} style={styles.continueBtn} onPress={() => navigation.goBack()} activeOpacity={0.9}>
+            <TouchableOpacity style={styles.continueBtn} onPress={() => navigation.goBack()} activeOpacity={0.9}>
               <Text style={styles.continueBtnText}>{t('scam_detail_continue_btn')}</Text>
               <MaterialIcons name="arrow-forward" size={20} color={colors.onPrimary} />
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.7}
-              style={[styles.continueBtn, styles.customMsgBtn]}
+            <TouchableOpacity style={[styles.continueBtn, styles.customMsgBtn]}
               onPress={() => setCustomAnalysisModalVisible(true)}
               activeOpacity={0.9}
             >
@@ -259,7 +253,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Analyze Custom Message</Text>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => setCustomAnalysisModalVisible(false)} style={styles.closeBtn}>
+              <TouchableOpacity onPress={() => setCustomAnalysisModalVisible(false)} style={styles.closeBtn}>
                 <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
               </TouchableOpacity>
             </View>
@@ -277,8 +271,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
                   multiline
                   autoCorrect={false}
                 />
-                <TouchableOpacity activeOpacity={0.7}
-                  style={styles.sheetBtnPrimary}
+                <TouchableOpacity style={styles.sheetBtnPrimary}
                   disabled={!customMsgInput.trim()}
                   onPress={handleAnalyzeCustomMessage}
                 >
@@ -305,7 +298,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
                   </Text>
                   <Text style={styles.resultReason}>{customAnalysisReason}</Text>
                 </View>
-                <TouchableOpacity activeOpacity={0.7} style={styles.sheetBtn} onPress={resetCustomAnalysis}>
+                <TouchableOpacity style={styles.sheetBtn} onPress={resetCustomAnalysis}>
                   <Text style={styles.sheetBtnText}>Analyze Another</Text>
                 </TouchableOpacity>
               </View>

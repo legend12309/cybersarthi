@@ -61,8 +61,7 @@ export default function SimulatorScreen({ navigation }: any) {
         </View>
 
         {/* Hero featured card */}
-        <TouchableOpacity activeOpacity={0.7}
-          style={styles.heroCard}
+        <TouchableOpacity style={styles.heroCard}
           onPress={() => navigation.navigate('ScamDetail', { scamId: SCENARIOS[0].id })}
           activeOpacity={0.85}
         >
@@ -81,8 +80,7 @@ export default function SimulatorScreen({ navigation }: any) {
         </TouchableOpacity>
 
         {/* Quiz Banner */}
-        <TouchableOpacity activeOpacity={0.7}
-          style={styles.quizBanner}
+        <TouchableOpacity style={styles.quizBanner}
           onPress={() => navigation.navigate('Quiz')}
           activeOpacity={0.85}
         >
@@ -98,8 +96,7 @@ export default function SimulatorScreen({ navigation }: any) {
         {SCENARIOS.slice(1).map(s => {
           const c = COLOR_MAP[s.colorKey];
           return (
-            <TouchableOpacity activeOpacity={0.7}
-              key={s.id}
+            <TouchableOpacity key={s.id}
               style={styles.scenarioRow}
               onPress={() => navigation.navigate('ScamDetail', { scamId: s.id })}
               activeOpacity={0.8}

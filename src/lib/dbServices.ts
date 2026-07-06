@@ -113,14 +113,21 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       .from('scam_reports')
       .select('*')
       .eq('user_id', userId)
-      .eq('source', 'simulator');
+      .in('source', ['simulator', 'user_report', 'scanner']);
       
     // console.log('[BADGES] Simulator completions result:', JSON.stringify(simData), 'error:', JSON.stringify(simError));
 
     let simCount = 0;
+    let scanCount = 0;
     if (!simError && simData) {
-      // Count ALL completed scam simulations
-      simCount = simData.length;
+      // Count unique completed scam simulations
+      const simRows = simData.filter(row => row.source === 'simulator');
+      const uniqueSims = new Set(simRows.map(row => row.scam_type));
+      simCount = uniqueSims.size;
+
+      // Count scanned links
+      const scanRows = simData.filter(row => row.source === 'user_report' || row.source === 'scanner');
+      scanCount = scanRows.length;
     }
 
     // console.log('[BADGES_CHECK] userId:', userId, 'simCount:', simCount, 'bestQuizScore:', highestQuizScore);
@@ -134,7 +141,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     if (simCount >= 5) {
       unlockedBadges.push('Scam Spotter');
     }
-    if (simCount >= 1) {
+    if (scanCount >= 1) {
       unlockedBadges.push('Link Sentry');
     }
     
