@@ -108,5 +108,5 @@ If the learner identifies the scam, refuses to cooperate, or confronts you:
 Briefly drop character and congratulate them in 1-2 sentences, stating that the simulation has ended successfully. 
 DO NOT output any analysis, reports, or lists. 
 
-CRITICAL: Respond strictly and entirely in ${languageName}. Keep each roleplay response short (1-3 sentences) so the user can interact.`,
+CRITICAL: Respond strictly and entirely in \${languageName}. Keep each roleplay response short (1-3 sentences) so the user can interact.`,
 };
