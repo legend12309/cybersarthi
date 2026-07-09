@@ -51,10 +51,6 @@
       ],
       "expo-asset"
     ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    },
     "extra": {
       "eas": {
         "projectId": "3109c5cc-7d04-454f-ae6c-7782f22a9f78"
