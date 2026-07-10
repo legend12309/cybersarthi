@@ -65,11 +65,11 @@ export default function ScamDetailScreen({ route, navigation }: any) {
 
   const handleRoleplayPress = () => {
     if (scamId !== 'electricity_bill') {
-      const msg = t('roleplay_unavailable') || 'Live Roleplay is locked for this scenario.';
+      const msg = t('roleplay_unavailable', 'Coming Soon');
       if (Platform.OS === 'android') {
         ToastAndroid.showWithGravity(msg, ToastAndroid.LONG, ToastAndroid.CENTER);
       } else {
-        Alert.alert('Roleplay Locked', msg);
+        Alert.alert('Coming Soon', msg);
       }
       return;
     }
