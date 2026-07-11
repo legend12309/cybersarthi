@@ -25,14 +25,21 @@ export default function SplashScreen({ navigation }: any) {
     }).start();
   }, []);
 
-  // Transition after exactly 2 seconds (2000 ms) for a crisp experience, but only after initialization
+  // Smooth transition after initialization
   useEffect(() => {
     if (!isInitialized) return;
     const timer = setTimeout(() => {
-      navigation.reset({ index: 0, routes: [{ name: hasSelectedLanguage ? 'Main' : 'Language' }] });
-    }, 2000);
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 350,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => {
+        navigation.reset({ index: 0, routes: [{ name: hasSelectedLanguage ? 'Main' : 'Language' }] });
+      });
+    }, 1200);
     return () => clearTimeout(timer);
-  }, [hasSelectedLanguage, isInitialized, navigation]);
+  }, [hasSelectedLanguage, isInitialized, navigation, fadeAnim]);
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim, paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 24) }]}>
