@@ -281,7 +281,7 @@ export default function HomeScreen({ navigation }: any) {
 
       {/* ══ LINK SCANNER MODAL ══════════════════════════════════════════ */}
       <Modal animationType="slide" transparent visible={scanModalVisible} onRequestClose={() => setScanModalVisible(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
           <View style={sheetStyle}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
@@ -351,7 +351,7 @@ export default function HomeScreen({ navigation }: any) {
 
       {/* ══ FRAUD REPORTER MODAL ════════════════════════════════════════ */}
       <Modal animationType="slide" transparent visible={reportModalVisible} onRequestClose={() => setReportModalVisible(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
           <View style={reportSheetStyle}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
@@ -383,7 +383,7 @@ export default function HomeScreen({ navigation }: any) {
                   </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder={'+91 98765 43210 / http://scam.site / scammer@ybl'}
+                    placeholder={t('report_details_placeholder', '+91 98765 43210, link or UPI')}
                     placeholderTextColor={colors.onSurfaceVariant + '70'}
                     value={scammerDetails}
                     onChangeText={setScammerDetails}
