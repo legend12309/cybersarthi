@@ -38,12 +38,12 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
 
   const languageName = {
-    'hi-IN': 'Hindi',
-    'mr-IN': 'Marathi',
-    'bn-IN': 'Bengali',
-    'ta-IN': 'Tamil',
-    'te-IN': 'Telugu',
-    'gu-IN': 'Gujarati',
+    'hi-IN': 'Hindi. आपको केवल हिंदी (Hindi) में ही जवाब देना है।',
+    'mr-IN': 'Marathi. तुम्हाला फक्त मराठी (Marathi) मध्येच उत्तर द्यायचे आहे।',
+    'bn-IN': 'Bengali. আপনাকে কেবল বাংলা (Bengali) ভাষাতেই উত্তর দিতে হবে।',
+    'ta-IN': 'Tamil. நீங்கள் தமிழ் (Tamil) மொழியில் மட்டுமே பதிலளிக்க வேண்டும்.',
+    'te-IN': 'Telugu. మీరు తెలుగు (Telugu) లో మాత్రమే సమాధానం చెప్పాలి.',
+    'gu-IN': 'Gujarati. તમારે ફક્ત ગુજરાતી (Gujarati) માં જ જવાબ આપવાનો છે.',
     'en-IN': 'English'
   }[languageCode] || 'English';
 
