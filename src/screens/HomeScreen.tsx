@@ -72,8 +72,8 @@ export default function HomeScreen({ navigation }: any) {
   const isSafe = scanResult === 'safe';
 
   // Memoized dynamic styles to prevent GC stutters on low-end devices
-  const sheetStyle = React.useMemo(() => [styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 10) }], [insets.bottom]);
-  const reportSheetStyle = React.useMemo(() => [styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(20, insets.bottom + 10) }], [insets.bottom]);
+  const sheetStyle = React.useMemo(() => [styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(48, insets.bottom + 24) }], [insets.bottom]);
+  const reportSheetStyle = React.useMemo(() => [styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(48, insets.bottom + 24) }], [insets.bottom]);
   const sheetBtnTextStyle = React.useMemo(() => [styles.sheetBtnText, { color: colors.onPrimary, opacity: linkInput.trim() ? 1 : 0.5 }], [linkInput]);
   const resultVerdictStyle = React.useMemo(() => [styles.resultVerdict, { color: isSafe ? colors.success : colors.error }], [isSafe]);
 
