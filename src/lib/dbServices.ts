@@ -141,7 +141,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     if (simCount >= 5) {
       unlockedBadges.push('Scam Spotter');
     }
-    if (scanCount >= 1) {
+    if (scanCount >= 10) {
       unlockedBadges.push('Link Sentry');
     }
     
