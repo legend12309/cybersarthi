@@ -261,7 +261,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
             </View>
 
             {customAnalysisState === 'idle' && (
-              <View style={styles.sheetBody}>
+              <ScrollView contentContainerStyle={styles.sheetBody} showsVerticalScrollIndicator={false}>
                 <Text style={styles.inputLabel}>Paste a suspicious message to analyze:</Text>
                 <TextInput
                   style={[styles.input, styles.multiInput]}
@@ -281,7 +281,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
                     Analyze Message
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </ScrollView>
             )}
 
             {customAnalysisState === 'scanning' && (
