@@ -98,7 +98,7 @@ function MainTabs() {
   );
 }
 
-class ErrorBoundary extends React.Component {
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
   state = { hasError: false, error: null };
   static getDerivedStateFromError(error: any) {
     return { hasError: true, error };
@@ -155,11 +155,11 @@ function MainApp() {
             },
           }}
         >
-          <Stack.Navigator 
-            screenOptions={{ 
+          <Stack.Navigator
+            screenOptions={{
               headerShown: false,
               animation: 'slide_from_right',
-            }} 
+            }}
             initialRouteName="Splash"
           >
             <Stack.Screen name="Splash"     component={CustomSplashScreen} />
