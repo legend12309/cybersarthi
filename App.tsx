@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -97,7 +98,25 @@ function MainTabs() {
   );
 }
 
-export default function App() {
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#990000', padding: 20 }}>
+          <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 20 }}>FATAL APP CRASH</Text>
+          <Text style={{ color: 'white', fontSize: 16 }}>{String(this.state.error)}</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function MainApp() {
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
     Manrope_600SemiBold,
@@ -154,5 +173,13 @@ export default function App() {
         </NavigationContainer>
       </LanguageProvider>
     </SafeAreaProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
   );
 }
