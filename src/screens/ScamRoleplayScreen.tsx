@@ -27,7 +27,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   const isMounted = useRef(true);
 
   // Audio Hooks & Animations
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
   const player = useAudioPlayer();
   const pulseScale = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0.4)).current;
@@ -53,6 +53,25 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
   useEffect(() => {
     isMounted.current = true;
+
+    // Pre-request permissions and pre-configure audio mode to eliminate delay on press
+    const setupAudio = async () => {
+      try {
+        const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+        if (granted) {
+          await AudioModule.setAudioModeAsync({
+            allowsRecording: true,
+            playsInSilentMode: true,
+            playThroughEarpiece: false,
+          } as any);
+        }
+      } catch (e) {
+        console.warn('setupAudio error:', e);
+      }
+    };
+    if (mode === 'voice') {
+      setupAudio();
+    }
     
     const subscription = player.addListener('playbackStatusUpdate', (status: any) => {
       if (status.didJustFinish) {
@@ -67,7 +86,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       subscription.remove();
       cleanupAudioAndRecording();
     };
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
     if (isRecording) {
@@ -222,8 +241,16 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       }
     } else {
       try {
-        await AudioModule.requestRecordingPermissionsAsync();
-        await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, playThroughEarpiece: false } as any);
+        // Check cached permission first to avoid slow native OS prompt
+        const status = await AudioModule.getRecordingPermissionsAsync();
+        let granted = status.granted;
+        if (!granted) {
+          const req = await AudioModule.requestRecordingPermissionsAsync();
+          granted = req.granted;
+        }
+        if (!granted) return;
+
+        // Audio mode is pre-set on mount, but check allowances
         await recorder.prepareToRecordAsync();
         recorder.record();
         setIsRecording(true);

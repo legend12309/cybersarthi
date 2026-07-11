@@ -26,7 +26,7 @@ export default function VoiceScreen({ navigation }: any) {
   const { t, languageCode } = useLanguage();
   const isFocused = useIsFocused();
   const [appState, setAppState] = useState<AppState>('idle');
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
   const player = useAudioPlayer();
   const [messages, setMessages] = useState<Message[]>([]);
 
@@ -42,6 +42,23 @@ export default function VoiceScreen({ navigation }: any) {
   useEffect(() => {
     isMounted.current = true;
     
+    // Pre-request permissions and pre-configure audio mode to eliminate delay on press
+    const setupAudio = async () => {
+      try {
+        const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+        if (granted) {
+          await AudioModule.setAudioModeAsync({
+            allowsRecording: true,
+            playsInSilentMode: true,
+            playThroughEarpiece: false,
+          } as any);
+        }
+      } catch (e) {
+        console.warn('setupAudio error:', e);
+      }
+    };
+    setupAudio();
+
     // Listen for playback finished
     const subscription = player.addListener('playbackStatusUpdate', (status: any) => {
       if (status.didJustFinish) {
@@ -377,8 +394,14 @@ export default function VoiceScreen({ navigation }: any) {
     try {
       setAppState('starting');
 
-      // Request microphone permission first
-      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      // Check cached permission first to avoid slow native OS prompt
+      const status = await AudioModule.getRecordingPermissionsAsync();
+      let granted = status.granted;
+      if (!granted) {
+        const req = await AudioModule.requestRecordingPermissionsAsync();
+        granted = req.granted;
+      }
+
       if (!granted) {
         // console.log('[MIC] Permission denied by user');
         if (isMounted.current) {
@@ -388,7 +411,7 @@ export default function VoiceScreen({ navigation }: any) {
         return;
       }
 
-      await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
+      // Audio mode is pre-set on mount, but check allowances
       await recorder.prepareToRecordAsync();
       recorder.record();
       setAppState('recording');
