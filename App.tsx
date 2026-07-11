@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import 'react-native-url-polyfill/auto';
+import React, { useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -129,7 +130,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 }
 
 function MainApp() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Manrope_400Regular,
     Manrope_600SemiBold,
     Manrope_700Bold,
@@ -138,53 +139,61 @@ function MainApp() {
     PublicSans_700Bold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded || fontError) {
+      try {
+        await SplashScreen.hideAsync();
+      } catch (e) {
+        console.warn('Error hiding splash screen:', e);
+      }
+    }
+  }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      <LanguageProvider>
-        <NavigationContainer
-          theme={{
-            dark: false,
-            fonts: {
-              regular: { fontFamily: 'PublicSans_400Regular', fontWeight: '400' as const },
-              medium:  { fontFamily: 'Manrope_600SemiBold',   fontWeight: '600' as const },
-              bold:    { fontFamily: 'Manrope_700Bold',        fontWeight: '700' as const },
-              heavy:   { fontFamily: 'Manrope_700Bold',        fontWeight: '900' as const },
-            },
-            colors: {
-              primary:      colors.primary,
-              background:   colors.background,
-              card:         colors.surface,
-              text:         colors.onSurface,
-              border:       colors.surfaceBorder,
-              notification: colors.error,
-            },
-          }}
-        >
-          <Stack.Navigator 
-            screenOptions={{ 
-              headerShown: false,
-              animation: 'slide_from_right',
-            }} 
-            initialRouteName="Splash"
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <LanguageProvider>
+          <NavigationContainer
+            theme={{
+              dark: false,
+              fonts: {
+                regular: { fontFamily: 'PublicSans_400Regular', fontWeight: '400' as const },
+                medium:  { fontFamily: 'Manrope_600SemiBold',   fontWeight: '600' as const },
+                bold:    { fontFamily: 'Manrope_700Bold',        fontWeight: '700' as const },
+                heavy:   { fontFamily: 'Manrope_700Bold',        fontWeight: '900' as const },
+              },
+              colors: {
+                primary:      colors.primary,
+                background:   colors.background,
+                card:         colors.surface,
+                text:         colors.onSurface,
+                border:       colors.surfaceBorder,
+                notification: colors.error,
+              },
+            }}
           >
-            <Stack.Screen name="Splash"     component={CustomSplashScreen} />
-            <Stack.Screen name="Language"   component={LanguageSelectionScreen} />
-            <Stack.Screen name="Main"       component={MainTabs} />
-            <Stack.Screen name="ScamDetail" component={ScamDetailScreen} />
-            <Stack.Screen name="ScamRoleplay" component={ScamRoleplayScreen} />
-            <Stack.Screen name="Quiz"       component={QuizScreen} />
-            <Stack.Screen name="ScreenshotScanner" component={ScreenshotScannerScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </LanguageProvider>
-    </SafeAreaProvider>
+            <Stack.Navigator 
+              screenOptions={{ 
+                headerShown: false,
+                animation: 'slide_from_right',
+              }} 
+              initialRouteName="Splash"
+            >
+              <Stack.Screen name="Splash"     component={CustomSplashScreen} />
+              <Stack.Screen name="Language"   component={LanguageSelectionScreen} />
+              <Stack.Screen name="Main"       component={MainTabs} />
+              <Stack.Screen name="ScamDetail" component={ScamDetailScreen} />
+              <Stack.Screen name="ScamRoleplay" component={ScamRoleplayScreen} />
+              <Stack.Screen name="Quiz"       component={QuizScreen} />
+              <Stack.Screen name="ScreenshotScanner" component={ScreenshotScannerScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </LanguageProvider>
+      </SafeAreaProvider>
+    </View>
   );
 }
 
