@@ -292,7 +292,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
 
             {scanState === 'idle' && (
-              <View style={styles.sheetBody}>
+              <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false}>
                 <Text style={styles.inputLabel}>{t('scanner_input_label')}</Text>
                 <TextInput
                   style={styles.input}
@@ -312,7 +312,7 @@ export default function HomeScreen({ navigation }: any) {
                     {t('scanner_scan_btn')}
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </ScrollView>
             )}
 
             {scanState === 'scanning' && (
