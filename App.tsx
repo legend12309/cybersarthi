@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -99,16 +99,28 @@ function MainTabs() {
 }
 
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
-  state = { hasError: false, error: null };
+  state = { hasError: false, error: null as any };
   static getDerivedStateFromError(error: any) {
     return { hasError: true, error };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('ErrorBoundary caught an error', error, errorInfo);
   }
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#990000', padding: 20 }}>
-          <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 20 }}>FATAL APP CRASH</Text>
-          <Text style={{ color: 'white', fontSize: 16 }}>{String(this.state.error)}</Text>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1E293B', padding: 24 }}>
+          <MaterialIcons name="error-outline" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
+          <Text style={{ color: 'white', fontSize: 20, fontFamily: 'Manrope_700Bold', marginBottom: 12, textAlign: 'center' }}>Application Error</Text>
+          <ScrollView style={{ backgroundColor: '#0F172A', borderRadius: 8, padding: 16, width: '100%', maxHeight: 300 }}>
+            <Text style={{ color: '#F87171', fontSize: 13, fontFamily: 'monospace' }}>{String(this.state.error?.stack || this.state.error)}</Text>
+          </ScrollView>
+          <TouchableOpacity 
+            style={{ marginTop: 24, backgroundColor: '#3B82F6', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 24 }}
+            onPress={() => this.setState({ hasError: false, error: null })}
+          >
+            <Text style={{ color: 'white', fontFamily: 'Manrope_700Bold' }}>Try Again</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -155,11 +167,11 @@ function MainApp() {
             },
           }}
         >
-          <Stack.Navigator
-            screenOptions={{
+          <Stack.Navigator 
+            screenOptions={{ 
               headerShown: false,
               animation: 'slide_from_right',
-            }}
+            }} 
             initialRouteName="Splash"
           >
             <Stack.Screen name="Splash"     component={CustomSplashScreen} />

@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Easing, ToastAndroid, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAudioRecorder, useAudioPlayer, AudioModule, RecordingPresets } from 'expo-audio';
 import { colors, theme } from '../lib/colors';
 import { useLanguage } from '../context/LanguageContext';
+import { ChatInput } from '../components/ChatInput';
 import { submitScamReport } from '../lib/api';
 import { roleplayWithSarvam, evaluateRoleplay, speechToText, textToSpeech } from '../lib/sarvam';
 import { scammerPersonas } from '../data/scammerPersonas';
@@ -16,7 +17,6 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   const { scamId, mode } = route.params || { scamId: 'electricity_bill', mode: 'text' };
   const { t, deviceId, languageCode } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const [exchanges, setExchanges] = useState(0);
   const [evaluation, setEvaluation] = useState<{verdict: 'PASS' | 'NEEDS_PRACTICE', feedback: string} | null>(null);
@@ -134,48 +134,29 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     }
   };
 
-  const handleSendText = async () => {
-    if (!inputText.trim() || isTyping) return;
-    const userMsg = inputText.trim();
-    setInputText('');
-    await processUserMessage(userMsg);
-  };
+  const performEvaluation = useCallback(async (finalMessages: Message[]) => {
+    const transcript = finalMessages
+      .filter(m => m.role !== 'system')
+      .map(m => `${m.role === 'user' ? 'User' : 'Scammer'}: ${m.content}`)
+      .join('\n');
+      
+    const result = await evaluateRoleplay(transcript, scamId, languageCode);
+    if (!isMounted.current) return;
+    
+    setEvaluation(result);
+    setIsTyping(false);
 
-  const toggleRecord = async () => {
-    if (isTyping) return; // Ignore if AI is speaking or thinking
-
-    if (isRecording) {
-      setIsRecording(false);
-      setIsTyping(true); // Lock while processing
-      try {
-        await recorder.stop();
-        const uri = recorder.uri;
-        if (!uri) throw new Error("No audio URI");
-        
-        const transcript = await speechToText(uri, languageCode);
-        if (transcript.trim()) {
-           await processUserMessage(transcript);
-        } else {
-           setIsTyping(false);
-        }
-      } catch (err) {
-        console.log('[ROLEPLAY] Voice STT error:', err);
-        if (isMounted.current) navigation.replace('ScamDetail', { scamId });
+    // Call submitScamReport silently
+    try {
+      if (deviceId) {
+        await submitScamReport(deviceId, '', 0, result.verdict === 'PASS' ? 'safe' : 'scam', scamId, scamId, 'simulator', result.verdict === 'PASS');
       }
-    } else {
-      try {
-        await AudioModule.requestRecordingPermissionsAsync();
-        await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, playThroughEarpiece: false } as any);
-        await recorder.prepareToRecordAsync();
-        recorder.record();
-        setIsRecording(true);
-      } catch (err) {
-        console.log("Could not start recording", err);
-      }
+    } catch (e) {
+      // Silent fail
     }
-  };
+  }, [scamId, languageCode, deviceId]);
 
-  const processUserMessage = async (userMsg: string) => {
+  const processUserMessage = useCallback(async (userMsg: string) => {
     const newMessages: Message[] = [...messages, { role: 'user', content: userMsg }];
     setMessages(newMessages);
     setIsTyping(true);
@@ -211,9 +192,48 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         setIsTyping(false);
       }
     }
-  };
+  }, [messages, exchanges, scamId, languageCode, mode, player, performEvaluation]);
 
-  const forceReveal = async () => {
+  const handleSendText = useCallback(async (text: string) => {
+    if (!text.trim() || isTyping) return;
+    await processUserMessage(text.trim());
+  }, [isTyping, processUserMessage]);
+
+  const toggleRecord = useCallback(async () => {
+    if (isTyping) return; // Ignore if AI is speaking or thinking
+
+    if (isRecording) {
+      setIsRecording(false);
+      setIsTyping(true); // Lock while processing
+      try {
+        await recorder.stop();
+        const uri = recorder.uri;
+        if (!uri) throw new Error("No audio URI");
+        
+        const transcript = await speechToText(uri, languageCode);
+        if (transcript.trim()) {
+           await processUserMessage(transcript);
+        } else {
+           setIsTyping(false);
+        }
+      } catch (err) {
+        console.log('[ROLEPLAY] Voice STT error:', err);
+        if (isMounted.current) navigation.replace('ScamDetail', { scamId });
+      }
+    } else {
+      try {
+        await AudioModule.requestRecordingPermissionsAsync();
+        await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, playThroughEarpiece: false } as any);
+        await recorder.prepareToRecordAsync();
+        recorder.record();
+        setIsRecording(true);
+      } catch (err) {
+        console.log("Could not start recording", err);
+      }
+    }
+  }, [isTyping, isRecording, recorder, languageCode, navigation, scamId, processUserMessage]);
+
+  const forceReveal = useCallback(async () => {
     if (isTyping && messages.length <= 1) return; // Wait for initial message
     setIsTyping(true);
     cleanupAudioAndRecording(); // Stop playback/recording if revealing
@@ -226,29 +246,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         setIsTyping(false);
       }
     }
-  };
-
-  const performEvaluation = async (finalMessages: Message[]) => {
-    const transcript = finalMessages
-      .filter(m => m.role !== 'system')
-      .map(m => `${m.role === 'user' ? 'User' : 'Scammer'}: ${m.content}`)
-      .join('\n');
-      
-    const result = await evaluateRoleplay(transcript, scamId, languageCode);
-    if (!isMounted.current) return;
-    
-    setEvaluation(result);
-    setIsTyping(false);
-
-    // Call submitScamReport silently
-    try {
-      if (deviceId) {
-        await submitScamReport(deviceId, '', 0, result.verdict === 'PASS' ? 'safe' : 'scam', scamId, scamId, 'simulator', result.verdict === 'PASS');
-      }
-    } catch (e) {
-      // Silent fail
-    }
-  };
+  }, [isTyping, messages, performEvaluation]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -323,19 +321,12 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         {!evaluation && (
           <View style={styles.inputArea}>
             {mode === 'text' ? (
-              <>
-                <TextInput 
-                  style={styles.input} 
-                  value={inputText}
-                  onChangeText={setInputText}
-                  placeholder={t('type_response', 'Type a response...')}
-                  placeholderTextColor={colors.onSurfaceVariant}
-                  editable={!isTyping}
-                />
-                <TouchableOpacity style={[styles.sendBtn, !inputText.trim() && { opacity: 0.5 }]} onPress={handleSendText} disabled={isTyping || !inputText.trim()}>
-                  <MaterialIcons name="send" size={24} color={colors.onPrimary} />
-                </TouchableOpacity>
-              </>
+              <ChatInput
+                onSubmit={handleSendText}
+                disabled={isTyping}
+                placeholder={t('type_response', 'Type a response...')}
+                styleType="roleplay"
+              />
             ) : (
               <View style={styles.micWrapper}>
                 {isRecording && (

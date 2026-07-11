@@ -65,7 +65,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
 
   const handleRoleplayPress = () => {
     if (scamId !== 'electricity_bill') {
-      const msg = t('roleplay_unavailable', 'Coming Soon');
+      const msg = t('roleplay_unavailable') || 'Coming Soon';
       if (Platform.OS === 'android') {
         ToastAndroid.showWithGravity(msg, ToastAndroid.LONG, ToastAndroid.CENTER);
       } else {
@@ -130,11 +130,13 @@ export default function ScamDetailScreen({ route, navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.startRoleplayBtn}
+            <TouchableOpacity style={[styles.startRoleplayBtn, !showRoleplayOption && { backgroundColor: colors.surfaceBorder }]}
               onPress={handleRoleplayPress}
             >
-              <MaterialIcons name="play-arrow" size={24} color={colors.onPrimary} />
-              <Text style={styles.startRoleplayBtnText}>Start Live Roleplay</Text>
+              <MaterialIcons name={showRoleplayOption ? "play-arrow" : "access-time"} size={24} color={showRoleplayOption ? colors.onPrimary : colors.onSurfaceVariant} />
+              <Text style={[styles.startRoleplayBtnText, !showRoleplayOption && { color: colors.onSurfaceVariant }]}>
+                {showRoleplayOption ? "Start Live Roleplay" : "Coming Soon"}
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.orDivider}>

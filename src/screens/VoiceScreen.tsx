@@ -11,6 +11,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { colors, theme } from '../lib/colors';
 import { speechToText, chatWithSarvam, textToSpeech, classifyContent } from '../lib/sarvam';
 import { useLanguage } from '../context/LanguageContext';
+import { ChatInput } from '../components/ChatInput';
 
 interface Message {
   id: string;
@@ -28,7 +29,6 @@ export default function VoiceScreen({ navigation }: any) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const player = useAudioPlayer();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
 
   const isMounted = useRef(true);
   const flatListRef = useRef<FlatList>(null);
@@ -156,7 +156,7 @@ export default function VoiceScreen({ navigation }: any) {
     return 'Hello! I am CyberSaathi. Ask me to verify any suspicious call, message, link, or transaction.';
   };
 
-  const handleSendMessage = async (textToSend: string) => {
+  const handleSendMessage = useCallback(async (textToSend: string) => {
     const msgText = textToSend.trim();
     if (!msgText) return;
 
@@ -224,12 +224,10 @@ export default function VoiceScreen({ navigation }: any) {
         setAppState('idle');
       }
     }
-  };
+  }, [languageCode, t, player]);
 
-  const handleTextSubmit = async () => {
-    const text = inputText.trim();
+  const handleTextSubmit = useCallback(async (text: string) => {
     if (!text || appState !== 'idle') return;
-    setInputText('');
 
     try {
       // console.log('[PIPELINE] Starting text classification...');
@@ -310,53 +308,9 @@ export default function VoiceScreen({ navigation }: any) {
         setAppState('idle');
       }
     }
-  };
+  }, [appState, languageCode, player, t]);
 
-  const startRecording = async () => {
-    if (appState !== 'idle') {
-      // console.log('[MIC] Ignored press, appState is not idle:', appState);
-      return;
-    }
-    // console.log('[PIPELINE] Starting recording process...');
-    try {
-      setAppState('starting');
-
-      // Request microphone permission first
-      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
-      if (!granted) {
-        // console.log('[MIC] Permission denied by user');
-        if (isMounted.current) {
-          setMessages(prev => [...prev, { id: 'err_perm_' + Date.now(), sender: 'ai', text: t('err_mic_permission') || 'Microphone permission denied. Please allow microphone access in Settings.' }]);
-          setAppState('idle');
-        }
-        return;
-      }
-
-      await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-      setAppState('recording');
-      // console.log('[PIPELINE] Recording started.');
-
-      // Auto-stop recording at 28 seconds to prevent exceeding 30-second API limit
-      if (recordingTimeoutRef.current) {
-        clearTimeout(recordingTimeoutRef.current);
-      }
-      recordingTimeoutRef.current = setTimeout(() => {
-        // console.log('[MIC] Auto-stopping recording (28s limit reached)');
-        stopRecordingAndProcess();
-      }, 28000);
-
-    } catch (error) {
-      // console.log('[MIC] error:', error);
-      if (isMounted.current) {
-        setMessages(prev => [...prev, { id: 'err_' + Date.now(), sender: 'ai', text: t('err_mic_permission') || 'Could not start microphone.' }]);
-        setAppState('idle');
-      }
-    }
-  };
-
-  const stopRecordingAndProcess = async () => {
+  const stopRecordingAndProcess = useCallback(async () => {
     if (appState !== 'recording') return;
     // console.log('[PIPELINE] Stopping recording...');
     setAppState('thinking');
@@ -412,12 +366,56 @@ export default function VoiceScreen({ navigation }: any) {
         setAppState('idle'); 
       }
     }
-  };
+  }, [appState, recorder, languageCode, t, handleSendMessage]);
 
-  const handleMicPress = () => {
+  const startRecording = useCallback(async () => {
+    if (appState !== 'idle') {
+      // console.log('[MIC] Ignored press, appState is not idle:', appState);
+      return;
+    }
+    // console.log('[PIPELINE] Starting recording process...');
+    try {
+      setAppState('starting');
+
+      // Request microphone permission first
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      if (!granted) {
+        // console.log('[MIC] Permission denied by user');
+        if (isMounted.current) {
+          setMessages(prev => [...prev, { id: 'err_perm_' + Date.now(), sender: 'ai', text: t('err_mic_permission') || 'Microphone permission denied. Please allow microphone access in Settings.' }]);
+          setAppState('idle');
+        }
+        return;
+      }
+
+      await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      setAppState('recording');
+      // console.log('[PIPELINE] Recording started.');
+
+      // Auto-stop recording at 28 seconds to prevent exceeding 30-second API limit
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+      }
+      recordingTimeoutRef.current = setTimeout(() => {
+        // console.log('[MIC] Auto-stopping recording (28s limit reached)');
+        stopRecordingAndProcess();
+      }, 28000);
+
+    } catch (error) {
+      // console.log('[MIC] error:', error);
+      if (isMounted.current) {
+        setMessages(prev => [...prev, { id: 'err_' + Date.now(), sender: 'ai', text: t('err_mic_permission') || 'Could not start microphone.' }]);
+        setAppState('idle');
+      }
+    }
+  }, [appState, recorder, t, stopRecordingAndProcess]);
+
+  const handleMicPress = useCallback(() => {
     if (appState === 'idle') startRecording();
     else if (appState === 'recording') stopRecordingAndProcess();
-  };
+  }, [appState, startRecording, stopRecordingAndProcess]);
 
   const handleStopSpeech = useCallback(async () => {
     if (player.playing) {
@@ -475,23 +473,12 @@ export default function VoiceScreen({ navigation }: any) {
       <View style={styles.micContainer}>
         
         {/* Secondary Text Input */}
-        <View style={styles.textInputContainer}>
-          <TextInput
-            style={styles.textInput}
-            placeholder={t('home_link_scan_input') || 'Paste link or message...'}
-            placeholderTextColor={colors.onSurfaceVariant}
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity style={[styles.sendButton, (!inputText.trim() || appState !== 'idle') && styles.sendButtonDisabled]} 
-            onPress={handleTextSubmit}
-            disabled={appState !== 'idle' || !inputText.trim()}
-          >
-            <MaterialIcons name="send" size={18} color={colors.onPrimary} />
-          </TouchableOpacity>
-        </View>
+        <ChatInput
+          onSubmit={handleTextSubmit}
+          disabled={appState !== 'idle'}
+          placeholder={t('home_link_scan_input') || 'Paste link or message...'}
+          styleType="voice"
+        />
 
         <View style={styles.micRingWrap}>
           {appState === 'recording' && (

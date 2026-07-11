@@ -2,7 +2,5 @@
 node_modules/
 dist/
 .expo/
-android/
-ios/
 # We specifically do NOT ignore .env here so that EAS has access to API keys during build
 # If you want to use EAS Secrets instead, you can ignore .env and upload secrets to Expo dashboard
