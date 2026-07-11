@@ -33,6 +33,7 @@ export default function VoiceScreen({ navigation }: any) {
   const isMounted = useRef(true);
   const flatListRef = useRef<FlatList>(null);
   const recordingTimeoutRef = useRef<any>(null);
+  const spokenLanguageRef = useRef<string | null>(null);
 
   // Animations for mic pulse
   const pulseScale = useRef(new Animated.Value(1)).current;
@@ -72,6 +73,8 @@ export default function VoiceScreen({ navigation }: any) {
     
     // Auto-speak the greeting
     const speakWelcome = async () => {
+      if (spokenLanguageRef.current === languageCode) return;
+      spokenLanguageRef.current = languageCode;
       try {
         setAppState('playing');
         setMessages(prev => prev.map(m => m.id === 'welcome' ? { ...m, isAudioPlaying: true } : m));
@@ -462,7 +465,7 @@ export default function VoiceScreen({ navigation }: any) {
 
   return (
     <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>

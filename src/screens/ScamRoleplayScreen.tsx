@@ -33,6 +33,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   const pulseOpacity = useRef(new Animated.Value(0.4)).current;
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
   const recordingTimeoutRef = useRef<any>(null);
+  const startedLanguageRef = useRef<string | null>(null);
 
 
 
@@ -126,6 +127,8 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   };
 
   const startRoleplay = async () => {
+    if (startedLanguageRef.current === languageCode) return;
+    startedLanguageRef.current = languageCode;
     try {
       const firstMsg = getInitialScammerMessage(languageCode);
       const initialMessages: Message[] = [
@@ -278,7 +281,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
         style={styles.container}
       >
         
