@@ -1,96 +1,135 @@
 # 🛡️ CyberSaathi
 
-> **Empowering India's Next Billion Users to Defend Against Cyber Fraud**
+> **Empowering India's Next Billion Users to Detect and Prevent Cyber Fraud**
 
 [![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**CyberSaathi** is a voice-first, multilingual mobile application built to tackle the rising epidemic of digital fraud in India. Traditional cybersecurity apps rely on heavy text and technical jargon, rendering them useless for users with lower digital literacy. CyberSaathi bridges this gap by leveraging advanced **Voice AI** to provide an accessible, conversational, and gamified defense mechanism against modern scams.
+**CyberSaathi** is a voice-first, multilingual mobile application built to tackle the rising epidemic of digital fraud in India. Traditional cybersecurity tools rely on complex text and technical jargon, which fail users with lower digital literacy. CyberSaathi bridges this gap by leveraging advanced **Voice AI** to provide an accessible, conversational, and gamified defense mechanism against modern scams.
 
 ---
 
-## ✨ Key Features
+## 🚀 Core Features
 
-### 🎙️ Multilingual AI Voice Assistant
-Powered by the **Sarvam AI** voice pipeline, users can simply tap a microphone and describe a suspicious situation in their native language (Hindi, Marathi, Bengali, Tamil, Telugu, or English). The AI converts speech to text, analyzes the fraud risk in real-time, and replies with a localized synthesized voice warning.
+### 🎙️ Multilingual AI Voice Assistant (Voice Chat)
+Powered by the **Sarvam AI** voice pipeline, users can simply tap a microphone and describe a suspicious situation in their native language (Hindi, Marathi, Bengali, Tamil, Telugu, or English). 
+*   **Speech-to-Text (STT):** Translates regional dialects and speech patterns.
+*   **Contextual Reasoning:** Uses deep learning to identify psychological manipulation tactics (urgency, digital arrest, fear).
+*   **Text-to-Speech (TTS):** Synthesizes a natural, local-language voice response explaining the risk.
 
 ### 🔍 Advanced Link & Content Scanner
-Before clicking on unfamiliar SMS or WhatsApp links, users can scan them through CyberSaathi. The app cross-references the URL with the **Google Safe Browsing API** and uses heuristic AI analysis to catch zero-day phishing structures, fake domains, and traditional SMS spoofing.
+Analyzes links and messages before the user clicks on them:
+*   **Threat Intelligence:** Real-time lookup against the **Google Safe Browsing API**.
+*   **Heuristics Engine:** Scans for look-alike domains, SMS spoofing, and zero-day phishing patterns.
 
 ### 🎭 Live AI Scam Simulator (Roleplay)
-A cutting-edge feature that lets users practice defending themselves. The app acts as an aggressive scammer (e.g., threatening electricity disconnection). Users negotiate via text or voice, and if they identify the scam, the simulator ends and provides a detailed **Cybersecurity Analysis Report** on their performance and missed red flags.
+A cutting-edge roleplay simulator designed to build muscle memory:
+*   **Interactive Simulation:** The AI acts as an aggressive scammer (e.g., a power grid support agent threatening disconnection).
+*   **Adaptive Difficulty:** Evaluates user responses in real-time.
+*   **Performance Report:** Generates a detailed **Cybersecurity Report** highlighting missed red flags.
 
 ### 🏆 Gamified Learning & Badges
-Education through gamification. Users take daily quizzes on modern scam vectors (Digital Arrests, OTP fraud, Task Scams) and earn badges (e.g., *Quiz Master*, *Vigilant Citizen*) which are securely tracked and stored in the cloud.
+*   **Daily Quizzes:** Evaluates knowledge on digital arrests, OTP frauds, and job scams.
+*   **Cloud Progress:** Unlocks achievements and tracks levels securely in the cloud.
 
 ### 📊 Community Fraud Reporting
-Users can report scam phone numbers, amounts lost, and fraud types directly to a centralized **Supabase PostgreSQL** database, helping map emerging threat patterns across regions.
+Allows users to anonymously report scam numbers, UPI IDs, links, and financial losses to help map regional cybercrime patterns.
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## 🏗️ Technical Architecture
 
-* **Framework:** React Native / Expo (Managed Workflow)
-* **Language:** TypeScript
-* **State Management & Caching:** React Hooks, AsyncStorage
-* **Backend as a Service:** Supabase (PostgreSQL, Real-time DB)
-* **AI Engine:** Sarvam AI (Custom STT → LLM Classifiers → TTS pipeline)
-* **Threat Intelligence:** Google Safe Browsing API
-* **UI/UX:** Custom Dark Theme, Reanimated for fluid micro-animations, Vector Icons
+### Architecture Diagram
+```mermaid
+graph TD
+    A[Mobile Client: Expo/React Native] -->|Audio Recording| B[Sarvam STT API]
+    B -->|Transcript text| C[Sarvam Chat LLM saaras:v3]
+    C -->|AI Explanation text| D[Sarvam TTS API bulbul:v3]
+    D -->|Compressed audio file| A
+    A -->|Link Scan Request| E[Google Safe Browsing API]
+    A -->|Fraud Reports & Quiz stats| F[Supabase Database]
+```
+
+### Tech Stack
+*   **Frontend:** React Native, Expo (Managed Workflow), TypeScript, React Navigation
+*   **UI/UX:** Custom Dark Theme, MaterialIcons, optimized view layout rendering
+*   **Audio Engines:** `expo-audio` (low-latency preheated recording session, mono compression)
+*   **Database:** Supabase PostgreSQL with Row Level Security (RLS)
+*   **AI Integration:** Sarvam AI (Speech-to-Text, Chat Completion, Text-to-Speech)
 
 ---
 
-## 🚀 Getting Started
+## 🛠️ Getting Started
 
 ### Prerequisites
-* [Node.js](https://nodejs.org/en/) (v18 or higher)
-* [Expo CLI](https://docs.expo.dev/get-started/installation/)
-* An Expo Go app installed on your physical device (Android/iOS)
+*   [Node.js](https://nodejs.org/) (v18 or higher)
+*   [Expo CLI](https://docs.expo.dev/get-started/installation/)
+*   A physical Android/iOS device with the [Expo Go](https://expo.dev/client) app installed (for local testing)
 
 ### Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/legend12309/cybersarthi.git
-   cd cybersarthi
-   ```
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/legend12309/cybersarthi.git
+    cd cybersarthi
+    ```
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-3. **Environment Configuration:**
-   Create a `.env` file in the root directory and add the following keys:
-   ```env
-   EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   EXPO_PUBLIC_SARVAM_API_KEY=your_sarvam_api_key
-   EXPO_PUBLIC_SAFE_BROWSING_API_KEY=your_google_safe_browsing_key
-   ```
+3.  **Environment Setup:**
+    Create a `.env` file in the root directory:
+    ```env
+    EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+    EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+    EXPO_PUBLIC_SARVAM_API_KEY=your_sarvam_api_key
+    EXPO_PUBLIC_SAFE_BROWSING_API_KEY=your_google_safe_browsing_key
+    ```
 
-4. **Database Setup:**
-   Copy the contents of `supabase_setup.sql` into your Supabase SQL Editor and run it to instantly provision the required tables, columns, and Row Level Security (RLS) policies.
+4.  **Database Provisioning:**
+    Copy the SQL definitions from [supabase_setup.sql](file:///D:/CyberSaathi/supabase_setup.sql) into your Supabase SQL Editor and run it to set up the schemas, tables, and RLS policies.
 
-5. **Run the Development Server:**
-   ```bash
-   npx expo start -c
-   ```
-   Scan the generated QR code using the Expo Go app on your mobile device to launch CyberSaathi.
+5.  **Run Locally:**
+    ```bash
+    npx expo start -c
+    ```
+    Scan the generated QR code using the Expo Go app on your phone.
+
+---
+
+## 📦 Building for Production (APK)
+
+CyberSaathi is configured for EAS (Expo Application Services) builds.
+
+### Triggering Cloud Builds (EAS)
+1.  Initialize/Link the project with your Expo account:
+    ```bash
+    eas project:init
+    ```
+2.  Trigger the Android preview build (generates a downloadable APK):
+    ```bash
+    eas build -p android --profile preview
+    ```
+
+### Compiling Locally
+To bypass cloud queues and build the APK locally on your machine (requires Android Studio, Android SDK, and JDK installed):
+```bash
+eas build --platform android --local --profile preview
+```
 
 ---
 
 ## 🔒 Security & Privacy
 
-* **No User Login Required:** The app utilizes hardware/device-level UUIDs to track user progress anonymously, ensuring maximum privacy for victims of fraud who wish to remain anonymous.
-* **Granular RLS Policies:** Backend Supabase tables are secured using Row Level Security to prevent unauthorized access to community fraud reports.
+*   **Anonymous UUIDs:** The app uses hardware-level UUIDs (`expo-application`) to track user levels and badge status anonymously. No personal sign-ups or credentials are required, protecting victims' privacy.
+*   **Row-Level Security (RLS):** Supabase database tables use strict RLS policies, permitting read-only lookups on global tables and allowing only anonymous insert operations for reports.
 
 ---
 
-## 🤝 Contributing
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/legend12309/cybersarthi/issues). 
-
 ## 📜 License
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](file:///D:/CyberSaathi/LICENSE) file for details.
