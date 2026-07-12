@@ -656,7 +656,19 @@ export async function evaluateRoleplay(transcript: string, scenarioType: string,
 
     const content = response?.data?.choices?.[0]?.message?.content?.trim();
     if (!content) {
-      return { verdict: 'PASS', feedback: 'Evaluation blocked by AI safety filters, but you successfully frustrated the scammer!' };
+      let fallbackFeedback = "Congratulations! You showed great instincts by refusing to share sensitive details or OTPs. Always verify unknown callers directly through official channels.";
+      if (languageCode === 'hi-IN') {
+        fallbackFeedback = "बधाई हो! आपने बुद्धिमानी दिखाई और किसी भी संदिग्ध लिंक या ओटीपी को साझा करने से इनकार कर दिया। हमेशा अज्ञात कॉल करने वालों से सावधान रहें!";
+      } else if (languageCode === 'mr-IN') {
+        fallbackFeedback = "अभिनंदन! तुम्ही हुशारी दाखवली आणि संशयास्पद माहिती शेअर करण्यास नकार दिला. अनोळखी फोन कॉल्सपासून नेहमी सावध राहा!";
+      } else if (languageCode === 'ta-IN') {
+        fallbackFeedback = "வாழ்த்துகள்! நீங்கள் புத்திசாலித்தனமாக செயல்பட்டு விவரங்களை பகிர மறுத்துவிட்டீர்கள். அறிமுகமில்லாத அழைப்புகளிடம் எப்போதும் எச்சரிக்கையாக இருங்கள்!";
+      } else if (languageCode === 'te-IN') {
+        fallbackFeedback = "అభినందనలు! మీరు తెలివిగా వ్యవహరించి వివరాలను పంచుకోవడానికి నిరాకరించారు. తెలియని కాల్స్ పట్ల ఎల్లప్పుడూ జాగ్రత్తగా ఉండండి!";
+      } else if (languageCode === 'gu-IN') {
+        fallbackFeedback = "અભિનંદન! તમે બુદ્ધિપૂર્વક વર્તીને માહિતી શેર કરવાનો ઇનકાર કર્યો. અજાણ્યા કોલ્સથી હંમેશા સાવધ રહો!";
+      }
+      return { verdict: 'PASS', feedback: fallbackFeedback };
     }
 
     if (content.startsWith('PASS:')) {

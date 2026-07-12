@@ -243,10 +243,23 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     } catch (error) {
       console.log('[ROLEPLAY] Error processing message:', error);
       if (isMounted.current) {
+        let fallbackMsg = "Hello? I can't hear you clearly. Look, the disconnection is scheduled right now, tell me quickly!";
+        if (languageCode === 'hi-IN') {
+          fallbackMsg = "हेलो? आपकी आवाज़ साफ़ नहीं आ रही है। सुनिए, कनेक्शन कटने वाला है, जल्दी बताइए!";
+        } else if (languageCode === 'mr-IN') {
+          fallbackMsg = "हॅलो? तुमचा आवाज स्पष्ट येत नाहीये. ऐका, कनेक्शन कापले जाणार आहे, लवकर सांगा!";
+        } else if (languageCode === 'ta-IN') {
+          fallbackMsg = "ஹலோ? உங்கள் குரல் தெளிவாக கேட்கவில்லை. இணைப்பு துண்டிக்கப்படப் போகிறது, சீக்கிரம் சொல்லுங்கள்!";
+        } else if (languageCode === 'te-IN') {
+          fallbackMsg = "హలో? మీ వాయిస్ స్పష్టంగా వినిపించడం లేదు. కనెక్షన్ కట్ కాబోతోంది, త్వరగా చెప్పండి!";
+        } else if (languageCode === 'gu-IN') {
+          fallbackMsg = "હેલો? તમારો અવાજ સ્પષ્ટ નથી આવી રહ્યો. કનેક્શન કપાઈ જશે, જલ્દી જણાવો!";
+        }
+
         setMessages(prev => [...prev, { 
           id: 'err_' + Date.now().toString(),
           role: 'assistant', 
-          content: languageCode === 'hi-IN' ? 'माफ़ कीजिए, नेटवर्क में समस्या है। कृपया फिर से कोशिश करें।' : 'Sorry, there was a network issue. Please try again.' 
+          content: fallbackMsg
         }]);
         setIsTyping(false);
       }
