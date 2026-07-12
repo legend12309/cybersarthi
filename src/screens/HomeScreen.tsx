@@ -292,7 +292,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
 
             {scanState === 'idle' && (
-              <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false}>
+              <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <Text style={styles.inputLabel}>{t('scanner_input_label')}</Text>
                 <TextInput
                   style={styles.input}
@@ -361,7 +361,7 @@ export default function HomeScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {!isSubmitted ? (
                 <>
                   {reportError ? <Text style={{ color: colors.error, fontFamily: 'Manrope_600SemiBold', marginBottom: -4 }}>{reportError}</Text> : null}
