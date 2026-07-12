@@ -147,19 +147,32 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         const currentToken = playTokenRef.current;
         try { if (player.playing) player.pause(); } catch(e) {}
 
-        const audioUri = await textToSpeech(firstMsg, languageCode);
-        if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
-          player.replace(audioUri);
-          player.play();
-        } else {
-          setIsTyping(false); // Unlock if TTS fails to return audio or token mismatch
+        try {
+          const audioUri = await textToSpeech(firstMsg, languageCode);
+          if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
+            try {
+              player.replace(audioUri);
+              player.play();
+            } catch (playErr) {
+              console.log('[ROLEPLAY] Player error on start:', playErr);
+              if (isMounted.current) setIsTyping(false);
+            }
+          } else {
+            if (isMounted.current) setIsTyping(false);
+          }
+        } catch (ttsErr) {
+          console.log('[ROLEPLAY] TTS failed on start, continuing in text mode:', ttsErr);
+          if (isMounted.current) setIsTyping(false);
         }
       } else {
         setIsTyping(false);
       }
     } catch (error) {
-      console.log('[ROLEPLAY] Falling back to static scenario due to error:', error);
-      if (isMounted.current) navigation.replace('ScamDetail', { scamId });
+      console.log('[ROLEPLAY] Error starting roleplay:', error);
+      if (isMounted.current) {
+        // Don't crash — just show the messages without audio and let user continue
+        setIsTyping(false);
+      }
     }
   };
 
@@ -206,12 +219,22 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
           const currentToken = playTokenRef.current;
           try { if (player.playing) player.pause(); } catch(e) {}
 
-          const audioUri = await textToSpeech(scammerResponse, languageCode);
-          if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
-            player.replace(audioUri);
-            player.play();
-          } else {
-            setIsTyping(false);
+          try {
+            const audioUri = await textToSpeech(scammerResponse, languageCode);
+            if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
+              try {
+                player.replace(audioUri);
+                player.play();
+              } catch (playErr) {
+                console.log('[ROLEPLAY] Player error:', playErr);
+                if (isMounted.current) setIsTyping(false);
+              }
+            } else {
+              if (isMounted.current) setIsTyping(false);
+            }
+          } catch (ttsErr) {
+            console.log('[ROLEPLAY] TTS failed, continuing without audio:', ttsErr);
+            if (isMounted.current) setIsTyping(false);
           }
         } else {
           setIsTyping(false);

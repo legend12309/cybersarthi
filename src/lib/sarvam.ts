@@ -599,7 +599,7 @@ export async function roleplayWithSarvam(messages: {role: string, content: strin
         {
           model: 'sarvam-105b',
           temperature: 0.6,
-          max_tokens: 1024,
+          max_tokens: 300,
           messages: messages,
         },
         { 
@@ -607,7 +607,7 @@ export async function roleplayWithSarvam(messages: {role: string, content: strin
             ...getHeaders(),
             'Content-Type': 'application/json',
           },
-          timeout: 15000
+          timeout: 12000
         }
       );
       
@@ -620,8 +620,9 @@ export async function roleplayWithSarvam(messages: {role: string, content: strin
         return "Listen, I am losing patience. You need to resolve this right now or face the consequences.";
       }
     } catch (error: any) {
+      console.log(`[ROLEPLAY API] Attempt ${attempt + 1} failed:`, error.message);
       if (attempt === maxRetries) {
-        throw error;
+        return "I don't have time for this. Pay now or else.";
       }
     }
   }
@@ -632,36 +633,42 @@ export async function evaluateRoleplay(transcript: string, scenarioType: string,
   const languageName = LANG_MAP[languageCode] || 'English';
   const systemPrompt = `Review this conversation where a user was being scammed (Scenario: ${scenarioType}). Evaluate: did they share sensitive info, did they show good instincts (asking for verification, refusing links, staying calm), or did they fall for the scam. Give brief, encouraging feedback in 2-3 sentences, plus a clear PASS or NEEDS_PRACTICE verdict. You MUST start your response with the exact word "PASS:" or "NEEDS_PRACTICE:" followed by your feedback in ${languageName}.`;
 
-  const response = await axios.post(
-    `${API_BASE_URL}/v1/chat/completions`,
-    {
-      model: 'sarvam-105b',
-      temperature: 0.2,
-      max_tokens: 500,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: transcript },
-      ],
-    },
-    { 
-      headers: {
-        ...getHeaders(),
-        'Content-Type': 'application/json',
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/v1/chat/completions`,
+      {
+        model: 'sarvam-105b',
+        temperature: 0.2,
+        max_tokens: 500,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: transcript },
+        ],
       },
-      timeout: 15000
+      { 
+        headers: {
+          ...getHeaders(),
+          'Content-Type': 'application/json',
+        },
+        timeout: 15000
+      }
+    );
+
+    const content = response?.data?.choices?.[0]?.message?.content?.trim();
+    if (!content) {
+      return { verdict: 'PASS', feedback: 'Evaluation blocked by AI safety filters, but you successfully frustrated the scammer!' };
     }
-  );
 
-  const content = response?.data?.choices?.[0]?.message?.content?.trim();
-  if (!content) {
-    return { verdict: 'PASS', feedback: 'Evaluation blocked by AI safety filters, but you successfully frustrated the scammer!' };
+    if (content.startsWith('PASS:')) {
+      return { verdict: 'PASS', feedback: content.replace('PASS:', '').trim() };
+    } else if (content.startsWith('NEEDS_PRACTICE:')) {
+      return { verdict: 'NEEDS_PRACTICE', feedback: content.replace('NEEDS_PRACTICE:', '').trim() };
+    }
+
+    return { verdict: 'NEEDS_PRACTICE', feedback: content };
+  } catch (error) {
+    console.log('[EVALUATE] Error evaluating roleplay:', error);
+    return { verdict: 'NEEDS_PRACTICE', feedback: 'Could not complete evaluation due to a network issue. Remember: never share personal details with unknown callers.' };
   }
-
-  if (content.startsWith('PASS:')) {
-    return { verdict: 'PASS', feedback: content.replace('PASS:', '').trim() };
-  } else if (content.startsWith('NEEDS_PRACTICE:')) {
-    return { verdict: 'NEEDS_PRACTICE', feedback: content.replace('NEEDS_PRACTICE:', '').trim() };
-  }
-
-  return { verdict: 'NEEDS_PRACTICE', feedback: content };
 }
+
