@@ -96,6 +96,7 @@ export default function HomeScreen({ navigation }: any) {
 
   const handleScanLink = useCallback(async () => {
     const url = linkInput.trim().toLowerCase();
+    Keyboard.dismiss();
     if (!url) return;
     setScanState('scanning');
     
@@ -197,7 +198,7 @@ export default function HomeScreen({ navigation }: any) {
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* ── Header ─────────────────────────────────────────── */}
         <View style={styles.header}>
           <View style={styles.brand}>
@@ -293,7 +294,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
 
             {scanState === 'idle' && (
-              <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always">
+              <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <Text style={styles.inputLabel}>{t('scanner_input_label')}</Text>
                 <TextInput
                   style={styles.input}
@@ -363,7 +364,7 @@ export default function HomeScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always">
+            <ScrollView contentContainerStyle={styles.reportScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {!isSubmitted ? (
                 <>
                   {reportError ? <Text style={{ color: colors.error, fontFamily: 'Manrope_600SemiBold', marginBottom: -4 }}>{reportError}</Text> : null}

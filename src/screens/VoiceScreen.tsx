@@ -32,6 +32,7 @@ export default function VoiceScreen({ navigation }: any) {
 
   const isMounted = useRef(true);
   const flatListRef = useRef<FlatList>(null);
+  const playTokenRef = useRef(0);
   const recordingTimeoutRef = useRef<any>(null);
   const spokenLanguageRef = useRef<string | null>(null);
 
@@ -77,7 +78,7 @@ export default function VoiceScreen({ navigation }: any) {
       spokenLanguageRef.current = languageCode;
       try {
         setAppState('playing');
-        setMessages(prev => prev.map(m => m.id === 'welcome' ? { ...m, isAudioPlaying: true } : m));
+        setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: m.id === 'welcome' })));
         const audioUri = await textToSpeech(welcomeText, languageCode);
         if (isMounted.current && audioUri) {
           player.replace(audioUri);
@@ -207,7 +208,7 @@ export default function VoiceScreen({ navigation }: any) {
 
       // console.log('[PIPELINE] Starting TTS...');
       setAppState('playing');
-      setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, isAudioPlaying: true } : m));
+      setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: m.id === aiMsgId })));
       
       let audio = '';
       try {
@@ -292,7 +293,7 @@ export default function VoiceScreen({ navigation }: any) {
 
       // console.log('[PIPELINE] Starting TTS...');
       setAppState('playing');
-      setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, isAudioPlaying: true } : m));
+      setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: m.id === aiMsgId })));
       
       let audio = '';
       try {
