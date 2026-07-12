@@ -168,7 +168,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
 
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {/* ── Roleplay Start Section ─────────────────────────────── */}
-        {!showAnalysis && userChoice === null && showRoleplayOption && (
+        {!showAnalysis && userChoice === null && (
           <View style={styles.roleplaySection}>
             <Text style={styles.roleplayTitle}>Live Scam Simulator</Text>
             <Text style={styles.roleplaySub}>Experience this scenario in a safe environment before you decide.</Text>
