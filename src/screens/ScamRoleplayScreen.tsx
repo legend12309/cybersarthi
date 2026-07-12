@@ -345,7 +345,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
         <ScrollView 
           ref={scrollViewRef} 
-          contentContainerStyle={styles.chatScroll}
+          contentContainerStyle={[styles.chatScroll, evaluation && { paddingBottom: 32 + insets.bottom }]}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
           {messages.map((msg) => {
