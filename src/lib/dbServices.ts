@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { withTimeout } from './api';
 
 export interface UserProfile {
   id: string;
@@ -26,14 +27,16 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
 
   try {
     // Atomically upsert user record to avoid Primary Key violation race conditions
-    const { data, error } = await supabase
-      .from('users')
-      .upsert(
-        { id: deviceId, language: languageCode, level: 'Level 2: Vigilant' },
-        { onConflict: 'id' }
-      )
-      .select('id, language, level')
-      .single();
+    const { data, error } = await withTimeout(
+      supabase
+        .from('users')
+        .upsert(
+          { id: deviceId, language: languageCode, level: 'Level 2: Vigilant' },
+          { onConflict: 'id' }
+        )
+        .select('id, language, level')
+        .single()
+    );
 
     if (error) {
       // console.warn('Supabase getOrCreateUser upsert error:', error);
@@ -52,10 +55,12 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
  */
 export async function updateUserLanguage(deviceId: string, languageCode: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('users')
-      .update({ language: languageCode })
-      .eq('id', deviceId);
+    const { error } = await withTimeout(
+      supabase
+        .from('users')
+        .update({ language: languageCode })
+        .eq('id', deviceId)
+    );
 
     if (error) {
       // console.warn('Supabase updateUserLanguage error:', error);
@@ -82,11 +87,13 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     // console.log('[BADGES] fetchUserStats called with userId:', userId, 'type:', typeof userId);
 
     // 1. Fetch user's level
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('level')
-      .eq('id', userId)
-      .maybeSingle();
+    const { data: userData, error: userError } = await withTimeout(
+      supabase
+        .from('users')
+        .select('level')
+        .eq('id', userId)
+        .maybeSingle()
+    );
 
     let userLevel = fallbackStats.level;
     if (!userError && userData) {
@@ -94,10 +101,12 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     }
 
     // 2. Fetch sum of quiz scores
-    const { data: quizData, error: quizError } = await supabase
-      .from('quiz_scores')
-      .select('*')
-      .eq('user_id', userId);
+    const { data: quizData, error: quizError } = await withTimeout(
+      supabase
+        .from('quiz_scores')
+        .select('*')
+        .eq('user_id', userId)
+    );
       
     // console.log('[BADGES] Quiz scores result:', JSON.stringify(quizData), 'error:', JSON.stringify(quizError));
 
@@ -109,11 +118,13 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     }
 
     // 3. Fetch completed simulations count
-    const { data: simData, error: simError } = await supabase
-      .from('scam_reports')
-      .select('*')
-      .eq('user_id', userId)
-      .in('source', ['simulator', 'user_report', 'scanner']);
+    const { data: simData, error: simError } = await withTimeout(
+      supabase
+        .from('scam_reports')
+        .select('*')
+        .eq('user_id', userId)
+        .in('source', ['simulator', 'user_report', 'scanner'])
+    );
       
     // console.log('[BADGES] Simulator completions result:', JSON.stringify(simData), 'error:', JSON.stringify(simError));
 
@@ -161,19 +172,17 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     }
 
     if (computedLevel !== userLevel) {
-      // Try to update level asynchronously
-      supabase
-        .from('users')
-        .update({ level: computedLevel })
-        .eq('id', userId)
-        .then(
-          ({ error }) => {
-            if (error) console.warn('Supabase async level update error:', error);
-          },
-          (err: any) => {
-            // console.error('Supabase async level update rejection:', err);
-          }
+      try {
+        const { error } = await withTimeout(
+          supabase
+            .from('users')
+            .update({ level: computedLevel })
+            .eq('id', userId)
         );
+        if (error) console.warn('Supabase level update error:', error);
+      } catch (err) {
+        // console.error('Supabase level update rejection:', err);
+      }
       userLevel = computedLevel;
     }
 

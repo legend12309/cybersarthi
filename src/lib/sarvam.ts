@@ -352,6 +352,200 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
         throw new Error('err_tts_failed');
       }
       // console.log(`[TTS] Retrying attempt ${attempt + 1}...`);
+        if (!contaminated && incomplete) {
+          lastIncompleteContent = text;
+          // console.log('[CHAT] Rejected - incomplete ending:', incomplete, 'finish_reason:', finishReason);
+        } else {
+          // console.log(`[CHAT] Attempt ${attempt + 1} rejected - content: '${text}', contaminated: ${contaminated}`);
+        }
+      }
+      
+    } catch (error: any) {
+      // console.log(`[CHAT] Error on attempt ${attempt + 1}:`, error.message);
+      lastErrorMsg = error.response?.data?.message || error.response?.data?.error?.message || error.message;
+      const status = error.response?.status;
+      if (status === 500 || status === 403 || status === 429) {
+        // console.log(`[CHAT] Fatal API Error ${status}, throwing explicitly.`);
+        throw new Error(`API Error ${status}: ${lastErrorMsg}`);
+      }
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        if (attempt === maxRetries) throw new Error('Request timed out. Please check your connection.');
+      }
+    }
+  }
+  
+  // After all retries fail, return a clean, safe, hardcoded fallback - NEVER show raw model text
+  if (lastIncompleteContent && mode === 'conversation') {
+    return truncateToLastSentence(lastIncompleteContent);
+  }
+
+  const errorReason = lastErrorMsg ? ` (Error: ${lastErrorMsg})` : '';
+
+  return mode === 'classification' 
+    ? 'SUSPICIOUS: Unable to verify safely, please be cautious.'
+    : `माफ़ कीजिए, मैं अभी जवाब नहीं दे पा रहा हूँ। कृपया अपना सवाल थोड़ा छोटा करके फिर पूछें।${errorReason}`;
+}
+
+export async function classifyContent(content: string, languageCode: string, contentType: 'url' | 'message'): Promise<{verdict: 'safe' | 'suspicious', explanation: string, source?: string}> {
+  const prompt = contentType === 'url' 
+    ? `You are a strict cybersecurity classifier trained to detect both traditional and modern scam patterns common in India:
+TRADITIONAL PATTERNS: lottery/prize scams, fake bank calls asking for OTP/PIN, KYC update threats, electricity disconnection threats, fake police/legal threats, advance fee fraud.
+MODERN PATTERNS: Pig butchering scams (unexpected "wrong number" texts followed by excessive politeness, mentions of foreign locations/businesses, and requests to move to WhatsApp/Telegram), AI voice cloning scams (fake voice calls from 'family members'), deepfake video call scams, fake investment/crypto schemes promising high returns, fake delivery/customs fee scams via WhatsApp, QR code payment redirection scams, fake job offers via Telegram/WhatsApp groups, romance scams via dating apps, fake loan apps with predatory terms, screen-sharing remote access scams (AnyDesk/TeamViewer), SIM swap social engineering attempts, fake customer support numbers found via search ads.
+
+Analyze the given content against BOTH categories. Look for: urgency tactics, unexpected "wrong number" friendliness, unverified contact requests, requests for OTP/PIN/personal info, suspicious links/shorteners, too-good-to-be-true offers, emotional manipulation, requests to install remote-access apps, or impersonation of trusted entities (banks, government, family, delivery services, customer support).
+URL: "${content}"`
+    : `You are a strict cybersecurity classifier trained to detect both traditional and modern scam patterns common in India:
+TRADITIONAL PATTERNS: lottery/prize scams, fake bank calls asking for OTP/PIN, KYC update threats, electricity disconnection threats, fake police/legal threats, advance fee fraud.
+MODERN PATTERNS: Pig butchering scams (unexpected "wrong number" texts followed by excessive politeness, mentions of foreign locations/businesses, and requests to move to WhatsApp/Telegram), AI voice cloning scams (fake voice calls from 'family members'), deepfake video call scams, fake investment/crypto schemes promising high returns, fake delivery/customs fee scams via WhatsApp, QR code payment redirection scams, fake job offers via Telegram/WhatsApp groups, romance scams via dating apps, fake loan apps with predatory terms, screen-sharing remote access scams (AnyDesk/TeamViewer), SIM swap social engineering attempts, fake customer support numbers found via search ads.
+
+Analyze the given content against BOTH categories. Look for: urgency tactics, unexpected "wrong number" friendliness, unverified contact requests, requests for OTP/PIN/personal info, suspicious links/shorteners, too-good-to-be-true offers, emotional manipulation, requests to install remote-access apps, or impersonation of trusted entities (banks, government, family, delivery services, customer support).
+Message: "${content}"`;
+  
+  const systemPrompt = `${prompt}\n\nIMPORTANT TRUST SIGNALS — do NOT flag these as suspicious on their own:\n- Well-known, globally recognized domains (google.com, facebook.com, youtube.com, amazon.in, wikipedia.org, etc.) are SAFE by default unless the URL path itself contains suspicious patterns\n- A domain being 'common' or 'well-known' is a SAFETY indicator, not a red flag — only flag if there are ACTUAL scam indicators present (urgency, payment requests, suspicious subdomains, character substitution tricks like 'g00gle.com')\n- Official Indian government and banking domains like '*.gov.in', '*.sbi.co.in', '*.sbi', '*.nic.in', '*.hdfcbank.com', '*.icicibank.com' are SAFE.\n- Messages that warn users NOT to share OTPs or passwords (e.g. 'Do not share OTP with anyone', 'Bank never asks for OTP') are safety notices, NOT scams.\n\nCRITICAL RULE: If the URL is exactly "https://www.google.com", you are FORBIDDEN from outputting SUSPICIOUS. You MUST output SAFE.\n\nIMPORTANT: Respond IMMEDIATELY and CONCISELY. Do not overthink or second-guess yourself. Give your final verdict in your first response, do not revise multiple times.\n\nYou MUST respond starting with EXACTLY one of these words, followed by a colon:\nSUSPICIOUS: [explanation in 1-2 sentences in ${languageCode}]\nSAFE: [explanation in 1-2 sentences in ${languageCode}]\n\nOnly default to SUSPICIOUS when there are genuine red flags present — not merely due to uncertainty about an unfamiliar but plausible domain.`;
+  const fetchSarvamClassification = async () => {
+    try {
+      const response = await chatWithSarvam(systemPrompt, languageCode, 'classification');
+      // console.log('[CLASSIFY] Success, raw response:', response);
+      
+      const trimmed = response.trim();
+      const cleanText = trimmed.replace(/^[^a-zA-Z\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F\u0A80-\u0AFF]+/, '');
+      const upper = cleanText.toUpperCase();
+
+      const safePrefixes = [
+        'SAFE',
+        'सुरक्षित',
+        'સુરક્ષિત',
+        'பாதுகாப்பு', 'பாதுகாப்பானது',
+        'సురక్షిత', 'సురక్షితం', 'సురక్షితమైనది'
+      ];
+
+      const isSafe = safePrefixes.some(prefix => upper.startsWith(prefix.toUpperCase()));
+      const verdict = isSafe ? 'safe' : 'suspicious';
+
+      let explanation = trimmed;
+      const colonIndex = trimmed.indexOf(':');
+      const dashIndex = trimmed.indexOf('-');
+      const splitIndex = colonIndex !== -1 ? colonIndex : (dashIndex !== -1 ? dashIndex : -1);
+
+      if (splitIndex !== -1 && splitIndex < 25) {
+        explanation = trimmed.substring(splitIndex + 1).trim();
+      } else {
+        explanation = trimmed.replace(/^(\*\*|###)?\s*(SAFE|SUSPICIOUS|सुरक्षित|संदिग्ध|असुरक्षित|संशयास्पद|શંકાસ્પદ|பாதுகாப்பானது|சந்தேகத்திற்குரியது)\s*(\*\*|###)?\s*[:\-\s]*/i, '').trim();
+      }
+
+      if (!explanation) {
+        explanation = trimmed;
+      }
+      
+      return { verdict, explanation, source: 'sarvam' };
+    } catch (error: any) {
+      // console.log('[CLASSIFY] FAILED with error:', error);
+      // console.log('[CLASSIFY] Error message:', error?.message);
+      throw error;
+    }
+  };
+
+  if (contentType === 'url') {
+    const [sarvamResult, safeBrowsingResult] = await Promise.all([
+      fetchSarvamClassification(),
+      checkSafeBrowsing(content),
+    ]);
+
+    // console.log('[CLASSIFY] Sarvam verdict:', sarvamResult.verdict, '| Safe Browsing threat:', safeBrowsingResult.isThreat);
+
+    if (safeBrowsingResult.isThreat) {
+      return {
+        verdict: 'suspicious',
+        explanation: `Google Safe Browsing has flagged this link as a known ${safeBrowsingResult.threatType?.toLowerCase().replace('_', ' ')} threat. Do not visit this link.`,
+        source: 'google_safe_browsing'
+      };
+    }
+
+    return sarvamResult as {verdict: 'safe' | 'suspicious', explanation: string, source: string};
+  }
+
+  return (await fetchSarvamClassification()) as {verdict: 'safe' | 'suspicious', explanation: string, source: string};
+}
+
+export async function cleanupTTSCache() {
+  try {
+    const dirUri = FileSystem.cacheDirectory;
+    if (!dirUri) return;
+    const files = await FileSystem.readDirectoryAsync(dirUri);
+    const ttsFiles = files.filter(f => f.startsWith('sarvam_tts_') && f.endsWith('.wav'));
+    
+    // Sort by timestamp (newest first)
+    ttsFiles.sort((a, b) => {
+      const tsA = parseInt(a.replace('sarvam_tts_', '').replace('.wav', ''), 10) || 0;
+      const tsB = parseInt(b.replace('sarvam_tts_', '').replace('.wav', ''), 10) || 0;
+      return tsB - tsA;
+    });
+
+    // Keep the most recent 5, delete the rest
+    const filesToDelete = ttsFiles.slice(5);
+    for (const file of filesToDelete) {
+      await FileSystem.deleteAsync(dirUri + file, { idempotent: true });
+    }
+  } catch (err) {
+    // console.log('[TTS] Cleanup error:', err);
+  }
+}
+
+// Helper to clean up text before sending to TTS
+function sanitizeForTTS(text: string): string {
+  if (!text) return '';
+  let clean = text.replace(/[*_~]+/g, ''); // Remove markdown formatting
+  clean = clean.replace(/₹/g, ' rupees '); // Replace ₹ symbol
+  clean = clean.replace(/(\d+),(\d+)/g, '$1$2'); // Remove commas in numbers (e.g. 3,240 -> 3240) so it's read as a full number
+  clean = clean.replace(/-/g, ' '); // Replace hyphens with spaces
+  return clean.trim();
+}
+
+export async function textToSpeech(text: string, languageCode: string): Promise<string> {
+  if (!text || text.trim().length === 0) {
+    throw new Error('No text provided for speech synthesis');
+  }
+
+  const maxRetries = 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      await cleanupTTSCache();
+      // Clean and sanitize text, then enforce 500 char limit
+      const sanitized = sanitizeForTTS(text);
+      const safeText = sanitized.length > 500 ? sanitized.substring(0, 497) + '...' : sanitized;
+      const response = await axios.post(
+        `${API_BASE_URL}/text-to-speech`,
+        {
+          inputs: [safeText],
+          target_language_code: languageCode,
+          speaker: 'shubh',
+          model: 'bulbul:v3',
+          enable_preprocessing: true,
+        },
+        { 
+          headers: {
+            ...getHeaders(),
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000
+        }
+      );
+      
+      const audio = response.data.audios ? response.data.audios[0] : response.data.audio;
+      if (!audio) {
+        throw new Error('No audio returned from API');
+      }
+      const uri = FileSystem.cacheDirectory + 'sarvam_tts_' + Date.now() + '.wav';
+      await FileSystem.writeAsStringAsync(uri, audio, {
+        encoding: 'base64' as any,
+      });
+      return uri;
+    } catch (error: any) {
+      // console.log('[TTS] Network error details:', error.message, error.code);
+      if (attempt === maxRetries) {
+        throw new Error('err_tts_failed');
+      }
+      // console.log(`[TTS] Retrying attempt ${attempt + 1}...`);
     }
   }
   throw new Error('err_tts_failed');
@@ -359,225 +553,242 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
 
 export async function analyzeScreenshot(imageUri: string, languageCode: string): Promise<string> {
   // console.log('[VISION] Starting screenshot analysis...');
-  
-  // 1. Create Job
-  const createRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1`, {
-    method: 'POST',
-    headers: {
-      'api-subscription-key': API_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      job_parameters: {
-        language: languageCode,
-        output_format: 'md',
-      },
-    }),
-  });
-  
-  if (!createRes.ok) {
-    const errText = await createRes.text();
-    throw new Error(`Job creation failed: ${errText}`);
-  }
-  
-  const createData = await createRes.json();
-  const jobId = createData.job_id;
-  // console.log('[VISION] Job initialized:', jobId);
-  
-  const ext = imageUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'png';
-  const isJpg = ext === 'jpg' || ext === 'jpeg';
-  const fileName = `screenshot.${isJpg ? 'jpg' : 'png'}`;
-  const mimeType = isJpg ? 'image/jpeg' : 'image/png';
-
-  // 2. Get Upload URL
-  const uploadRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/upload-files`, {
-    method: 'POST',
-    headers: {
-      'api-subscription-key': API_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      job_id: jobId,
-      files: [fileName],
-    }),
-  });
-  
-  if (!uploadRes.ok) {
-    const errText = await uploadRes.text();
-    throw new Error(`Failed to get upload URLs: ${errText}`);
-  }
-  
-  const uploadData = await uploadRes.json();
-  const uploadUrlObj = uploadData.upload_urls?.[fileName];
-  const uploadUrl = typeof uploadUrlObj === 'string' ? uploadUrlObj : (uploadUrlObj?.file_url || uploadUrlObj?.url);
-  
-  if (!uploadUrl) {
-    throw new Error('Upload URL not found in response');
-  }
-  
-  // 3. Upload File
-  let blob: any;
-  try {
-    const fileResp = await fetch(imageUri);
-    blob = await fileResp.blob();
-  } catch (error) {
-    throw new Error('Failed to read local image file. It may be inaccessible or deleted.');
-  }
-  
-  const uploadHeaders: Record<string, string> = {
-    'Content-Type': mimeType,
-  };
-  if (uploadUrl.includes('windows.net') || uploadUrl.includes('blob.core.windows.net')) {
-    uploadHeaders['x-ms-blob-type'] = 'BlockBlob';
-  }
-  
   const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), 30000); // 30s timeout
-
+  const timeoutId = setTimeout(() => abortController.abort(), 60000); // 60s global timeout
+  let jobId: string | null = null;
   try {
-    const putRes = await fetch(uploadUrl, {
-      method: 'PUT',
-      body: blob,
-      headers: uploadHeaders,
+    // 1. Create Job
+    const createRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1`, {
+      method: 'POST',
+      headers: {
+        'api-subscription-key': API_KEY,
+        'Content-Type': 'application/json',
+      },
       signal: abortController.signal as any,
+      body: JSON.stringify({
+        job_parameters: {
+          language: languageCode,
+          output_format: 'md',
+        },
+      }),
     });
     
-    if (!putRes.ok) {
-      const errText = await putRes.text();
-      throw new Error(`File upload failed: ${errText}`);
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      throw new Error(`Job creation failed: ${errText}`);
     }
+    
+    const createData = await createRes.json();
+    jobId = createData.job_id;
+    // console.log('[VISION] Job initialized:', jobId);
+    
+    const ext = imageUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'png';
+    const isJpg = ext === 'jpg' || ext === 'jpeg';
+    const fileName = `screenshot.${isJpg ? 'jpg' : 'png'}`;
+    const mimeType = isJpg ? 'image/jpeg' : 'image/png';
+
+    // 2. Get Upload URL
+    const uploadRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/upload-files`, {
+      method: 'POST',
+      headers: {
+        'api-subscription-key': API_KEY,
+        'Content-Type': 'application/json',
+      },
+      signal: abortController.signal as any,
+      body: JSON.stringify({
+        job_id: jobId,
+        files: [fileName],
+      }),
+    });
+    
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      throw new Error(`Failed to get upload URLs: ${errText}`);
+    }
+    
+    const uploadData = await uploadRes.json();
+    const uploadUrlObj = uploadData.upload_urls?.[fileName];
+    const uploadUrl = typeof uploadUrlObj === 'string' ? uploadUrlObj : (uploadUrlObj?.file_url || uploadUrlObj?.url);
+    
+    if (!uploadUrl) {
+      throw new Error('Upload URL not found in response');
+    }
+    
+    // 3. Upload File
+    let blob: any;
+    try {
+      const fileResp = await fetch(imageUri, { signal: abortController.signal as any });
+      blob = await fileResp.blob();
+    } catch (error) {
+      throw new Error('Failed to read local image file. It may be inaccessible or deleted.');
+    }
+    
+    const uploadHeaders: Record<string, string> = {
+      'Content-Type': mimeType,
+    };
+    if (uploadUrl.includes('windows.net') || uploadUrl.includes('blob.core.windows.net')) {
+      uploadHeaders['x-ms-blob-type'] = 'BlockBlob';
+    }
+    
+    try {
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: uploadHeaders,
+        signal: abortController.signal as any,
+      });
+      
+      if (!putRes.ok) {
+        const errText = await putRes.text();
+        throw new Error(`File upload failed: ${errText}`);
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Upload timed out. Please check your network connection.');
+      }
+      throw error;
+    }
+    
+    // console.log('[VISION] Upload complete');
+    
+    // 4. Start Job
+    const startRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/start`, {
+      method: 'POST',
+      headers: {
+        'api-subscription-key': API_KEY,
+        'Content-Type': 'application/json',
+      },
+      signal: abortController.signal as any,
+      body: JSON.stringify({
+        job_id: jobId,
+      }),
+    });
+    
+    if (!startRes.ok) {
+      const errText = await startRes.text();
+      throw new Error(`Failed to start job: ${errText}`);
+    }
+    
+    // 5. Poll Status
+    let status = 'processing';
+    let attempts = 0;
+    let jobDetails: any = null;
+    
+    while (attempts < 15) {
+      attempts++;
+      // Wait 2 seconds
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      const statusRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/status`, {
+        method: 'GET',
+        headers: {
+          'api-subscription-key': API_KEY,
+        },
+        signal: abortController.signal as any,
+      });
+      
+      if (!statusRes.ok) {
+        // console.warn(`[VISION] Status poll failed (attempt ${attempts})`);
+        continue;
+      }
+      
+      const statusData = await statusRes.json();
+      status = statusData.job_state?.toLowerCase() || statusData.status?.toLowerCase();
+      jobDetails = statusData.job_details;
+      
+      // console.log('[VISION] Polling attempt:', attempts, 'status:', status);
+      
+      if (status === 'completed' || status === 'failed') {
+        break;
+      }
+    }
+    
+    if (status !== 'completed') {
+      throw new Error(status === 'failed' ? 'Job failed on server' : 'Job timed out');
+    }
+    
+    // 6. Get Download URLs
+    let outputFiles: string[] = [];
+    if (jobDetails && Array.isArray(jobDetails.outputs)) {
+      outputFiles = jobDetails.outputs.map((o: any) => o.file_name);
+    } else if (jobDetails && Array.isArray(jobDetails)) {
+      for (const d of jobDetails) {
+        if (d.outputs && Array.isArray(d.outputs)) {
+          outputFiles.push(...d.outputs.map((o: any) => o.file_name));
+        }
+      }
+    }
+    
+    if (outputFiles.length === 0) {
+      outputFiles = ['screenshot.md'];
+    }
+    
+    const downloadRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/download-files`, {
+      method: 'POST',
+      headers: {
+        'api-subscription-key': API_KEY,
+        'Content-Type': 'application/json',
+      },
+      signal: abortController.signal as any,
+      body: JSON.stringify({
+        job_id: jobId,
+        files: outputFiles,
+      }),
+    });
+    
+    if (!downloadRes.ok) {
+      const errText = await downloadRes.text();
+      throw new Error(`Failed to get download URLs: ${errText}`);
+    }
+    
+    const downloadData = await downloadRes.json();
+    const downloadUrlObj = downloadData.download_urls?.[outputFiles[0]];
+    const downloadUrl = typeof downloadUrlObj === 'string' ? downloadUrlObj : (downloadUrlObj?.file_url || downloadUrlObj?.url);
+    
+    if (!downloadUrl) {
+      throw new Error('Download URL not found in response');
+    }
+    
+    // 7. Fetch Extracted Text
+    const textRes = await fetch(downloadUrl, { signal: abortController.signal as any });
+    if (!textRes.ok) {
+      throw new Error('Failed to download result text');
+    }
+    
+    const arrayBuffer = await textRes.arrayBuffer();
+    const zipUint8 = new Uint8Array(arrayBuffer);
+    
+    const unzipped = unzipSync(zipUint8);
+    const mdFileName = Object.keys(unzipped).find(name => name.endsWith('.md'));
+    if (!mdFileName) {
+      throw new Error('No .md file found in zip archive');
+    }
+    
+    const mdBuffer = unzipped[mdFileName];
+    let extractedText = '';
+    if (typeof TextDecoder !== 'undefined') {
+      extractedText = new TextDecoder('utf-8').decode(mdBuffer);
+    } else {
+      // Simple fallback decoding for UTF-8 Uint8Array
+      extractedText = Array.from(mdBuffer).map(c => String.fromCharCode(c)).join('');
+    }
+    
+    // console.log('[VISION] Extracted text:', extractedText);
+    return extractedText;
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      throw new Error('Upload timed out. Please check your network connection.');
+      throw new Error('Analysis timed out after 60 seconds.');
     }
     throw error;
   } finally {
     clearTimeout(timeoutId);
-  }
-  
-  // console.log('[VISION] Upload complete');
-  
-  // 4. Start Job
-  const startRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/start`, {
-    method: 'POST',
-    headers: {
-      'api-subscription-key': API_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      job_id: jobId,
-    }),
-  });
-  
-  if (!startRes.ok) {
-    const errText = await startRes.text();
-    throw new Error(`Failed to start job: ${errText}`);
-  }
-  
-  // 5. Poll Status
-  let status = 'processing';
-  let attempts = 0;
-  let jobDetails: any = null;
-  
-  while (attempts < 15) {
-    attempts++;
-    // Wait 2 seconds
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    const statusRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/status`, {
-      method: 'GET',
-      headers: {
-        'api-subscription-key': API_KEY,
-      },
-    });
-    
-    if (!statusRes.ok) {
-      // console.warn(`[VISION] Status poll failed (attempt ${attempts})`);
-      continue;
-    }
-    
-    const statusData = await statusRes.json();
-    status = statusData.job_state?.toLowerCase() || statusData.status?.toLowerCase();
-    jobDetails = statusData.job_details;
-    
-    // console.log('[VISION] Polling attempt:', attempts, 'status:', status);
-    
-    if (status === 'completed' || status === 'failed') {
-      break;
+    if (jobId) {
+      fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}`, {
+        method: 'DELETE',
+        headers: { 'api-subscription-key': API_KEY }
+      }).catch(() => {});
     }
   }
-  
-  if (status !== 'completed') {
-    throw new Error(status === 'failed' ? 'Job failed on server' : 'Job timed out');
-  }
-  
-  // 6. Get Download URLs
-  let outputFiles: string[] = [];
-  if (jobDetails && Array.isArray(jobDetails.outputs)) {
-    outputFiles = jobDetails.outputs.map((o: any) => o.file_name);
-  } else if (jobDetails && Array.isArray(jobDetails)) {
-    for (const d of jobDetails) {
-      if (d.outputs && Array.isArray(d.outputs)) {
-        outputFiles.push(...d.outputs.map((o: any) => o.file_name));
-      }
-    }
-  }
-  
-  if (outputFiles.length === 0) {
-    outputFiles = ['screenshot.md'];
-  }
-  
-  const downloadRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/${jobId}/download-files`, {
-    method: 'POST',
-    headers: {
-      'api-subscription-key': API_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      job_id: jobId,
-      files: outputFiles,
-    }),
-  });
-  
-  if (!downloadRes.ok) {
-    const errText = await downloadRes.text();
-    throw new Error(`Failed to get download URLs: ${errText}`);
-  }
-  
-  const downloadData = await downloadRes.json();
-  const downloadUrlObj = downloadData.download_urls?.[outputFiles[0]];
-  const downloadUrl = typeof downloadUrlObj === 'string' ? downloadUrlObj : (downloadUrlObj?.file_url || downloadUrlObj?.url);
-  
-  if (!downloadUrl) {
-    throw new Error('Download URL not found in response');
-  }
-  
-  // 7. Fetch Extracted Text
-  const textRes = await fetch(downloadUrl);
-  if (!textRes.ok) {
-    throw new Error('Failed to download result text');
-  }
-  
-  const arrayBuffer = await textRes.arrayBuffer();
-  const zipUint8 = new Uint8Array(arrayBuffer);
-  
-  const unzipped = unzipSync(zipUint8);
-  const mdFileName = Object.keys(unzipped).find(name => name.endsWith('.md'));
-  if (!mdFileName) {
-    throw new Error('No .md file found in zip archive');
-  }
-  
-  const mdBuffer = unzipped[mdFileName];
-  let extractedText = '';
-  if (typeof TextDecoder !== 'undefined') {
-    extractedText = new TextDecoder('utf-8').decode(mdBuffer);
-  } else {
-    // Simple fallback decoding for UTF-8 Uint8Array
-    extractedText = Array.from(mdBuffer).map(c => String.fromCharCode(c)).join('');
-  }
-  
-  // console.log('[VISION] Extracted text:', extractedText);
-  return extractedText;
 }
 
 export async function roleplayWithSarvam(messages: {role: string, content: string}[]): Promise<string> {

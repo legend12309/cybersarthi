@@ -8,6 +8,91 @@ import { submitScamReport } from '../lib/api';
 import { chatWithSarvam, classifyContent } from '../lib/sarvam';
 import scamsData from '../data/scams.json';
 
+const CustomMessageModal = ({ visible, onClose, languageCode }: { visible: boolean, onClose: () => void, languageCode: string }) => {
+  const [customMsgInput, setCustomMsgInput] = useState('');
+  const [customAnalysisState, setCustomAnalysisState] = useState<'idle'|'scanning'|'result'>('idle');
+  const [customAnalysisVerdict, setCustomAnalysisVerdict] = useState<'safe'|'suspicious'|null>(null);
+  const [customAnalysisReason, setCustomAnalysisReason] = useState('');
+  const insets = useSafeAreaInsets();
+
+  const btnTextStyle = React.useMemo(() => [styles.sheetBtnText, { color: colors.onPrimary, opacity: customMsgInput.trim() ? 1 : 0.5 }], [customMsgInput]);
+  const resultVerdictStyle = React.useMemo(() => [styles.resultVerdict, { color: customAnalysisVerdict === 'safe' ? colors.success : colors.error }], [customAnalysisVerdict]);
+
+  const handleAnalyzeCustomMessage = async () => {
+    if (!customMsgInput.trim()) return;
+    setCustomAnalysisState('scanning');
+    try {
+      const { verdict, explanation } = await classifyContent(customMsgInput, languageCode, 'message');
+      setCustomAnalysisVerdict(verdict);
+      setCustomAnalysisReason(explanation);
+    } catch (e) {
+      setCustomAnalysisVerdict('suspicious');
+      setCustomAnalysisReason('Could not analyze the message right now. Please be cautious.');
+    } finally {
+      setCustomAnalysisState('result');
+    }
+  };
+
+  const resetCustomAnalysis = () => {
+    setCustomMsgInput('');
+    setCustomAnalysisState('idle');
+    setCustomAnalysisVerdict(null);
+  };
+
+  return (
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior="padding" style={styles.overlay}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+        <View style={[styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(20, insets.bottom + 10) }]}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Analyze Custom Message</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
+            </TouchableOpacity>
+          </View>
+          {customAnalysisState === 'idle' && (
+            <ScrollView contentContainerStyle={styles.sheetBody} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always">
+              <Text style={styles.inputLabel}>Paste a suspicious message to analyze:</Text>
+              <TextInput
+                style={[styles.input, styles.multiInput]}
+                placeholder="Paste message here..."
+                placeholderTextColor={colors.onSurfaceVariant + '70'}
+                value={customMsgInput}
+                onChangeText={setCustomMsgInput}
+                autoCapitalize="none"
+                multiline
+                autoCorrect={false}
+              />
+              <TouchableOpacity style={styles.sheetBtnPrimary} disabled={!customMsgInput.trim()} onPress={handleAnalyzeCustomMessage}>
+                <Text style={btnTextStyle}>Analyze Message</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          )}
+          {customAnalysisState === 'scanning' && (
+            <View style={styles.centerBlock}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.analyzeText}>Analyzing message with AI...</Text>
+            </View>
+          )}
+          {customAnalysisState === 'result' && (
+            <View style={styles.sheetBody}>
+              <View style={[styles.resultCard, customAnalysisVerdict === 'safe' ? styles.resultSafe : styles.resultDanger]}>
+                <MaterialIcons name={customAnalysisVerdict === 'safe' ? 'verified-user' : 'gpp-bad'} size={40} color={customAnalysisVerdict === 'safe' ? colors.success : colors.error} />
+                <Text style={resultVerdictStyle}>{customAnalysisVerdict === 'safe' ? 'Looks Safe' : 'Suspicious'}</Text>
+                <Text style={styles.resultReason}>{customAnalysisReason}</Text>
+              </View>
+              <TouchableOpacity style={styles.sheetBtn} onPress={resetCustomAnalysis}>
+                <Text style={styles.sheetBtnText}>Analyze Another</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
 export default function ScamDetailScreen({ route, navigation }: any) {
   const { scamId } = route.params || { scamId: 'electricity_bill' };
   const { t, deviceId, languageCode } = useLanguage();
@@ -24,13 +109,6 @@ export default function ScamDetailScreen({ route, navigation }: any) {
   const isMounted = useRef(true);
 
   const [customAnalysisModalVisible, setCustomAnalysisModalVisible] = useState(false);
-  const [customMsgInput, setCustomMsgInput] = useState('');
-  const [customAnalysisState, setCustomAnalysisState] = useState<'idle'|'scanning'|'result'>('idle');
-  const [customAnalysisVerdict, setCustomAnalysisVerdict] = useState<'safe'|'suspicious'|null>(null);
-  const [customAnalysisReason, setCustomAnalysisReason] = useState('');
-
-  const btnTextStyle = React.useMemo(() => [styles.sheetBtnText, { color: colors.onPrimary, opacity: customMsgInput.trim() ? 1 : 0.5 }], [customMsgInput]);
-  const resultVerdictStyle = React.useMemo(() => [styles.resultVerdict, { color: customAnalysisVerdict === 'safe' ? colors.success : colors.error }], [customAnalysisVerdict]);
 
   useEffect(() => {
     return () => { isMounted.current = false; };
@@ -78,26 +156,6 @@ export default function ScamDetailScreen({ route, navigation }: any) {
 
   const isCorrect = userChoice === 'scam';
 
-  const handleAnalyzeCustomMessage = async () => {
-    if (!customMsgInput.trim()) return;
-    setCustomAnalysisState('scanning');
-    try {
-      const { verdict, explanation } = await classifyContent(customMsgInput, languageCode, 'message');
-      setCustomAnalysisVerdict(verdict);
-      setCustomAnalysisReason(explanation);
-    } catch (e) {
-      setCustomAnalysisVerdict('suspicious');
-      setCustomAnalysisReason('Could not analyze the message right now. Please be cautious.');
-    } finally {
-      setCustomAnalysisState('result');
-    }
-  };
-
-  const resetCustomAnalysis = () => {
-    setCustomMsgInput('');
-    setCustomAnalysisState('idle');
-    setCustomAnalysisVerdict(null);
-  };
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
@@ -110,7 +168,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
 
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {/* ── Roleplay Start Section ─────────────────────────────── */}
-        {!showAnalysis && userChoice === null && (
+        {!showAnalysis && userChoice === null && showRoleplayOption && (
           <View style={styles.roleplaySection}>
             <Text style={styles.roleplayTitle}>Live Scam Simulator</Text>
             <Text style={styles.roleplaySub}>Experience this scenario in a safe environment before you decide.</Text>
@@ -215,8 +273,8 @@ export default function ScamDetailScreen({ route, navigation }: any) {
             <View style={styles.analysisCard}>
               <Text style={styles.analysisTitle}>{t('scam_detail_analysis_title')}</Text>
               <View style={styles.gap12}>
-                {scamInfo.redFlags.map((flag, i) => (
-                  <View key={i} style={styles.flagRow}>
+                {scamInfo.redFlags.map((flag) => (
+                  <View key={flag} style={styles.flagRow}>
                     <View style={styles.flagIconBg}>
                       <MaterialIcons name="warning" size={14} color={colors.warning} />
                     </View>
@@ -249,65 +307,12 @@ export default function ScamDetailScreen({ route, navigation }: any) {
       </ScrollView>
 
       {/* ══ CUSTOM ANALYSIS MODAL ══════════════════════════════════════════ */}
-      <Modal animationType="slide" transparent visible={customAnalysisModalVisible} onRequestClose={() => setCustomAnalysisModalVisible(false)}>
-        <KeyboardAvoidingView behavior="padding" style={styles.overlay}>
-          <View style={[styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(20, insets.bottom + 10) }]}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Analyze Custom Message</Text>
-              <TouchableOpacity onPress={() => setCustomAnalysisModalVisible(false)} style={styles.closeBtn}>
-                <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
-              </TouchableOpacity>
-            </View>
-
-            {customAnalysisState === 'idle' && (
-              <ScrollView contentContainerStyle={styles.sheetBody} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always">
-                <Text style={styles.inputLabel}>Paste a suspicious message to analyze:</Text>
-                <TextInput
-                  style={[styles.input, styles.multiInput]}
-                  placeholder="Paste message here..."
-                  placeholderTextColor={colors.onSurfaceVariant + '70'}
-                  value={customMsgInput}
-                  onChangeText={setCustomMsgInput}
-                  autoCapitalize="none"
-                  multiline
-                  autoCorrect={false}
-                />
-                <TouchableOpacity style={styles.sheetBtnPrimary}
-                  disabled={!customMsgInput.trim()}
-                  onPress={handleAnalyzeCustomMessage}
-                >
-                  <Text style={btnTextStyle}>
-                    Analyze Message
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
-            )}
-
-            {customAnalysisState === 'scanning' && (
-              <View style={styles.centerBlock}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.analyzeText}>Analyzing message with AI...</Text>
-              </View>
-            )}
-
-            {customAnalysisState === 'result' && (
-              <View style={styles.sheetBody}>
-                <View style={[styles.resultCard, customAnalysisVerdict === 'safe' ? styles.resultSafe : styles.resultDanger]}>
-                  <MaterialIcons name={customAnalysisVerdict === 'safe' ? 'verified-user' : 'gpp-bad'} size={40} color={customAnalysisVerdict === 'safe' ? colors.success : colors.error} />
-                  <Text style={resultVerdictStyle}>
-                    {customAnalysisVerdict === 'safe' ? 'Looks Safe' : 'Suspicious'}
-                  </Text>
-                  <Text style={styles.resultReason}>{customAnalysisReason}</Text>
-                </View>
-                <TouchableOpacity style={styles.sheetBtn} onPress={resetCustomAnalysis}>
-                  <Text style={styles.sheetBtnText}>Analyze Another</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      {/* ══ CUSTOM ANALYSIS MODAL ══════════════════════════════════════════ */}
+      <CustomMessageModal 
+        visible={customAnalysisModalVisible} 
+        onClose={() => setCustomAnalysisModalVisible(false)} 
+        languageCode={languageCode} 
+      />
 
     </SafeAreaView>
   );

@@ -11,7 +11,7 @@ import { roleplayWithSarvam, evaluateRoleplay, speechToText, textToSpeech } from
 import { scammerPersonas } from '../data/scammerPersonas';
 import scamsData from '../data/scams.json';
 
-type Message = { role: 'user' | 'assistant' | 'system' | 'system_context', content: string };
+type Message = { id: string, role: 'user' | 'assistant' | 'system' | 'system_context', content: string };
 
 export default function ScamRoleplayScreen({ route, navigation }: any) {
   const { scamId, mode } = route.params || { scamId: 'electricity_bill', mode: 'text' };
@@ -104,6 +104,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       pulseScale.setValue(1);
       pulseOpacity.setValue(0.4);
     }
+    return () => pulseLoop.current?.stop();
   }, [isRecording]);
 
   const cleanupAudioAndRecording = () => {
@@ -133,10 +134,10 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     try {
       const firstMsg = getInitialScammerMessage(languageCode);
       const initialMessages: Message[] = [
-        { role: 'system_context', content: 'You received a call from an unknown number. The caller claims to be from the Electricity Board.' },
-        { role: 'system', content: persona },
-        { role: 'user', content: 'Hello?' },
-        { role: 'assistant', content: firstMsg }
+        { id: 'sysctx', role: 'system_context', content: 'You received a call from an unknown number. The caller claims to be from the Electricity Board.' },
+        { id: 'sys', role: 'system', content: persona },
+        { id: 'usr0', role: 'user', content: 'Hello?' },
+        { id: 'ast0', role: 'assistant', content: firstMsg }
       ];
       setMessages(initialMessages);
       
@@ -184,7 +185,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   }, [scamId, languageCode, deviceId]);
 
   const processUserMessage = useCallback(async (userMsg: string) => {
-    const newMessages: Message[] = [...messages, { role: 'user', content: userMsg }];
+    const newMessages: Message[] = [...messages, { id: 'u_' + Date.now(), role: 'user', content: userMsg }];
     setMessages(newMessages);
     setIsTyping(true);
 
@@ -193,10 +194,10 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         // Evaluate now instead of getting another response
         await performEvaluation(newMessages);
       } else {
-        const apiMessages = newMessages.filter(m => m.role !== 'system_context');
-        const scammerResponse = await roleplayWithSarvam(apiMessages);
+        const apiMessages = newMessages.filter(m => m.role !== 'system_context').map(m => ({ role: m.role, content: m.content }));
+        const scammerResponse = await roleplayWithSarvam(apiMessages as any);
         if (!isMounted.current) return;
-        setMessages([...newMessages, { role: 'assistant', content: scammerResponse }]);
+        setMessages([...newMessages, { id: 'a_' + Date.now(), role: 'assistant', content: scammerResponse }]);
         setExchanges(prev => prev + 1);
         
         if (mode === 'voice') {
@@ -318,17 +319,17 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
           contentContainerStyle={styles.chatScroll}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
-          {messages.map((msg, idx) => {
+          {messages.map((msg) => {
             if (msg.role === 'system') return null;
             if (msg.role === 'system_context') {
               return (
-                <View key={idx} style={styles.contextBubble}>
+                <View key={msg.id} style={styles.contextBubble}>
                   <Text style={styles.contextText}>{msg.content}</Text>
                 </View>
               );
             }
             return (
-              <View key={idx} style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleScammer]}>
+              <View key={msg.id} style={[styles.bubble, msg.role === 'user' ? styles.bubbleUser : styles.bubbleScammer]}>
                 {msg.role === 'assistant' && (
                   <Text style={styles.scammerLabel}>{scamInfo?.sender || t('unknown_number', 'Unknown Number')}</Text>
                 )}

@@ -282,7 +282,8 @@ export default function HomeScreen({ navigation }: any) {
       {/* ══ LINK SCANNER MODAL ══════════════════════════════════════════ */}
       <Modal animationType="slide" transparent visible={scanModalVisible} onRequestClose={() => setScanModalVisible(false)}>
         <KeyboardAvoidingView behavior="padding" style={styles.overlay}>
-          <View style={sheetStyle}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setScanModalVisible(false)} />
+          <View style={[styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 10) }]}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{t('home_scan_link')}</Text>
@@ -350,9 +351,10 @@ export default function HomeScreen({ navigation }: any) {
       </Modal>
 
       {/* ══ FRAUD REPORTER MODAL ════════════════════════════════════════ */}
-      <Modal animationType="slide" transparent visible={reportModalVisible} onRequestClose={() => setReportModalVisible(false)}>
+      <Modal animationType="slide" transparent visible={reportModalVisible} onRequestClose={() => { if (!isSubmitting) setReportModalVisible(false); }}>
         <KeyboardAvoidingView behavior="padding" style={styles.overlay}>
-          <View style={reportSheetStyle}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => { if (!isSubmitting) setReportModalVisible(false); }} />
+          <View style={[styles.sheet, { maxHeight: '92%', paddingBottom: Math.max(20, insets.bottom + 10) }]}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{t('home_report_fraud')}</Text>

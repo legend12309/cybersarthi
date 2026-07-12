@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: colors.surfaceBorder,
-    width: '90%',
+    alignSelf: 'stretch',
   },
   voiceInput: {
     flex: 1,

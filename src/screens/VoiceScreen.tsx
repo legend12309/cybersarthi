@@ -104,9 +104,10 @@ export default function VoiceScreen({ navigation }: any) {
 
   useEffect(() => {
     // Auto-scroll when messages change
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 100);
+    return () => clearTimeout(timeoutId);
   }, [messages]);
 
   useEffect(() => {
@@ -123,6 +124,7 @@ export default function VoiceScreen({ navigation }: any) {
       pulseScale.setValue(1);
       pulseOpacity.setValue(0.4);
     }
+    return () => pulseLoop.current?.stop();
   }, [appState]);
 
   const cleanupAudioAndRecording = () => {

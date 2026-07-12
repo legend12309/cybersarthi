@@ -154,7 +154,7 @@ export default function QuizScreen({ navigation }: any) {
             }
 
             return (
-              <TouchableOpacity key={i}
+              <TouchableOpacity key={opt}
                 style={btnStyle}
                 onPress={() => handleSelect(i)}
                 activeOpacity={0.8}

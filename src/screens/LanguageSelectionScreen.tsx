@@ -7,9 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors, theme } from '../lib/colors';
 import { useLanguage } from '../context/LanguageContext';
-
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48 - 12) / 2;
+import { useWindowDimensions } from 'react-native';
 
 const LANGUAGES = [
   { code: 'hi-IN', native: 'हिंदी',    english: 'Hindi'    },
@@ -25,6 +23,8 @@ export default function LanguageSelectionScreen({ navigation }: any) {
   const [selected, setSelected] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const cardWidth = (width - 48 - 12) / 2;
 
   useEffect(() => {
     if (languageCode) setSelected(languageCode);
@@ -64,7 +64,7 @@ export default function LanguageSelectionScreen({ navigation }: any) {
             const active = selected === lang.code;
             return (
               <TouchableOpacity key={lang.code}
-                style={[styles.card, active && styles.cardActive]}
+                style={[styles.card, { width: cardWidth }, active && styles.cardActive]}
                 onPress={() => setSelected(lang.code)}
                 activeOpacity={0.85}
               >
@@ -166,7 +166,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', gap: 12,
   },
   card: {
-    width: CARD_WIDTH,
     backgroundColor: colors.surface,
     borderRadius: theme.cardRadius,
     padding: 20,
