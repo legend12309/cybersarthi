@@ -220,6 +220,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       console.log('[ROLEPLAY] Error processing message:', error);
       if (isMounted.current) {
         setMessages(prev => [...prev, { 
+          id: 'err_' + Date.now().toString(),
           role: 'assistant', 
           content: languageCode === 'hi-IN' ? 'माफ़ कीजिए, नेटवर्क में समस्या है। कृपया फिर से कोशिश करें।' : 'Sorry, there was a network issue. Please try again.' 
         }]);
