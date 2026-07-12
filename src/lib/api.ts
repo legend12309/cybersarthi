@@ -1,8 +1,8 @@
 import { supabase } from './supabase';
 
-export function withTimeout<T>(promise: Promise<T>, ms = 10000): Promise<T> {
+export async function withTimeout<T>(promise: PromiseLike<T>, ms = 10000): Promise<T> {
   return Promise.race([
-    promise,
+    Promise.resolve(promise),
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Supabase request timed out')), ms))
   ]);
 }
