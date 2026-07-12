@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Easing, ToastAndroid, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAudioRecorder, useAudioPlayer, AudioModule, RecordingPresets } from 'expo-audio';
 import { colors, theme } from '../lib/colors';
@@ -25,6 +25,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   
   const scrollViewRef = useRef<ScrollView>(null);
   const isMounted = useRef(true);
+  const insets = useSafeAreaInsets();
 
   // Audio Hooks & Animations
   const recorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
@@ -366,7 +367,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         </ScrollView>
 
         {!evaluation && (
-          <View style={styles.inputArea}>
+          <View style={[styles.inputArea, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             {mode === 'text' ? (
               <ChatInput
                 onSubmit={handleSendText}

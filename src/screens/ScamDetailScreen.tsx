@@ -166,7 +166,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
         <Text style={styles.headerTitle}>{scamInfo.title}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 60 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {/* ── Roleplay Start Section ─────────────────────────────── */}
         {!showAnalysis && userChoice === null && (
           <View style={styles.roleplaySection}>
