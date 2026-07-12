@@ -250,7 +250,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
 
       {/* ══ CUSTOM ANALYSIS MODAL ══════════════════════════════════════════ */}
       <Modal animationType="slide" transparent visible={customAnalysisModalVisible} onRequestClose={() => setCustomAnalysisModalVisible(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
+        <KeyboardAvoidingView behavior="padding" style={styles.overlay}>
           <View style={[styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(20, insets.bottom + 10) }]}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
