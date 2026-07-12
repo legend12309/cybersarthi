@@ -253,7 +253,11 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         }
       } catch (err) {
         console.log('[ROLEPLAY] Voice STT error:', err);
-        if (isMounted.current) navigation.replace('ScamDetail', { scamId });
+        if (isMounted.current) {
+          ToastAndroid.show(t('err_unexpected', 'Could not process audio. Try again.'), ToastAndroid.SHORT);
+          setIsTyping(false);
+          setIsRecording(false);
+        }
       }
     } else {
       try {
@@ -292,11 +296,11 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   }, [isTyping, messages, performEvaluation]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-        style={styles.container}
-      >
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+      style={styles.container}
+    >
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -389,8 +393,8 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
           </View>
         )}
 
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
