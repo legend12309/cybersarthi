@@ -158,7 +158,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
 
 
   return (
-    <SafeAreaView edges={['top']} style={styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
