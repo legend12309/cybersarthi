@@ -34,6 +34,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
   const recordingTimeoutRef = useRef<any>(null);
   const startedLanguageRef = useRef<string | null>(null);
+  const playTokenRef = useRef(0);
 
 
 
@@ -140,12 +141,16 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       setMessages(initialMessages);
       
       if (mode === 'voice') {
+        playTokenRef.current += 1;
+        const currentToken = playTokenRef.current;
+        try { if (player.playing) player.pause(); } catch(e) {}
+
         const audioUri = await textToSpeech(firstMsg, languageCode);
-        if (isMounted.current && audioUri) {
+        if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
           player.replace(audioUri);
           player.play();
         } else {
-          setIsTyping(false); // Unlock if TTS fails to return audio
+          setIsTyping(false); // Unlock if TTS fails to return audio or token mismatch
         }
       } else {
         setIsTyping(false);
@@ -195,10 +200,16 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         setExchanges(prev => prev + 1);
         
         if (mode === 'voice') {
+          playTokenRef.current += 1;
+          const currentToken = playTokenRef.current;
+          try { if (player.playing) player.pause(); } catch(e) {}
+
           const audioUri = await textToSpeech(scammerResponse, languageCode);
-          if (isMounted.current && audioUri) {
+          if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
             player.replace(audioUri);
             player.play();
+          } else {
+            setIsTyping(false);
           }
         } else {
           setIsTyping(false);
