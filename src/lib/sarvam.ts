@@ -347,6 +347,169 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
       });
       return uri;
     } catch (error: any) {
+      if (attempt === maxRetries) {
+        throw new Error('err_tts_failed');
+      }
+    }
+  }
+  throw new Error('err_tts_failed');
+}
+
+export async function classifyContent(content: string, languageCode: string, contentType: 'url' | 'message'): Promise<{verdict: 'safe' | 'suspicious', explanation: string, source?: string}> {
+  const prompt = contentType === 'url' 
+    ? `You are a strict cybersecurity classifier trained to detect both traditional and modern scam patterns common in India:
+TRADITIONAL PATTERNS: lottery/prize scams, fake bank calls asking for OTP/PIN, KYC update threats, electricity disconnection threats, fake police/legal threats, advance fee fraud.
+MODERN PATTERNS: Pig butchering scams (unexpected "wrong number" texts followed by excessive politeness, mentions of foreign locations/businesses, and requests to move to WhatsApp/Telegram), AI voice cloning scams (fake voice calls from 'family members'), deepfake video call scams, fake investment/crypto schemes promising high returns, fake delivery/customs fee scams via WhatsApp, QR code payment redirection scams, fake job offers via Telegram/WhatsApp groups, romance scams via dating apps, fake loan apps with predatory terms, screen-sharing remote access scams (AnyDesk/TeamViewer), SIM swap social engineering attempts, fake customer support numbers found via search ads.
+
+Analyze the given content against BOTH categories. Look for: urgency tactics, unexpected "wrong number" friendliness, unverified contact requests, requests for OTP/PIN/personal info, suspicious links/shorteners, too-good-to-be-true offers, emotional manipulation, requests to install remote-access apps, or impersonation of trusted entities (banks, government, family, delivery services, customer support).
+URL: "${content}"`
+    : `You are a strict cybersecurity classifier trained to detect both traditional and modern scam patterns common in India:
+TRADITIONAL PATTERNS: lottery/prize scams, fake bank calls asking for OTP/PIN, KYC update threats, electricity disconnection threats, fake police/legal threats, advance fee fraud.
+MODERN PATTERNS: Pig butchering scams (unexpected "wrong number" texts followed by excessive politeness, mentions of foreign locations/businesses, and requests to move to WhatsApp/Telegram), AI voice cloning scams (fake voice calls from 'family members'), deepfake video call scams, fake investment/crypto schemes promising high returns, fake delivery/customs fee scams via WhatsApp, QR code payment redirection scams, fake job offers via Telegram/WhatsApp groups, romance scams via dating apps, fake loan apps with predatory terms, screen-sharing remote access scams (AnyDesk/TeamViewer), SIM swap social engineering attempts, fake customer support numbers found via search ads.
+
+Analyze the given content against BOTH categories. Look for: urgency tactics, unexpected "wrong number" friendliness, unverified contact requests, requests for OTP/PIN/personal info, suspicious links/shorteners, too-good-to-be-true offers, emotional manipulation, requests to install remote-access apps, or impersonation of trusted entities (banks, government, family, delivery services, customer support).
+Message: "${content}"`;
+  
+  const systemPrompt = `${prompt}\n\nIMPORTANT TRUST SIGNALS — do NOT flag these as suspicious on their own:\n- Well-known, globally recognized domains (google.com, facebook.com, youtube.com, amazon.in, wikipedia.org, etc.) are SAFE by default unless the URL path itself contains suspicious patterns\n- A domain being 'common' or 'well-known' is a SAFETY indicator, not a red flag — only flag if there are ACTUAL scam indicators present (urgency, payment requests, suspicious subdomains, character substitution tricks like 'g00gle.com')\n- Official Indian government and banking domains like '*.gov.in', '*.sbi.co.in', '*.sbi', '*.nic.in', '*.hdfcbank.com', '*.icicibank.com' are SAFE.\n- Messages that warn users NOT to share OTPs or passwords (e.g. 'Do not share OTP with anyone', 'Bank never asks for OTP') are safety notices, NOT scams.\n\nCRITICAL RULE: If the URL is exactly "https://www.google.com", you are FORBIDDEN from outputting SUSPICIOUS. You MUST output SAFE.\n\nIMPORTANT: Respond IMMEDIATELY and CONCISELY. Do not overthink or second-guess yourself. Give your final verdict in your first response, do not revise multiple times.\n\nYou MUST respond starting with EXACTLY one of these words, followed by a colon:\nSUSPICIOUS: [explanation in 1-2 sentences in ${languageCode}]\nSAFE: [explanation in 1-2 sentences in ${languageCode}]\n\nOnly default to SUSPICIOUS when there are genuine red flags present — not merely due to uncertainty about an unfamiliar but plausible domain.`;
+  const fetchSarvamClassification = async () => {
+    try {
+      const response = await chatWithSarvam(systemPrompt, languageCode, 'classification');
+      // console.log('[CLASSIFY] Success, raw response:', response);
+      
+      const trimmed = response.trim();
+      const cleanText = trimmed.replace(/^[^a-zA-Z\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F\u0A80-\u0AFF]+/, '');
+      const upper = cleanText.toUpperCase();
+
+      const safePrefixes = [
+        'SAFE',
+        'सुरक्षित',
+        'સુરક્ષિત',
+        'பாதுகாப்பு', 'பாதுகாப்பானது',
+        'సురక్షిత', 'సురక్షితం', 'సురక్షితమైనది'
+      ];
+
+      const isSafe = safePrefixes.some(prefix => upper.startsWith(prefix.toUpperCase()));
+      const verdict = isSafe ? 'safe' : 'suspicious';
+
+      let explanation = trimmed;
+      const colonIndex = trimmed.indexOf(':');
+      const dashIndex = trimmed.indexOf('-');
+      const splitIndex = colonIndex !== -1 ? colonIndex : (dashIndex !== -1 ? dashIndex : -1);
+
+      if (splitIndex !== -1 && splitIndex < 25) {
+        explanation = trimmed.substring(splitIndex + 1).trim();
+      } else {
+        explanation = trimmed.replace(/^(\*\*|###)?\s*(SAFE|SUSPICIOUS|सुरक्षित|संदिग्ध|असुरक्षित|संशयास्पद|શંકાસ્પદ|பாதுகாப்பானது|சந்தேகத்திற்குரியது)\s*(\*\*|###)?\s*[:\-\s]*/i, '').trim();
+      }
+
+      if (!explanation) {
+        explanation = trimmed;
+      }
+      
+      return { verdict, explanation, source: 'sarvam' };
+    } catch (error: any) {
+      // console.log('[CLASSIFY] FAILED with error:', error);
+      // console.log('[CLASSIFY] Error message:', error?.message);
+      throw error;
+    }
+  };
+
+  if (contentType === 'url') {
+    const [sarvamResult, safeBrowsingResult] = await Promise.all([
+      fetchSarvamClassification(),
+      checkSafeBrowsing(content),
+    ]);
+
+    // console.log('[CLASSIFY] Sarvam verdict:', sarvamResult.verdict, '| Safe Browsing threat:', safeBrowsingResult.isThreat);
+
+    if (safeBrowsingResult.isThreat) {
+      return {
+        verdict: 'suspicious',
+        explanation: `Google Safe Browsing has flagged this link as a known ${safeBrowsingResult.threatType?.toLowerCase().replace('_', ' ')} threat. Do not visit this link.`,
+        source: 'google_safe_browsing'
+      };
+    }
+
+    return sarvamResult as {verdict: 'safe' | 'suspicious', explanation: string, source: string};
+  }
+
+  return (await fetchSarvamClassification()) as {verdict: 'safe' | 'suspicious', explanation: string, source: string};
+}
+
+export async function cleanupTTSCache() {
+  try {
+    const dirUri = FileSystem.cacheDirectory;
+    if (!dirUri) return;
+    const files = await FileSystem.readDirectoryAsync(dirUri);
+    const ttsFiles = files.filter(f => f.startsWith('sarvam_tts_') && f.endsWith('.wav'));
+    
+    // Sort by timestamp (newest first)
+    ttsFiles.sort((a, b) => {
+      const tsA = parseInt(a.replace('sarvam_tts_', '').replace('.wav', ''), 10) || 0;
+      const tsB = parseInt(b.replace('sarvam_tts_', '').replace('.wav', ''), 10) || 0;
+      return tsB - tsA;
+    });
+
+    // Keep the most recent 5, delete the rest
+    const filesToDelete = ttsFiles.slice(5);
+    for (const file of filesToDelete) {
+      await FileSystem.deleteAsync(dirUri + file, { idempotent: true });
+    }
+  } catch (err) {
+    // console.log('[TTS] Cleanup error:', err);
+  }
+}
+
+// Helper to clean up text before sending to TTS
+function sanitizeForTTS(text: string): string {
+  if (!text) return '';
+  let clean = text.replace(/[*_~]+/g, ''); // Remove markdown formatting
+  clean = clean.replace(/₹/g, ' rupees '); // Replace ₹ symbol
+  clean = clean.replace(/(\d+),(\d+)/g, '$1$2'); // Remove commas in numbers (e.g. 3,240 -> 3240) so it's read as a full number
+  clean = clean.replace(/-/g, ' '); // Replace hyphens with spaces
+  return clean.trim();
+}
+
+export async function textToSpeech(text: string, languageCode: string): Promise<string> {
+  if (!text || text.trim().length === 0) {
+    throw new Error('No text provided for speech synthesis');
+  }
+
+  const maxRetries = 2;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      await cleanupTTSCache();
+      // Clean and sanitize text, then enforce 500 char limit
+      const sanitized = sanitizeForTTS(text);
+      const safeText = sanitized.length > 500 ? sanitized.substring(0, 497) + '...' : sanitized;
+      const response = await axios.post(
+        `${API_BASE_URL}/text-to-speech`,
+        {
+          inputs: [safeText],
+          target_language_code: languageCode,
+          speaker: 'shubh',
+          model: 'bulbul:v3',
+          enable_preprocessing: true,
+        },
+        { 
+          headers: {
+            ...getHeaders(),
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000
+        }
+      );
+      
+      const audio = response.data.audios ? response.data.audios[0] : response.data.audio;
+      if (!audio) {
+        throw new Error('No audio returned from API');
+      }
+      const uri = FileSystem.cacheDirectory + 'sarvam_tts_' + Date.now() + '.wav';
+      await FileSystem.writeAsStringAsync(uri, audio, {
+        encoding: 'base64' as any,
+      });
+      return uri;
+    } catch (error: any) {
       // console.log('[TTS] Network error details:', error.message, error.code);
       if (attempt === maxRetries) {
         throw new Error('err_tts_failed');
