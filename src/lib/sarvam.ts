@@ -421,10 +421,9 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
     // 3. Upload File
     let blob: any;
     try {
-      const fileResp = await fetch(imageUri, { signal: abortController.signal as any });
-      blob = await fileResp.blob();
+      // Replaced by FileSystem.uploadAsync below
     } catch (error) {
-      throw new Error('Failed to read local image file. It may be inaccessible or deleted.');
+      throw new Error('Failed to read local image file.');
     }
     
     const uploadHeaders: Record<string, string> = {
@@ -435,21 +434,16 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
     }
     
     try {
-      const putRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: blob,
+      const putRes = await FileSystem.uploadAsync(uploadUrl, imageUri, {
+        httpMethod: 'PUT',
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
         headers: uploadHeaders,
-        signal: abortController.signal as any,
       });
       
-      if (!putRes.ok) {
-        const errText = await putRes.text();
-        throw new Error(`File upload failed: ${errText}`);
+      if (putRes.status !== 200 && putRes.status !== 201) {
+        throw new Error(`File upload failed: ${putRes.body}`);
       }
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        throw new Error('Upload timed out. Please check your network connection.');
-      }
       throw error;
     }
     
