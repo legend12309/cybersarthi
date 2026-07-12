@@ -13,7 +13,7 @@ const getHeaders = () => ({
 export async function speechToText(audioUri: string, languageCode: string): Promise<string> {
   // console.log('API Key length:', API_KEY?.length);
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
   try {
     const formData = new FormData();
     formData.append('model', 'saaras:v3');
@@ -113,7 +113,7 @@ Respond in ${languageName}.`;
     {
       model: 'sarvam-105b',
       temperature: mode === 'classification' ? 0 : 0.4,
-      max_tokens: mode === 'classification' ? 1500 : 1024,
+      max_tokens: mode === 'classification' ? 1500 : 300,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: transcript },
@@ -124,14 +124,14 @@ Respond in ${languageName}.`;
         ...getHeaders(),
         'Content-Type': 'application/json',
       },
-      timeout: 15000
+      timeout: 12000
     }
   );
   return response;
 }
 
 export async function chatWithSarvam(prompt: string, languageCode: string, mode: 'classification' | 'conversation' = 'conversation'): Promise<string> {
-  const maxRetries = 2;
+  const maxRetries = 1;
   let lastIncompleteContent: string | null = null;
   let lastErrorMsg: string | null = null;
   
@@ -312,10 +312,11 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
     throw new Error('No text provided for speech synthesis');
   }
 
-  const maxRetries = 2;
+  const maxRetries = 1;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      await cleanupTTSCache();
+      // Fire-and-forget cache cleanup (don't block TTS)
+      cleanupTTSCache().catch(() => {});
       // Clean and sanitize text, then enforce 500 char limit
       const sanitized = sanitizeForTTS(text);
       const safeText = sanitized.length > 500 ? sanitized.substring(0, 497) + '...' : sanitized;
@@ -333,7 +334,7 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
             ...getHeaders(),
             'Content-Type': 'application/json',
           },
-          timeout: 15000
+          timeout: 12000
         }
       );
       
