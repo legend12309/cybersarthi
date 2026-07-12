@@ -334,7 +334,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
   return (
     <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
     >
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
