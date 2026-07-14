@@ -189,7 +189,10 @@ export const translations: TranslationsDictionary = {
     report_helpline_header: 'Immediate Action Required:',
     report_helpline_btn: 'Call Cyber Helpline 1930',
     report_helpline_support: 'Available 24/7. File official complaints at cybercrime.gov.in.',
-  },
+  
+    scam_title_electricity_bill: 'Electricity Bill Disconnect',
+    live_roleplay_title: 'Live Roleplay',
+    roleplay_voice_mode: ' (Voice)',},
   'hi-IN': {
     sim_quiz_title: 'अपने ज्ञान का परीक्षण करें',
     sim_quiz_desc: 'पॉइंट्स कमाने के लिए 5-प्रश्नों की त्वरित प्रश्नोत्तरी लें!',
@@ -374,7 +377,10 @@ export const translations: TranslationsDictionary = {
     report_helpline_header: 'तत्काल कार्रवाई आवश्यक:',
     report_helpline_btn: 'साइबर हेल्पलाइन 1930 पर कॉल करें',
     report_helpline_support: '24/7 उपलब्ध। cybercrime.gov.in पर आधिकारिक शिकायत दर्ज करें।',
-  },
+  
+    scam_title_electricity_bill: 'बिजली बिल कटने का झांसा',
+    live_roleplay_title: 'लाइव रोलप्ले',
+    roleplay_voice_mode: ' (आवाज)',},
   'mr-IN': {
     sim_quiz_title: 'तुमच्या ज्ञानाची चाचणी घ्या',
     sim_quiz_desc: 'पॉइंट्स मिळवण्यासाठी ५-प्रश्नांची जलद प्रश्नमंजुषा सोडवा!',
@@ -554,7 +560,10 @@ export const translations: TranslationsDictionary = {
     report_helpline_header: 'तातडीची कारवाई आवश्यक:',
     report_helpline_btn: 'सायबर हेल्पलाईन १९३० ला कॉल करा',
     report_helpline_support: '२४/7 उपलब्ध. cybercrime.gov.in वर अधिकृत तक्रार नोंदवा.',
-  },
+  
+    scam_title_electricity_bill: 'वीज बिल कापण्याचा कट',
+    live_roleplay_title: 'लाईव्ह रोलप्ले',
+    roleplay_voice_mode: ' (आवाज)',},
   'ta-IN': {
     sim_quiz_title: 'உங்கள் அறிவை சோதிக்கவும்',
     sim_quiz_desc: 'புள்ளிகளைப் பெற 5 கேள்விகள் கொண்ட விரைவான வினாடி வினாவை எடுக்கவும்!',
@@ -734,7 +743,10 @@ export const translations: TranslationsDictionary = {
     report_helpline_header: 'உடனடி நடவடிக்கை தேவை:',
     report_helpline_btn: 'சைபர் உதவி எண் 1930 ஐ அழைக்கவும்',
     report_helpline_support: '24/7 சேவை கிடைக்கும். cybercrime.gov.in இல் அதிகாரப்பூர்வமாகப் புகார் அளிக்கவும்.',
-  },
+  
+    scam_title_electricity_bill: 'மின் கட்டணத் துண்டிப்பு மோசடி',
+    live_roleplay_title: 'நேரடி பயிற்சி',
+    roleplay_voice_mode: ' (குரல்)',},
   'te-IN': {
     sim_quiz_title: 'మీ జ్ఞానాన్ని పరీక్షించుకోండి',
     sim_quiz_desc: 'పాయింట్లను సంపాదించడానికి 5-ప్రశ్నల క్విజ్ తీసుకోండి!',
@@ -914,7 +926,10 @@ export const translations: TranslationsDictionary = {
     report_helpline_header: 'తక్షణ చర్య అవసరం:',
     report_helpline_btn: 'సైబర్ హెల్ప్‌లైన్ 1930 కు కాల్ చేయండి',
     report_helpline_support: '24/7 అందుబాటులో ఉంటుంది. cybercrime.gov.in లో అధికారికంగా ఫిర్యాదు చేయండి.',
-  },
+  
+    scam_title_electricity_bill: 'విద్యుత్ బిల్లు నిలిపివేత మోసం',
+    live_roleplay_title: 'లైవ్ రోల్-ప్లే',
+    roleplay_voice_mode: ' (వాయిస్)',},
   'gu-IN': {
     sim_quiz_title: 'તમારા જ્ઞાનની કસોટી કરો',
     sim_quiz_desc: 'પોઈન્ટ કમાવવા માટે 5-પ્રશ્નોની ક્વિઝ લો!',
@@ -1094,5 +1109,8 @@ export const translations: TranslationsDictionary = {
     report_helpline_header: 'તાત્કાલિક પગલાંની જરૂર છે:',
     report_helpline_btn: 'સાયબર હેલ્પલાઈન 1930 પર કોલ કરો',
     report_helpline_support: '૨૪/૭ સેવા ઉપલબ્ધ. cybercrime.gov.in પર સત્તાવાર ફરિયાદ કરો.',
-  },
+  
+    scam_title_electricity_bill: 'વીજળી બિલ કાપવાનો સ્કેમ',
+    live_roleplay_title: 'લાઈવ રોલપ્લે',
+    roleplay_voice_mode: ' (અવાજ)',},
 };

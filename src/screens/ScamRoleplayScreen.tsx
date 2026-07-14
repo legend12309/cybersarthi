@@ -344,8 +344,8 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
             <MaterialIcons name="arrow-back" size={28} color={colors.onSurface} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>{scamInfo?.title || 'Roleplay'}</Text>
-            <Text style={styles.headerSub}>Live Roleplay {mode === 'voice' ? '(Voice)' : ''}</Text>
+            <Text style={styles.headerTitle}>{t('scam_title_' + scamId, scamInfo?.title)}</Text>
+            <Text style={styles.headerSub}>{t('live_roleplay_title')}{mode === 'voice' ? t('roleplay_voice_mode') : ''}</Text>
           </View>
         </View>
 
