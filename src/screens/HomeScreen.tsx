@@ -74,7 +74,13 @@ export default function HomeScreen({ navigation }: any) {
   // Memoized dynamic styles to prevent GC stutters on low-end devices
   const sheetStyle = React.useMemo(() => [styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(48, insets.bottom + 24) }], [insets.bottom]);
   const reportSheetStyle = React.useMemo(() => [styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(48, insets.bottom + 24) }], [insets.bottom]);
-  const sheetBtnTextStyle = React.useMemo(() => [styles.sheetBtnText, { color: colors.onPrimary, opacity: linkInput.trim() ? 1 : 0.5 }], [linkInput]);
+  const sheetBtnTextStyle = React.useMemo(() => [
+    styles.sheetBtnText,
+    { 
+      color: linkInput.trim() ? colors.onPrimary : colors.onSurfaceVariant, 
+      opacity: linkInput.trim() ? 1 : 0.6 
+    }
+  ], [linkInput]);
   const resultVerdictStyle = React.useMemo(() => [styles.resultVerdict, { color: isSafe ? colors.success : colors.error }], [isSafe]);
 
   useEffect(() => {
@@ -561,7 +567,7 @@ const styles = StyleSheet.create({
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
     marginTop: 4,
   },
-  sheetBtnDisabled: { backgroundColor: colors.surfaceHigh, shadowOpacity: 0 },
+  sheetBtnDisabled: { backgroundColor: colors.surfaceBorder, shadowOpacity: 0 },
   sheetBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onPrimary },
 
   // Inputs

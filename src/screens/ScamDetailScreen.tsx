@@ -15,7 +15,13 @@ const CustomMessageModal = ({ visible, onClose, languageCode }: { visible: boole
   const [customAnalysisReason, setCustomAnalysisReason] = useState('');
   const insets = useSafeAreaInsets();
 
-  const btnTextStyle = React.useMemo(() => [styles.sheetBtnText, { color: colors.onPrimary, opacity: customMsgInput.trim() ? 1 : 0.5 }], [customMsgInput]);
+  const btnTextStyle = React.useMemo(() => [
+    styles.sheetBtnText,
+    { 
+      color: customMsgInput.trim() ? colors.onPrimary : colors.onSurfaceVariant, 
+      opacity: customMsgInput.trim() ? 1 : 0.6 
+    }
+  ], [customMsgInput]);
   const resultVerdictStyle = React.useMemo(() => [styles.resultVerdict, { color: customAnalysisVerdict === 'safe' ? colors.success : colors.error }], [customAnalysisVerdict]);
 
   const handleAnalyzeCustomMessage = async () => {
@@ -451,7 +457,7 @@ const styles = StyleSheet.create({
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 3,
     marginTop: 4,
   },
-  sheetBtnDisabled: { backgroundColor: colors.surfaceHigh, shadowOpacity: 0, elevation: 0 },
+  sheetBtnDisabled: { backgroundColor: colors.surfaceBorder, shadowOpacity: 0, elevation: 0 },
   sheetBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onPrimary },
 
   inputLabel: { fontFamily: 'Manrope_600SemiBold', fontSize: 13, color: colors.onSurface },
