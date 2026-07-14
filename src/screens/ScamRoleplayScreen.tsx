@@ -209,7 +209,18 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         await performEvaluation(newMessages);
       } else {
         const apiMessages = newMessages.filter(m => m.role !== 'system_context').map(m => ({ role: m.role, content: m.content }));
-        const scammerResponse = await roleplayWithSarvam(apiMessages as any);
+        
+        const finalMessages = apiMessages.map((m, idx) => {
+          if (idx === apiMessages.length - 1 && m.role === 'user') {
+            return {
+              ...m,
+              content: `${m.content}\n\n(Respond strictly and entirely in ${languageName}. Do not use English.)`
+            };
+          }
+          return m;
+        });
+
+        const scammerResponse = await roleplayWithSarvam(finalMessages as any);
         if (!isMounted.current) return;
         setMessages([...newMessages, { id: 'a_' + Date.now(), role: 'assistant', content: scammerResponse }]);
         setExchanges(prev => prev + 1);
@@ -264,7 +275,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         setIsTyping(false);
       }
     }
-  }, [messages, exchanges, scamId, languageCode, mode, player, performEvaluation]);
+  }, [messages, exchanges, scamId, languageCode, languageName, mode, player, performEvaluation]);
 
   const handleSendText = useCallback(async (text: string) => {
     if (!text.trim() || isTyping) return;
