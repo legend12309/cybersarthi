@@ -51,3 +51,7 @@ test.js
 test-stt.js
 fetch_designs.js
 stitch_designs/
+
+# APK Builds
+*.apk
+**.aab
