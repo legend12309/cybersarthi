@@ -113,7 +113,7 @@ Respond in ${languageName}.`;
     {
       model: 'sarvam-105b',
       temperature: mode === 'classification' ? 0 : 0.4,
-      max_tokens: mode === 'classification' ? 1500 : 300,
+      max_tokens: mode === 'classification' ? 1500 : 1024,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: transcript },
@@ -599,7 +599,7 @@ export async function roleplayWithSarvam(messages: {role: string, content: strin
         {
           model: 'sarvam-105b',
           temperature: 0.6,
-          max_tokens: 300,
+          max_tokens: 1024,
           messages: messages,
         },
         { 
