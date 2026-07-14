@@ -64,7 +64,11 @@ const CustomMessageModal = ({ visible, onClose, languageCode }: { visible: boole
                 multiline
                 autoCorrect={false}
               />
-              <TouchableOpacity style={styles.sheetBtnPrimary} disabled={!customMsgInput.trim()} onPress={handleAnalyzeCustomMessage}>
+              <TouchableOpacity 
+                style={[styles.sheetBtnPrimary, !customMsgInput.trim() && styles.sheetBtnDisabled]} 
+                disabled={!customMsgInput.trim()} 
+                onPress={handleAnalyzeCustomMessage}
+              >
                 <Text style={btnTextStyle}>Analyze Message</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -444,9 +448,10 @@ const styles = StyleSheet.create({
   sheetBtn: {
     height: 52, borderRadius: 26, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 3,
     marginTop: 4,
   },
+  sheetBtnDisabled: { backgroundColor: colors.surfaceHigh, shadowOpacity: 0, elevation: 0 },
   sheetBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onPrimary },
 
   inputLabel: { fontFamily: 'Manrope_600SemiBold', fontSize: 13, color: colors.onSurface },
@@ -472,7 +477,7 @@ const styles = StyleSheet.create({
   sheetBtnPrimary: {
     height: 52, borderRadius: 26, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 3,
     marginTop: 4,
   },
   
