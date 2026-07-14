@@ -11,7 +11,7 @@ import { saveQuizScore } from '../lib/api';
 
 export default function QuizScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { deviceId, t } = useLanguage();
+  const { deviceId, t, languageCode } = useLanguage();
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -26,7 +26,11 @@ export default function QuizScreen({ navigation }: any) {
   // Animation values
   const bgColorAnim = useRef(new Animated.Value(0)).current;
 
-  const question = quizData[currentIndex];
+  const rawQuestion = quizData[currentIndex];
+  const question = {
+    ...rawQuestion,
+    ...(rawQuestion.translations?.[languageCode as keyof typeof rawQuestion.translations] || {})
+  };
 
   const handleSelect = async (index: number) => {
     if (selectedOption !== null) return;
