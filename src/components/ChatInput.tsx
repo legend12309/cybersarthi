@@ -48,6 +48,8 @@ export const ChatInput = React.memo(({ onSubmit, disabled, placeholder, styleTyp
   );
 });
 
+ChatInput.displayName = 'ChatInput';
+
 const styles = StyleSheet.create({
   // VoiceScreen style
   voiceContainer: {

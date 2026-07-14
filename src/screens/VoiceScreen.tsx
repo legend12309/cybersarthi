@@ -572,6 +572,8 @@ const MessageItem = React.memo(({ item, onStopSpeech, t }: { item: Message, onSt
   );
 });
 
+MessageItem.displayName = 'MessageItem';
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   safeArea: { flex: 1 },

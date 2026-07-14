@@ -104,6 +104,8 @@ const CustomMessageModal = ({ visible, onClose, languageCode }: { visible: boole
   );
 };
 
+CustomMessageModal.displayName = 'CustomMessageModal';
+
 export default function ScamDetailScreen({ route, navigation }: any) {
   const { scamId } = route.params || { scamId: 'electricity_bill' };
   const { t, deviceId, languageCode } = useLanguage();

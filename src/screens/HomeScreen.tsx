@@ -39,6 +39,8 @@ const TypeChip = React.memo(({ type, isSelected, onPress, localizedLabel }: any)
   </TouchableOpacity>
 ));
 
+TypeChip.displayName = 'TypeChip';
+
 export default function HomeScreen({ navigation }: any) {
   const { t, deviceId, languageCode } = useLanguage();
   const scaleValue   = useRef(new Animated.Value(1)).current;
