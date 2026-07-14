@@ -7,6 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { submitScamReport } from '../lib/api';
 import { chatWithSarvam, classifyContent } from '../lib/sarvam';
 import scamsData from '../data/scams.json';
+import { getLocalizedScam } from '../data/localizedScams';
 
 const CustomMessageModal = ({ visible, onClose, languageCode }: { visible: boolean, onClose: () => void, languageCode: string }) => {
   const [customMsgInput, setCustomMsgInput] = useState('');
@@ -124,7 +125,10 @@ export default function ScamDetailScreen({ route, navigation }: any) {
     return () => { isMounted.current = false; };
   }, []);
 
-  const scamInfo = scamsData.find(s => s.id === scamId) || scamsData[0];
+  const scamInfo = React.useMemo(() => {
+    const rawScam = scamsData.find(s => s.id === scamId) || scamsData[0];
+    return getLocalizedScam(scamId, languageCode, rawScam);
+  }, [scamId, languageCode]);
 
   const handleChoice = async (choice: 'scam' | 'safe') => {
     if (userChoice || isSubmitting) return;
@@ -180,21 +184,21 @@ export default function ScamDetailScreen({ route, navigation }: any) {
         {/* ── Roleplay Start Section ─────────────────────────────── */}
         {!showAnalysis && userChoice === null && (
           <View style={styles.roleplaySection}>
-            <Text style={styles.roleplayTitle}>Live Scam Simulator</Text>
-            <Text style={styles.roleplaySub}>Experience this scenario in a safe environment before you decide.</Text>
+            <Text style={styles.roleplayTitle}>{t('live_scam_simulator')}</Text>
+            <Text style={styles.roleplaySub}>{t('experience_safe_environment')}</Text>
             
             <View style={styles.toggleRow}>
               <TouchableOpacity style={[styles.toggleBtn, roleplayMode === 'text' && styles.toggleBtnActive]} 
                 onPress={() => setRoleplayMode('text')}
               >
                 <MaterialIcons name="chat" size={18} color={roleplayMode === 'text' ? colors.onPrimary : colors.onSurface} />
-                <Text style={[styles.toggleText, roleplayMode === 'text' && styles.toggleTextActive]}>Text</Text>
+                <Text style={[styles.toggleText, roleplayMode === 'text' && styles.toggleTextActive]}>{t('roleplay_text_btn')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.toggleBtn, roleplayMode === 'voice' && styles.toggleBtnActive]} 
                 onPress={() => setRoleplayMode('voice')}
               >
                 <MaterialIcons name="mic" size={18} color={roleplayMode === 'voice' ? colors.onPrimary : colors.onSurface} />
-                <Text style={[styles.toggleText, roleplayMode === 'voice' && styles.toggleTextActive]}>Voice</Text>
+                <Text style={[styles.toggleText, roleplayMode === 'voice' && styles.toggleTextActive]}>{t('roleplay_voice_btn')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -203,13 +207,13 @@ export default function ScamDetailScreen({ route, navigation }: any) {
             >
               <MaterialIcons name={showRoleplayOption ? "play-arrow" : "access-time"} size={24} color={showRoleplayOption ? colors.onPrimary : colors.onSurfaceVariant} />
               <Text style={[styles.startRoleplayBtnText, !showRoleplayOption && { color: colors.onSurfaceVariant }]}>
-                {showRoleplayOption ? "Start Live Roleplay" : "Coming Soon"}
+                {showRoleplayOption ? t('start_live_roleplay') : t('coming_soon')}
               </Text>
             </TouchableOpacity>
 
             <View style={styles.orDivider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.orText}>OR skip to static version</Text>
+              <Text style={styles.orText}>{t('skip_to_static')}</Text>
               <View style={styles.dividerLine} />
             </View>
           </View>

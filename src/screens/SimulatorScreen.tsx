@@ -10,12 +10,7 @@ import { fetchUserStats } from '../lib/dbServices';
 const { width } = Dimensions.get('window');
 
 import scamsData from '../data/scams.json';
-
-const SCENARIOS = scamsData.map((s, i) => ({
-  ...s,
-  icon: ['receipt-long', 'local-shipping', 'account-balance', 'family-restroom', 'emoji-events', 'qr-code-scanner', 'work', 'phonelink-erase', 'card-giftcard', 'policy'][i % 10],
-  colorKey: ['warning', 'error', 'primary', 'warning', 'success', 'primary', 'success', 'error', 'warning', 'error'][i % 10],
-}));
+import { getLocalizedScenarios } from '../data/localizedScams';
 
 const COLOR_MAP: Record<string, { bg: string; text: string }> = {
   warning: { bg: colors.warningDim, text: colors.warning },
@@ -25,9 +20,18 @@ const COLOR_MAP: Record<string, { bg: string; text: string }> = {
 };
 
 export default function SimulatorScreen({ navigation }: any) {
-  const { t, deviceId } = useLanguage();
+  const { t, languageCode, deviceId } = useLanguage();
   const isFocused = useIsFocused();
   const [level, setLevel] = useState('Level 2: Vigilant');
+
+  const scenarios = React.useMemo(() => {
+    const localized = getLocalizedScenarios(scamsData, languageCode);
+    return localized.map((s, i) => ({
+      ...s,
+      icon: ['receipt-long', 'local-shipping', 'account-balance', 'family-restroom', 'emoji-events', 'qr-code-scanner', 'work', 'phonelink-erase', 'card-giftcard', 'policy'][i % 10],
+      colorKey: ['warning', 'error', 'primary', 'warning', 'success', 'primary', 'success', 'error', 'warning', 'error'][i % 10],
+    }));
+  }, [languageCode]);
 
   useEffect(() => {
     let active = true;
@@ -62,17 +66,17 @@ export default function SimulatorScreen({ navigation }: any) {
 
         {/* Hero featured card */}
         <TouchableOpacity style={styles.heroCard}
-          onPress={() => navigation.navigate('ScamDetail', { scamId: SCENARIOS[0].id })}
+          onPress={() => navigation.navigate('ScamDetail', { scamId: scenarios[0].id })}
           activeOpacity={0.85}
         >
           <View style={styles.heroCardTop}>
-            <View style={[styles.heroIconBg, { backgroundColor: COLOR_MAP[SCENARIOS[0].colorKey].bg }]}>
-              <MaterialIcons name={SCENARIOS[0].icon as any} size={28} color={COLOR_MAP[SCENARIOS[0].colorKey].text} />
+            <View style={[styles.heroIconBg, { backgroundColor: COLOR_MAP[scenarios[0].colorKey].bg }]}>
+              <MaterialIcons name={scenarios[0].icon as any} size={28} color={COLOR_MAP[scenarios[0].colorKey].text} />
             </View>
             <View style={styles.newBadge}><Text style={styles.newBadgeText}>HOT</Text></View>
           </View>
-          <Text style={styles.heroCardTitle}>{SCENARIOS[0].title}</Text>
-          <Text style={styles.heroCardDesc} numberOfLines={2}>{SCENARIOS[0].content}</Text>
+          <Text style={styles.heroCardTitle}>{scenarios[0].title}</Text>
+          <Text style={styles.heroCardDesc} numberOfLines={2}>{scenarios[0].content}</Text>
           <View style={styles.heroCardBtn}>
             <Text style={styles.heroCardBtnText}>{t('sim_card_electricity_button') || 'Try Scenario'}</Text>
             <MaterialIcons name="play-arrow" size={18} color={colors.onPrimary} />
@@ -93,7 +97,7 @@ export default function SimulatorScreen({ navigation }: any) {
 
         {/* Scenario List */}
         <Text style={styles.sectionLabel}>{t('sim_more_scenarios') || 'More Scenarios'}</Text>
-        {SCENARIOS.slice(1).map(s => {
+        {scenarios.slice(1).map(s => {
           const c = COLOR_MAP[s.colorKey];
           return (
             <TouchableOpacity key={s.id}
