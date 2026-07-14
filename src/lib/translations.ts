@@ -205,7 +205,7 @@ export const translations: TranslationsDictionary = {
     // Navigation / Tabs
     tab_home: 'होम',
     
-    tab_voice: 'Voice',
+    tab_voice: 'आवाज',
     tab_sim: 'सिम्युलेटर',
     tab_badges: 'बैज',
 
@@ -262,8 +262,8 @@ export const translations: TranslationsDictionary = {
     badges_hero_desc: '३ स्कैम सिमुलेशन पूरे किए।',
     badges_sentry_title: 'लिंक संतरी',
     badges_sentry_desc: 'अनलॉक करने के लिए १० संदिग्ध लिंक सत्यापित करें।',
-    badges_quiz_title: 'Quiz Master',
-    badges_quiz_desc: 'Completed cybersecurity quizzes.',
+    badges_quiz_title: 'क्विज मास्टर',
+    badges_quiz_desc: 'साइबर सुरक्षा प्रश्नोत्तरी पूरी की।',
     badges_guardian_title: 'कॉल गार्जियन',
     badges_guardian_desc: '५ अज्ञात वॉयस कॉल स्कैन करें।',
     badges_shield_title: 'पारिवारिक सुरक्षा कवच',
@@ -390,7 +390,7 @@ export const translations: TranslationsDictionary = {
     // Navigation / Tabs
     tab_home: 'होम',
     
-    tab_voice: 'Voice',
+    tab_voice: 'आवाज',
     tab_sim: 'सिम्युलेटर',
     tab_badges: 'बॅजेस',
 
@@ -447,8 +447,8 @@ export const translations: TranslationsDictionary = {
     badges_hero_desc: '३ स्कॅम सिम्युलेशन पूर्ण केले.',
     badges_sentry_title: 'लिंक संतरी',
     badges_sentry_desc: 'अनलॉक करण्यासाठी १० संशयास्पद लिंक तपासा.',
-    badges_quiz_title: 'Quiz Master',
-    badges_quiz_desc: 'Completed cybersecurity quizzes.',
+    badges_quiz_title: 'क्विज मास्टर',
+    badges_quiz_desc: 'सायबर सुरक्षा प्रश्नमंजुषा पूर्ण केली.',
     badges_guardian_title: 'कॉल गार्जियन',
     badges_guardian_desc: '५ अनोळखी वॉयस कॉल स्कॅन करा.',
     badges_shield_title: 'कौटुंबिक रक्षक कवच',
@@ -570,7 +570,7 @@ export const translations: TranslationsDictionary = {
     // Navigation / Tabs
     tab_home: 'முகப்பு',
     
-    tab_voice: 'Voice',
+    tab_voice: 'குரல்',
     tab_sim: 'சிமுலேட்டர்',
     tab_badges: 'பேட்ஜ்கள்',
 
@@ -627,8 +627,8 @@ export const translations: TranslationsDictionary = {
     badges_hero_desc: '3 மோசடி சிமுலேஷன்களை முடித்தார்.',
     badges_sentry_title: 'லிங்க் சென்ட்ரி',
     badges_sentry_desc: 'திறக்க 10 சந்தேகத்திற்கிடமான இணைப்புகளைச் சரிபார்க்கவும்.',
-    badges_quiz_title: 'Quiz Master',
-    badges_quiz_desc: 'Completed cybersecurity quizzes.',
+    badges_quiz_title: 'வினாடி வினா மாஸ்டர்',
+    badges_quiz_desc: 'சைபர் பாதுகாப்பு வினாடி வினாக்களை முடித்தவர்.',
     badges_guardian_title: 'கால் கார்டியன்',
     badges_guardian_desc: '5 அறியப்படாத குரல் அழைப்புகளை ஸ்கேன் செய்யவும்.',
     badges_shield_title: 'குடும்ப கேடயம்',
@@ -750,7 +750,7 @@ export const translations: TranslationsDictionary = {
     // Navigation / Tabs
     tab_home: 'హోమ్',
     
-    tab_voice: 'Voice',
+    tab_voice: 'వాయిస్',
     tab_sim: 'సిమ్యులేటర్',
     tab_badges: 'బ్యాడ్జీలు',
 
@@ -807,8 +807,8 @@ export const translations: TranslationsDictionary = {
     badges_hero_desc: '3 స్కామ్ సిమ్యులేషన్లను పూర్తి చేసారు.',
     badges_sentry_title: 'లింక్ సెంట్రీ',
     badges_sentry_desc: 'అన్‌లాక్ చేయడానికి 10 సందేహాస్పద లింకులను ధృవీకరించండి.',
-    badges_quiz_title: 'Quiz Master',
-    badges_quiz_desc: 'Completed cybersecurity quizzes.',
+    badges_quiz_title: 'క్విజ్ మాస్టర్',
+    badges_quiz_desc: 'సైబర్ సెక్యూరిటీ క్విజ్‌లను పూర్తి చేసారు.',
     badges_guardian_title: 'కాల్ గార్డియన్',
     badges_guardian_desc: '5 తెలియని వాయిస్ కాల్స్ స్కాన్ చేయండి.',
     badges_shield_title: 'కుటుంబ రక్షణ కవచం',
@@ -930,7 +930,7 @@ export const translations: TranslationsDictionary = {
     // Navigation / Tabs
     tab_home: 'હોમ',
     
-    tab_voice: 'Voice',
+    tab_voice: 'અવાજ',
     tab_sim: 'સિમ્યુલેટર',
     tab_badges: 'બેજ',
 
@@ -987,8 +987,8 @@ export const translations: TranslationsDictionary = {
     badges_hero_desc: '૩ સ્કેમ સિમ્યુલેશન પૂર્ણ કર્યા.',
     badges_sentry_title: 'લિંક સંત્રી',
     badges_sentry_desc: 'અનલોક કરવા માટે ૧૦ શંકાસ્પદ લિંક વેરીફાય કરો.',
-    badges_quiz_title: 'Quiz Master',
-    badges_quiz_desc: 'Completed cybersecurity quizzes.',
+    badges_quiz_title: 'ક્વિઝ માસ્ટર',
+    badges_quiz_desc: 'સાયબર સુરક્ષા ક્વિઝ પૂર્ણ કરી.',
     badges_guardian_title: 'કોલ ગાર્ડિયન',
     badges_guardian_desc: '૫ અજાણ્યા કોલ સ્કેન કરો.',
     badges_shield_title: 'પારિવારિક સુરક્ષા કવચ',
