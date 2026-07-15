@@ -598,8 +598,8 @@ export async function roleplayWithSarvam(messages: {role: string, content: strin
         `${API_BASE_URL}/v1/chat/completions`,
         {
           model: 'sarvam-105b',
-          temperature: 0.6,
-          max_tokens: 1024,
+          temperature: 0.3,
+          max_tokens: 150,
           messages: messages,
         },
         { 
