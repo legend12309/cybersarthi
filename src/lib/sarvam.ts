@@ -599,7 +599,7 @@ export async function roleplayWithSarvam(messages: {role: string, content: strin
         {
           model: 'sarvam-105b',
           temperature: 0.3,
-          max_tokens: 150,
+          max_tokens: 1024,
           messages: messages,
         },
         { 

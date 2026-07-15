@@ -220,11 +220,17 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       } else {
         const apiMessages = newMessages.filter(m => m.role !== 'system_context').map(m => ({ role: m.role, content: m.content }));
         
+        const langNames: Record<string, string> = {
+          'en-IN': 'English', 'hi-IN': 'Hindi', 'mr-IN': 'Marathi', 
+          'ta-IN': 'Tamil', 'te-IN': 'Telugu', 'gu-IN': 'Gujarati'
+        };
+        const currentLangName = langNames[languageCode] || 'English';
+
         const finalMessages = apiMessages.map((m, idx) => {
           if (idx === apiMessages.length - 1 && m.role === 'user') {
             return {
               ...m,
-              content: `${m.content}\n\n(Respond strictly and entirely in ${languageName}. Do not use English.)`
+              content: `${m.content}\n\n(Respond strictly and entirely in ${currentLangName}. Do not use English.)`
             };
           }
           return m;
