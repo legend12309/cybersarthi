@@ -643,7 +643,7 @@ Give brief, educational feedback in 2-3 sentences, plus a clear PASS or NEEDS_PR
       {
         model: 'sarvam-105b',
         temperature: 0.2,
-        max_tokens: 500,
+        max_tokens: 2048,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: transcript },
