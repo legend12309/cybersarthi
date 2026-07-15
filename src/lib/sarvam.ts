@@ -631,7 +631,11 @@ export async function roleplayWithSarvam(messages: {role: string, content: strin
 
 export async function evaluateRoleplay(transcript: string, scenarioType: string, languageCode: string): Promise<{verdict: 'PASS' | 'NEEDS_PRACTICE', feedback: string}> {
   const languageName = LANG_MAP[languageCode] || 'English';
-  const systemPrompt = `Review this conversation where a user was being scammed (Scenario: ${scenarioType}). Evaluate: did they share sensitive info, did they show good instincts (asking for verification, refusing links, staying calm), or did they fall for the scam. Give brief, encouraging feedback in 2-3 sentences, plus a clear PASS or NEEDS_PRACTICE verdict. You MUST start your response with the exact word "PASS:" or "NEEDS_PRACTICE:" followed by your feedback in ${languageName}.`;
+  const systemPrompt = `Review this conversation where a user was being scammed (Scenario: ${scenarioType}).
+CRITICAL EVALUATION RULES:
+1. If the user agrees to pay, asks how to pay, asks for payment details (like amount or UPI ID), clicks a link, or shares personal/financial info, they FAILED. Verdict must be NEEDS_PRACTICE.
+2. They only PASS if they explicitly refuse to comply, challenge the scammer, recognize the scam, or refuse to pay.
+Give brief, educational feedback in 2-3 sentences, plus a clear PASS or NEEDS_PRACTICE verdict. You MUST start your response with the exact word "PASS:" or "NEEDS_PRACTICE:" followed by your feedback in ${languageName}.`;
 
   try {
     const response = await axios.post(
