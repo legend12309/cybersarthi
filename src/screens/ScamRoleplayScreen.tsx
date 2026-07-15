@@ -134,15 +134,16 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     startedLanguageRef.current = languageCode;
     try {
       const firstMsg = getInitialScammerMessage(languageCode);
-      const initialMessages: Message[] = [
+      const contextMessages: Message[] = [
         { id: 'sysctx', role: 'system_context', content: 'You received a call from an unknown number. The caller claims to be from the Electricity Board.' },
         { id: 'sys', role: 'system', content: persona },
         { id: 'usr0', role: 'user', content: 'Hello?' },
-        { id: 'ast0', role: 'assistant', content: firstMsg }
       ];
-      setMessages(initialMessages);
+      const assistantMsg: Message = { id: 'ast0', role: 'assistant', content: firstMsg };
       
       if (mode === 'voice') {
+        // Show context immediately, hold scammer text until TTS is ready
+        setMessages(contextMessages);
         playTokenRef.current += 1;
         const currentToken = playTokenRef.current;
         try { if (player.playing) player.pause(); } catch(e) {}
@@ -150,6 +151,8 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         try {
           const audioUri = await textToSpeech(firstMsg, languageCode);
           if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
+            // Show scammer text + play audio simultaneously
+            setMessages([...contextMessages, assistantMsg]);
             try {
               player.replace(audioUri);
               player.play();
@@ -158,13 +161,20 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
               if (isMounted.current) setIsTyping(false);
             }
           } else {
-            if (isMounted.current) setIsTyping(false);
+            if (isMounted.current) {
+              setMessages([...contextMessages, assistantMsg]);
+              setIsTyping(false);
+            }
           }
         } catch (ttsErr) {
           console.log('[ROLEPLAY] TTS failed on start, continuing in text mode:', ttsErr);
-          if (isMounted.current) setIsTyping(false);
+          if (isMounted.current) {
+            setMessages([...contextMessages, assistantMsg]);
+            setIsTyping(false);
+          }
         }
       } else {
+        setMessages([...contextMessages, assistantMsg]);
         setIsTyping(false);
       }
     } catch (error) {
@@ -191,7 +201,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     // Call submitScamReport silently
     try {
       if (deviceId) {
-        await submitScamReport(deviceId, '', 0, result.verdict === 'PASS' ? 'safe' : 'scam', scamId, scamId, 'simulator', result.verdict === 'PASS');
+        await submitScamReport(deviceId, '', 0, result.verdict === 'PASS' ? 'safe' : 'scam', scamId, scamId, 'simulator', result.verdict !== 'PASS');
       }
     } catch (e) {
       // Silent fail
@@ -222,10 +232,9 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
         const scammerResponse = await roleplayWithSarvam(finalMessages as any);
         if (!isMounted.current) return;
-        setMessages([...newMessages, { id: 'a_' + Date.now(), role: 'assistant', content: scammerResponse }]);
-        setExchanges(prev => prev + 1);
-        
+
         if (mode === 'voice') {
+          // Keep typing indicator while TTS loads — don't show text yet
           playTokenRef.current += 1;
           const currentToken = playTokenRef.current;
           try { if (player.playing) player.pause(); } catch(e) {}
@@ -233,6 +242,9 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
           try {
             const audioUri = await textToSpeech(scammerResponse, languageCode);
             if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
+              // Show text and play audio simultaneously
+              setMessages([...newMessages, { id: 'a_' + Date.now(), role: 'assistant', content: scammerResponse }]);
+              setExchanges(prev => prev + 1);
               try {
                 player.replace(audioUri);
                 player.play();
@@ -241,13 +253,23 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
                 if (isMounted.current) setIsTyping(false);
               }
             } else {
-              if (isMounted.current) setIsTyping(false);
+              if (isMounted.current) {
+                setMessages([...newMessages, { id: 'a_' + Date.now(), role: 'assistant', content: scammerResponse }]);
+                setExchanges(prev => prev + 1);
+                setIsTyping(false);
+              }
             }
           } catch (ttsErr) {
-            console.log('[ROLEPLAY] TTS failed, continuing without audio:', ttsErr);
-            if (isMounted.current) setIsTyping(false);
+            console.log('[ROLEPLAY] TTS failed, showing text without audio:', ttsErr);
+            if (isMounted.current) {
+              setMessages([...newMessages, { id: 'a_' + Date.now(), role: 'assistant', content: scammerResponse }]);
+              setExchanges(prev => prev + 1);
+              setIsTyping(false);
+            }
           }
         } else {
+          setMessages([...newMessages, { id: 'a_' + Date.now(), role: 'assistant', content: scammerResponse }]);
+          setExchanges(prev => prev + 1);
           setIsTyping(false);
         }
       }
@@ -282,31 +304,39 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     await processUserMessage(text.trim());
   }, [isTyping, processUserMessage]);
 
+  const stopRecordingAndProcess = useCallback(async () => {
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+    setIsRecording(false);
+    setIsTyping(true); // Lock while processing
+    try {
+      await recorder.stop();
+      const uri = recorder.uri;
+      if (!uri) throw new Error("No audio URI");
+      
+      const transcript = await speechToText(uri, languageCode);
+      if (transcript.trim()) {
+         await processUserMessage(transcript);
+      } else {
+         setIsTyping(false);
+      }
+    } catch (err) {
+      console.log('[ROLEPLAY] Voice STT error:', err);
+      if (isMounted.current) {
+        ToastAndroid.show(t('err_unexpected', 'Could not process audio. Try again.'), ToastAndroid.SHORT);
+        setIsTyping(false);
+        setIsRecording(false);
+      }
+    }
+  }, [recorder, languageCode, processUserMessage, t]);
+
   const toggleRecord = useCallback(async () => {
     if (isTyping) return; // Ignore if AI is speaking or thinking
 
     if (isRecording) {
-      setIsRecording(false);
-      setIsTyping(true); // Lock while processing
-      try {
-        await recorder.stop();
-        const uri = recorder.uri;
-        if (!uri) throw new Error("No audio URI");
-        
-        const transcript = await speechToText(uri, languageCode);
-        if (transcript.trim()) {
-           await processUserMessage(transcript);
-        } else {
-           setIsTyping(false);
-        }
-      } catch (err) {
-        console.log('[ROLEPLAY] Voice STT error:', err);
-        if (isMounted.current) {
-          ToastAndroid.show(t('err_unexpected', 'Could not process audio. Try again.'), ToastAndroid.SHORT);
-          setIsTyping(false);
-          setIsRecording(false);
-        }
-      }
+      await stopRecordingAndProcess();
     } else {
       try {
         // Check cached permission first to avoid slow native OS prompt
@@ -322,11 +352,18 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         await recorder.prepareToRecordAsync();
         recorder.record();
         setIsRecording(true);
+
+        if (recordingTimeoutRef.current) {
+          clearTimeout(recordingTimeoutRef.current);
+        }
+        recordingTimeoutRef.current = setTimeout(() => {
+          stopRecordingAndProcess();
+        }, 28000);
       } catch (err) {
         console.log("Could not start recording", err);
       }
     }
-  }, [isTyping, isRecording, recorder, languageCode, navigation, scamId, processUserMessage]);
+  }, [isTyping, isRecording, recorder, stopRecordingAndProcess]);
 
   const forceReveal = useCallback(async () => {
     if (isTyping && messages.length <= 1) return; // Wait for initial message

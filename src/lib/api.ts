@@ -1,10 +1,17 @@
 import { supabase } from './supabase';
 
 export async function withTimeout<T>(promise: PromiseLike<T>, ms = 10000): Promise<T> {
+  let timeoutId: any;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('Supabase request timed out')), ms);
+  });
+  
   return Promise.race([
     Promise.resolve(promise),
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Supabase request timed out')), ms))
-  ]);
+    timeoutPromise
+  ]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
 }
 
 // TODO (Post-Hackathon): Upgrade to Supabase Auth with proper JWT-based RLS.

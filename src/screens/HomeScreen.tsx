@@ -134,7 +134,7 @@ export default function HomeScreen({ navigation }: any) {
   }, [linkInput, languageCode, t, deviceId]);
 
   const resetScanner = useCallback(() => { setLinkInput(''); setScanState('idle'); setScanResult(null); setScanSource(''); }, []);
-  const resetReporter = useCallback(() => { setFraudType('other'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); }, []);
+  const resetReporter = useCallback(() => { setFraudType('other'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); setSubmitError(false); }, []);
 
   const handleSubmitReport = useCallback(async () => {
     if (!scammerDetails.trim() && !description.trim()) {
@@ -142,6 +142,7 @@ export default function HomeScreen({ navigation }: any) {
       return;
     }
     setReportError('');
+    setSubmitError(false);
     setIsSubmitting(true);
     try {
       if (deviceId) {
@@ -290,7 +291,7 @@ export default function HomeScreen({ navigation }: any) {
 
       {/* ══ LINK SCANNER MODAL ══════════════════════════════════════════ */}
       <Modal animationType="slide" transparent visible={scanModalVisible} onRequestClose={() => setScanModalVisible(false)}>
-        <KeyboardAvoidingView behavior="padding" style={styles.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setScanModalVisible(false)} />
           <View style={[styles.sheet, { paddingBottom: Math.max(20, insets.bottom + 10) }]}>
             <View style={styles.sheetHandle} />
@@ -361,7 +362,7 @@ export default function HomeScreen({ navigation }: any) {
 
       {/* ══ FRAUD REPORTER MODAL ════════════════════════════════════════ */}
       <Modal animationType="slide" transparent visible={reportModalVisible} onRequestClose={() => { if (!isSubmitting) setReportModalVisible(false); }}>
-        <KeyboardAvoidingView behavior="padding" style={styles.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
           <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => { if (!isSubmitting) setReportModalVisible(false); }} />
           <View style={[styles.sheet, { maxHeight: '92%', paddingBottom: Math.max(20, insets.bottom + 10) }]}>
             <View style={styles.sheetHandle} />

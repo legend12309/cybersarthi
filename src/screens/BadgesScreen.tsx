@@ -207,6 +207,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     width: '100%', height: 8, borderRadius: 4,
     backgroundColor: colors.surfaceHigh, overflow: 'hidden', marginTop: 8,
+    flexDirection: 'row',
   },
   progressFill: { height: '100%', borderRadius: 4, backgroundColor: colors.primary },
   progressLabel: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant },

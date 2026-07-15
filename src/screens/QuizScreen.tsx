@@ -102,7 +102,7 @@ export default function QuizScreen({ navigation }: any) {
   if (isFinished) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.resultContainer}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }} showsVerticalScrollIndicator={false}>
           <MaterialIcons name="emoji-events" size={80} color={colors.primary} />
           <Text style={styles.resultTitle}>{t('quiz_completed', 'Quiz Completed!')}</Text>
           <Text style={styles.scoreText}>{score} / {quizData.length}</Text>
@@ -122,7 +122,7 @@ export default function QuizScreen({ navigation }: any) {
           <TouchableOpacity style={[styles.shareBtn, styles.homeBtn]} onPress={() => navigation.goBack()}>
             <Text style={[styles.shareBtnText, { color: colors.primary }]}>{t('return_home', 'Return Home')}</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }

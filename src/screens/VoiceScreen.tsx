@@ -133,9 +133,7 @@ export default function VoiceScreen({ navigation }: any) {
       clearTimeout(recordingTimeoutRef.current);
       recordingTimeoutRef.current = null;
     }
-    if (appState === 'recording' || appState === 'starting') {
-      try { recorder.stop().catch((e) => console.warn('Recorder stop error', e)); } catch(e) {}
-    }
+    try { recorder.stop().catch((e) => console.warn('Recorder stop error', e)); } catch(e) {}
     try { if (player.playing) player.pause(); } catch(e) {}
     try {
       AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch((e) => console.warn('AudioMode err', e));
