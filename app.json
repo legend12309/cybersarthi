@@ -49,7 +49,11 @@
           "microphonePermission": "Allow CyberSaathi to access your microphone."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-image",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

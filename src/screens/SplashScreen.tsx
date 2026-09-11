@@ -10,7 +10,7 @@ import { colors } from '../lib/colors';
 // The design stays dark and smooth to avoid a non‑trusted feel.
 
 export default function SplashScreen({ navigation }: any) {
-  const { t, isInitialized, hasSelectedLanguage } = useLanguage();
+  const { t, isInitialized, hasSelectedLanguage, hasConfirmedParticipantId } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const fadeAnim = useRef(new Animated.Value(0)).current; // Fade‑in logo & text
@@ -35,11 +35,17 @@ export default function SplashScreen({ navigation }: any) {
         easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
       }).start(() => {
-        navigation.reset({ index: 0, routes: [{ name: hasSelectedLanguage ? 'Main' : 'Language' }] });
+        if (!hasSelectedLanguage) {
+          navigation.reset({ index: 0, routes: [{ name: 'Language' }] });
+        } else if (!hasConfirmedParticipantId) {
+          navigation.reset({ index: 0, routes: [{ name: 'ParticipantId' }] });
+        } else {
+          navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        }
       });
     }, 1200);
     return () => clearTimeout(timer);
-  }, [hasSelectedLanguage, isInitialized, navigation, fadeAnim]);
+  }, [hasConfirmedParticipantId, hasSelectedLanguage, isInitialized, navigation, fadeAnim]);
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim, paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 24) }]}>

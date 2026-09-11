@@ -7,6 +7,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 import { colors, theme } from '../lib/colors';
 import { useLanguage } from '../context/LanguageContext';
 import { submitScamReport, saveLinkScan } from '../lib/api';
@@ -14,6 +16,7 @@ import { chatWithSarvam, classifyContent } from '../lib/sarvam';
 import dailyAlerts from '../data/dailyAlerts.json';
 
 const { width } = Dimensions.get('window');
+const CARD_W = Math.floor((width - 40 - 12) / 2);
 
 const SCAM_TYPES = [
   { id: 'otp_scam', label: 'OTP / Bank' },
@@ -42,15 +45,19 @@ const TypeChip = React.memo(({ type, isSelected, onPress, localizedLabel }: any)
 TypeChip.displayName = 'TypeChip';
 
 export default function HomeScreen({ navigation }: any) {
-  const { t, deviceId, languageCode } = useLanguage();
+  const { t, deviceId, userId, languageCode, participantId, setParticipantId, logout } = useLanguage();
   const scaleValue   = useRef(new Animated.Value(1)).current;
   const opacityValue = useRef(new Animated.Value(0.6)).current;
   const pulse2Scale  = useRef(new Animated.Value(1)).current;
   const pulse2Opacity = useRef(new Animated.Value(0.35)).current;
   const insets = useSafeAreaInsets();
 
-  const [scanModalVisible,   setScanModalVisible]   = useState(false);
-  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [scanModalVisible,        setScanModalVisible]        = useState(false);
+  const [reportModalVisible,      setReportModalVisible]      = useState(false);
+  const [participantModalVisible, setParticipantModalVisible] = useState(false);
+  const [tempParticipantId,       setTempParticipantId]       = useState(participantId || '');
+  const [searchQuery,             setSearchQuery]             = useState('');
+
   const [reportError, setReportError] = useState('');
   const [linkInput,    setLinkInput]    = useState('');
   const [scanState,    setScanState]    = useState<'idle'|'scanning'|'result'>('idle');
@@ -65,17 +72,53 @@ export default function HomeScreen({ navigation }: any) {
   const [isSubmitted,  setIsSubmitted]  = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError,  setSubmitError]  = useState(false);
+  const [roleplayProgress, setRoleplayProgress] = useState<Record<string, number>>({});
+  const isFocused = useIsFocused();
 
   const isMounted = useRef(true);
   useEffect(() => {
     return () => { isMounted.current = false; };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const activeUser = userId || deviceId;
+    if (activeUser) {
+      AsyncStorage.getItem(`@cybersaathi_roleplay_sessions_${activeUser}`).then(raw => {
+        if (!active) return;
+        if (raw) {
+          try {
+            const list = JSON.parse(raw);
+            const progressMap: Record<string, number> = {};
+            if (Array.isArray(list)) {
+              for (const session of list) {
+                if (session.scamId && !progressMap[session.scamId]) {
+                  // If user passed or has a completed session, 100%, else step-based
+                  progressMap[session.scamId] = session.verdict === 'PASS' ? 100 : Math.min(100, Math.max(20, (session.exchanges || 1) * 20));
+                }
+              }
+            }
+            setRoleplayProgress(progressMap);
+          } catch (e) {
+            setRoleplayProgress({});
+          }
+        } else {
+          setRoleplayProgress({});
+        }
+      });
+    } else {
+      setRoleplayProgress({});
+    }
+    return () => { active = false; };
+  }, [isFocused, userId, deviceId]);
+
+  useEffect(() => {
+    if (participantId) setTempParticipantId(participantId);
+  }, [participantId]);
+
   const isSafe = scanResult === 'safe';
 
-  // Memoized dynamic styles to prevent GC stutters on low-end devices
-  const sheetStyle = React.useMemo(() => [styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(48, insets.bottom + 24) }], [insets.bottom]);
-  const reportSheetStyle = React.useMemo(() => [styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(48, insets.bottom + 24) }], [insets.bottom]);
+  // Memoized dynamic styles
   const sheetBtnTextStyle = React.useMemo(() => [
     styles.sheetBtnText,
     { 
@@ -103,7 +146,7 @@ export default function HomeScreen({ navigation }: any) {
   }, []);
 
   const handleScanLink = useCallback(async () => {
-    const url = linkInput.trim().toLowerCase();
+    const url = linkInput.trim();
     Keyboard.dismiss();
     if (!url) return;
     setScanState('scanning');
@@ -117,9 +160,8 @@ export default function HomeScreen({ navigation }: any) {
       setScanAdvice(verdict === 'suspicious' ? t('scanner_suspicious_advice') : t('scanner_safe_advice'));
       setScanSource(source || 'sarvam');
       
-      // Save to Supabase
-      if (deviceId) {
-        await saveLinkScan(deviceId, url, verdict, explanation);
+      if (userId) {
+        await saveLinkScan(userId, url, verdict, explanation);
       }
     } catch (e) {
       if (!isMounted.current) return;
@@ -131,7 +173,7 @@ export default function HomeScreen({ navigation }: any) {
         setScanState('result');
       }
     }
-  }, [linkInput, languageCode, t, deviceId]);
+  }, [linkInput, languageCode, t, userId]);
 
   const resetScanner = useCallback(() => { setLinkInput(''); setScanState('idle'); setScanResult(null); setScanSource(''); }, []);
   const resetReporter = useCallback(() => { setFraudType('other'); setScammerDetails(''); setAmountLost(''); setDescription(''); setIsSubmitted(false); setReportError(''); setSubmitError(false); }, []);
@@ -145,15 +187,15 @@ export default function HomeScreen({ navigation }: any) {
     setSubmitError(false);
     setIsSubmitting(true);
     try {
-      if (deviceId) {
+      if (userId) {
         await submitScamReport(
-          deviceId,
+          userId,
           scammerDetails,
           parseFloat(amountLost) || 0,
           description,
-          fraudType, // Keep this as scamType for backwards compat
-          fraudType, // Also pass it as the new fraud_type column
-          'user_report' // source column
+          fraudType,
+          fraudType,
+          'user_report'
         );
       }
       if (!isMounted.current) return;
@@ -172,7 +214,7 @@ export default function HomeScreen({ navigation }: any) {
     } finally { 
       if (isMounted.current) setIsSubmitting(false); 
     }
-  }, [scammerDetails, description, amountLost, fraudType, deviceId, resetReporter, t]);
+  }, [scammerDetails, description, amountLost, fraudType, userId, resetReporter, t]);
 
   const handleSelectFraudType = useCallback((id: any) => setFraudType(id), []);
 
@@ -194,100 +236,377 @@ export default function HomeScreen({ navigation }: any) {
         navigation.navigate('ScreenshotScanner', { imageUri: result.assets[0].uri });
       }
     } catch (err) {
-      // console.error('Image picker error:', err);
       Alert.alert('Error', 'Could not select image.');
     }
   }, [navigation]);
 
+  const handleSaveParticipantId = async () => {
+    if (!tempParticipantId.trim()) return;
+    await setParticipantId(tempParticipantId.trim());
+    setParticipantModalVisible(false);
+  };
 
-  // Pick one alert based on day-of-month modulo 10
-  const alertIndex = new Date().getDate() % 10;
-  const currentAlert = dailyAlerts[alertIndex] || dailyAlerts[0];
-  const activeAlertData = (currentAlert as any)[languageCode] || (currentAlert as any)['en-IN'];
+  const handleQuickSearchSubmit = () => {
+    if (!searchQuery.trim()) return;
+    setLinkInput(searchQuery.trim());
+    setSearchQuery('');
+    setScanState('idle');
+    setScanResult(null);
+    setScanModalVisible(true);
+  };
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* ── Header ─────────────────────────────────────────── */}
-        <View style={styles.header}>
-          <View style={styles.brand}>
-            <MaterialIcons name="security" size={24} color={colors.primary} />
-            <Text style={styles.brandText}>CyberSaathi</Text>
+        
+        {/* ── Top Header (Insightlancer: App / Greeting / Participant ID / Language / Bell) ── */}
+        <View style={styles.topHeader}>
+          <View style={styles.headerLeft}>
+            <View style={styles.appIconPill}>
+              <MaterialIcons name="grid-view" size={20} color={colors.primary} />
+            </View>
+            <TouchableOpacity 
+              style={styles.headerIconBtn} 
+              onPress={() => navigation.navigate('Language')}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="translate" size={17} color={colors.onSurface} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.profileBtn} onPress={() => navigation.navigate('Language')}>
-            <MaterialIcons name="person" size={20} color={colors.primary} />
+          
+          <View style={styles.headerCenterWrap} pointerEvents="none">
+            <Text style={styles.headerCenterTitle}>Home</Text>
+          </View>
+          
+          <View style={styles.headerRight}>
+            {/* Participant ID Pill for Research Tracking */}
+            <TouchableOpacity 
+              style={styles.participantPill}
+              onPress={() => setParticipantModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="fingerprint" size={14} color={colors.primary} />
+              <Text style={styles.participantText}>{participantId || 'ID'}</Text>
+            </TouchableOpacity>
+
+            {/* Helpline notification bell */}
+            <TouchableOpacity 
+              style={styles.headerIconBtn}
+              onPress={() => Linking.openURL('tel:1930')}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="notifications-none" size={20} color={colors.onSurface} />
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ── User Greeting (Reference Style) ─────────────────── */}
+        <View style={styles.greetingWrap}>
+          <Text style={styles.userGreeting}>
+            Hi <Text style={styles.userGreetingBold}>{participantId ? participantId : 'Defender'}!</Text>
+          </Text>
+          <Text style={styles.userSubGreeting}>
+            {new Date().getHours() < 12 ? 'Good Morning' : (new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening')}
+          </Text>
+        </View>
+
+        {/* ── Search / Verification Bar (Insightlancer Style) ─── */}
+        <View style={styles.searchBar}>
+          <MaterialIcons name="search" size={22} color={colors.onSurfaceVariant} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t('home_link_scan_input', 'Search or verify URL, phone, or UPI...')}
+            placeholderTextColor={colors.onSurfaceVariant + '90'}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleQuickSearchSubmit}
+            returnKeyType="search"
+            autoCapitalize="none"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={handleQuickSearchSubmit} style={styles.searchActionBtn}>
+              <MaterialIcons name="arrow-forward" size={18} color={colors.onPrimary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* ── Welcome Illustration Card (Reference Style) ─────── */}
+        <View style={styles.welcomeCard}>
+          <View style={styles.welcomeContent}>
+            <Text style={styles.welcomeTitle}>Welcome!</Text>
+            <Text style={styles.welcomeDesc}>Let's safeguard your digital presence</Text>
+            <TouchableOpacity 
+              style={styles.welcomeBtn}
+              onPress={() => navigation.navigate('Chat')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.welcomeBtnText}>Ask CyberSaathi</Text>
+              <MaterialIcons name="arrow-forward" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.welcomeIllustration}>
+            <View style={styles.illustCircleBg}>
+              <MaterialIcons name="security" size={42} color={colors.primary} />
+            </View>
+          </View>
+        </View>
+
+        {/* ── Ongoing Projects / Threat Scenarios (Reference 2x2 Grid) ── */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Ongoing Scenarios</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Sim')}>
+            <Text style={styles.sectionLink}>view all</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ── Scam Alert Banner ──────────────────────────────── */}
-        <TouchableOpacity 
-          style={styles.alertBanner} 
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('ScamDetail', { scamId: currentAlert.scamId })}
-        >
-          <View style={styles.alertIconWrap}>
-            <MaterialIcons name="warning-amber" size={20} color={colors.warning} />
-          </View>
-          <View style={styles.flex1}>
-            <Text style={styles.alertTitle}>{activeAlertData.title}</Text>
-            <Text style={styles.alertBody} numberOfLines={2}>
-              <Text style={styles.alertHighlight}>{activeAlertData.highlight}</Text>
-              {activeAlertData.text}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <View style={styles.threatGrid}>
+          {/* Card 1: Deep Navy Hero Card (Matches Reference Left Top Card) */}
+          <TouchableOpacity 
+            style={[styles.threatCard, styles.threatCardNavy]}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('ScamDetail', { scamId: 'electricity_bill' })}
+          >
+            <View style={styles.threatCardTop}>
+              <Text style={styles.threatDateNavy}>{roleplayProgress['electricity_bill'] ? 'Completed' : 'New Scenario'}</Text>
+              <MaterialIcons name="more-vert" size={16} color={colors.navyCardSub} />
+            </View>
+            <View style={styles.threatHeaderRow}>
+              <View style={styles.threatIconNavyBg}>
+                <MaterialIcons name="bolt" size={18} color="#FFFFFF" />
+              </View>
+              <View style={styles.threatHeaderTexts}>
+                <Text style={styles.threatTitleNavy} numberOfLines={1} ellipsizeMode="tail">Electricity Bill</Text>
+                <Text style={styles.threatSubNavy} numberOfLines={1} ellipsizeMode="tail">Voice Roleplay</Text>
+              </View>
+            </View>
+            <View style={styles.threatProgressWrap}>
+              <View style={styles.threatProgressLabelRow}>
+                <Text style={styles.threatProgressTextNavy}>Progress</Text>
+                <Text style={styles.threatProgressPercentNavy}>{roleplayProgress['electricity_bill'] || 0}%</Text>
+              </View>
+              <View style={styles.threatProgressBarTrackNavy}>
+                <View style={[styles.threatProgressBarFillNavy, { width: `${roleplayProgress['electricity_bill'] || 0}%` }]} />
+              </View>
+            </View>
+          </TouchableOpacity>
 
-        {/* ── Mic Hero ───────────────────────────────────────── */}
-        <View style={styles.heroWrap}>
-          <TouchableOpacity style={styles.micOuter}
-            onPress={() => navigation.navigate('Chat')}
+          {/* Card 2: Clean White Card (Matches Reference Right Top Card) */}
+          <TouchableOpacity 
+            style={[styles.threatCard, styles.threatCardWhite]}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('ScamDetail', { scamId: 'fedex_parcel' })}
+          >
+            <View style={styles.threatCardTop}>
+              <Text style={styles.threatDate}>{roleplayProgress['fedex_parcel'] ? 'Completed' : 'New Scenario'}</Text>
+              <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
+            </View>
+            <View style={styles.threatHeaderRow}>
+              <View style={[styles.threatIconBg, { backgroundColor: colors.primaryLight }]}>
+                <MaterialIcons name="local-shipping" size={18} color={colors.primary} />
+              </View>
+              <View style={styles.threatHeaderTexts}>
+                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">FedEx Hold</Text>
+                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">Digital Arrest</Text>
+              </View>
+            </View>
+            <View style={styles.threatProgressWrap}>
+              <View style={styles.threatProgressLabelRow}>
+                <Text style={styles.threatProgressText}>Progress</Text>
+                <Text style={styles.threatProgressPercent}>{roleplayProgress['fedex_parcel'] || 0}%</Text>
+              </View>
+              <View style={styles.threatProgressBarTrack}>
+                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['fedex_parcel'] || 0}%`, backgroundColor: colors.primary }]} />
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Card 3: Clean White Card (SBI KYC) */}
+          <TouchableOpacity 
+            style={[styles.threatCard, styles.threatCardWhite]}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('ScamDetail', { scamId: 'sbi_kyc' })}
+          >
+            <View style={styles.threatCardTop}>
+              <Text style={styles.threatDate}>{roleplayProgress['sbi_kyc'] ? 'Completed' : 'New Scenario'}</Text>
+              <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
+            </View>
+            <View style={styles.threatHeaderRow}>
+              <View style={[styles.threatIconBg, { backgroundColor: colors.warningDim }]}>
+                <MaterialIcons name="account-balance" size={18} color={colors.warning} />
+              </View>
+              <View style={styles.threatHeaderTexts}>
+                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">SBI PAN Block</Text>
+                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">Phishing SMS</Text>
+              </View>
+            </View>
+            <View style={styles.threatProgressWrap}>
+              <View style={styles.threatProgressLabelRow}>
+                <Text style={styles.threatProgressText}>Progress</Text>
+                <Text style={styles.threatProgressPercent}>{roleplayProgress['sbi_kyc'] || 0}%</Text>
+              </View>
+              <View style={styles.threatProgressBarTrack}>
+                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['sbi_kyc'] || 0}%`, backgroundColor: colors.warning }]} />
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Card 4: Clean White Card (WhatsApp Emergency) */}
+          <TouchableOpacity 
+            style={[styles.threatCard, styles.threatCardWhite]}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('ScamDetail', { scamId: 'whatsapp_family' })}
+          >
+            <View style={styles.threatCardTop}>
+              <Text style={styles.threatDate}>{roleplayProgress['whatsapp_family'] ? 'Completed' : 'New Scenario'}</Text>
+              <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
+            </View>
+            <View style={styles.threatHeaderRow}>
+              <View style={[styles.threatIconBg, { backgroundColor: colors.successDim }]}>
+                <MaterialIcons name="family-restroom" size={18} color={colors.success} />
+              </View>
+              <View style={styles.threatHeaderTexts}>
+                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">WhatsApp Family</Text>
+                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">Family Scam</Text>
+              </View>
+            </View>
+            <View style={styles.threatProgressWrap}>
+              <View style={styles.threatProgressLabelRow}>
+                <Text style={styles.threatProgressText}>Progress</Text>
+                <Text style={styles.threatProgressPercent}>{roleplayProgress['whatsapp_family'] || 0}%</Text>
+              </View>
+              <View style={styles.threatProgressBarTrack}>
+                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['whatsapp_family'] || 0}%`, backgroundColor: colors.accent }]} />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Quick Verification Folders (Reference Folder Rows) ── */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Verification Tools</Text>
+        </View>
+
+        <View style={styles.toolsRow}>
+          <TouchableOpacity 
+            style={styles.toolCard}
+            onPress={() => { resetScanner(); setScanModalVisible(true); }}
             activeOpacity={0.85}
           >
-            <Animated.View style={[styles.pulseRing, { transform: [{ scale: scaleValue }], opacity: opacityValue }]} />
-            <Animated.View style={[styles.pulseRing2, { transform: [{ scale: pulse2Scale }], opacity: pulse2Opacity }]} />
-            <View style={styles.micCircle}>
-              <MaterialIcons name="mic" size={52} color={colors.onPrimary} />
+            <View style={styles.toolIconWrap}>
+              <MaterialIcons name="qr-code-scanner" size={22} color={colors.primary} />
             </View>
-          </TouchableOpacity>
-          <Text style={styles.heroTitle}>{t('home_mic_title')}</Text>
-          <Text style={styles.heroSub}>{t('home_mic_subtitle')}</Text>
-        </View>
-
-        {/* ── Quick Actions ──────────────────────────────────── */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionCard} onPress={() => { resetScanner(); setScanModalVisible(true); }} activeOpacity={0.8}>
-            <View style={styles.actionIconBg}>
-              <MaterialIcons name="qr-code-scanner" size={26} color={colors.primary} />
-            </View>
-            <Text style={styles.actionLabel}>{t('home_scan_link')}</Text>
-            <MaterialIcons name="chevron-right" size={18} color={colors.onSurfaceVariant} style={styles.actionChevron} />
+            <Text style={styles.toolTitle} numberOfLines={1} adjustsFontSizeToFit>Scan Link</Text>
+            <Text style={styles.toolSub} numberOfLines={1}>Verify URLs</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard} onPress={() => { resetReporter(); setReportModalVisible(true); }} activeOpacity={0.8}>
-            <View style={[styles.actionIconBg, styles.bgErrorDim]}>
-              <MaterialIcons name="report" size={26} color={colors.error} />
+          <TouchableOpacity 
+            style={styles.toolCard}
+            onPress={handlePickScreenshot}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.toolIconWrap, { backgroundColor: colors.warningDim }]}>
+              <MaterialIcons name="image-search" size={22} color={colors.warning} />
             </View>
-            <Text style={styles.actionLabel}>{t('home_report_fraud')}</Text>
-            <MaterialIcons name="chevron-right" size={18} color={colors.onSurfaceVariant} style={styles.actionChevron} />
+            <Text style={styles.toolTitle} numberOfLines={1} adjustsFontSizeToFit>Screenshot</Text>
+            <Text style={styles.toolSub} numberOfLines={1}>OCR Analysis</Text>
           </TouchableOpacity>
-        </View>
 
-        <View style={[styles.actionsRow, styles.mt12]}>
-          <TouchableOpacity style={styles.actionCard} onPress={handlePickScreenshot} activeOpacity={0.8}>
-            <View style={[styles.actionIconBg, styles.bgWarningDim]}>
-              <MaterialIcons name="image-search" size={26} color={colors.warning} />
+          <TouchableOpacity 
+            style={styles.toolCard}
+            onPress={() => { resetReporter(); setReportModalVisible(true); }}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.toolIconWrap, { backgroundColor: colors.errorDim }]}>
+              <MaterialIcons name="report" size={22} color={colors.error} />
             </View>
-            <Text style={styles.actionLabel}>{t('home_scan_screenshot')}</Text>
-            <MaterialIcons name="chevron-right" size={18} color={colors.onSurfaceVariant} style={styles.actionChevron} />
+            <Text style={styles.toolTitle} numberOfLines={1} adjustsFontSizeToFit>Report Scam</Text>
+            <Text style={styles.toolSub} numberOfLines={1}>Log incidents</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ── Quick tip card ─────────────────────────────────── */}
-        <View style={styles.tipCard}>
-          <MaterialIcons name="lightbulb" size={18} color={colors.warning} />
-          <Text style={styles.tipText}>🇮🇳  National Cyber Helpline: <Text style={styles.primaryBold}>1930</Text></Text>
-        </View>
+        {/* ── Floating Voice Orb Quick Launcher ───────────────── */}
+        <TouchableOpacity 
+          style={styles.voiceBanner}
+          onPress={() => navigation.navigate('Chat')}
+          activeOpacity={0.9}
+        >
+          <View style={styles.voiceBannerLeft}>
+            <View style={styles.micCircleMini}>
+              <MaterialIcons name="mic" size={22} color={colors.onPrimary} />
+            </View>
+            <View style={styles.voiceBannerTexts}>
+              <Text style={styles.voiceBannerTitle} numberOfLines={1} ellipsizeMode="tail">{t('home_mic_title')}</Text>
+              <Text style={styles.voiceBannerSub} numberOfLines={1} ellipsizeMode="tail">Voice-to-voice in {languageCode.split('-')[0].toUpperCase()}</Text>
+            </View>
+          </View>
+          <MaterialIcons name="arrow-forward-ios" size={15} color={colors.onSurfaceVariant} style={styles.voiceBannerArrow} />
+        </TouchableOpacity>
+
+        {/* ── 1930 Helpline Banner (Clean footer style) ───────── */}
+        <TouchableOpacity 
+          style={styles.helplineBanner}
+          onPress={() => Linking.openURL('tel:1930')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.helplineBadge}>
+            <Text style={styles.helplineBadgeText}>1930</Text>
+          </View>
+          <View style={styles.flex1}>
+            <Text style={styles.helplineTitle} numberOfLines={1}>National Cyber Helpline: 1930</Text>
+            <Text style={styles.helplineDesc} numberOfLines={1}>Tap to report active financial cyber fraud 24/7</Text>
+          </View>
+          <MaterialIcons name="call" size={20} color={colors.primary} />
+        </TouchableOpacity>
+
       </ScrollView>
+
+      {/* ══ PARTICIPANT ID MODAL (Academic Research) ═══════════════════ */}
+      <Modal animationType="fade" transparent visible={participantModalVisible} onRequestClose={() => setParticipantModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setParticipantModalVisible(false)} />
+          <View style={styles.studyDialog}>
+            <View style={styles.studyDialogIconWrap}>
+              <MaterialIcons name="science" size={32} color={colors.primary} />
+            </View>
+            <Text style={styles.studyDialogTitle}>Participant Study ID</Text>
+            <Text style={styles.studyDialogDesc}>
+              Assign this device to a participant code (e.g. P-101 or EXP-01) to accurately partition research logs.
+            </Text>
+            <TextInput
+              style={styles.studyInput}
+              value={tempParticipantId}
+              onChangeText={setTempParticipantId}
+              placeholder="e.g. P-101"
+              placeholderTextColor={colors.onSurfaceVariant + '70'}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            <View style={styles.studyActions}>
+              <TouchableOpacity style={styles.studyBtnCancel} onPress={() => setParticipantModalVisible(false)}>
+                <Text style={styles.studyBtnCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.studyBtnSave} onPress={handleSaveParticipantId}>
+                <Text style={styles.studyBtnSaveText}>Save ID</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity 
+              style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 6 }}
+              onPress={async () => {
+                setParticipantModalVisible(false);
+                await logout();
+                navigation.reset({ index: 0, routes: [{ name: 'ParticipantId' }] });
+              }}
+            >
+              <MaterialIcons name="logout" size={16} color={colors.error} />
+              <Text style={{ color: colors.error, fontFamily: 'Manrope_600SemiBold', fontSize: 13 }}>
+                Log Out / Switch Participant
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* ══ LINK SCANNER MODAL ══════════════════════════════════════════ */}
       <Modal animationType="slide" transparent visible={scanModalVisible} onRequestClose={() => setScanModalVisible(false)}>
@@ -400,52 +719,49 @@ export default function HomeScreen({ navigation }: any) {
                     value={scammerDetails}
                     onChangeText={setScammerDetails}
                     autoCapitalize="none"
-                    autoCorrect={false}
                   />
 
-                  <Text style={styles.inputLabel}>{t('report_amount_label')}</Text>
+                  <Text style={styles.inputLabel}>
+                    {t('report_amount_label')}
+                  </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="₹5,000 (optional)"
+                    placeholder={t('report_amount_placeholder', '0.00')}
                     placeholderTextColor={colors.onSurfaceVariant + '70'}
                     value={amountLost}
                     onChangeText={setAmountLost}
                     keyboardType="numeric"
                   />
 
-                  <Text style={styles.inputLabel}>{t('report_desc_label')}</Text>
+                  <Text style={styles.inputLabel}>
+                    {t('report_description_label')}
+                  </Text>
                   <TextInput
-                    style={[styles.input, { height: 90, textAlignVertical: 'top', paddingTop: 12 }]}
-                    placeholder={t('report_desc_placeholder')}
+                    style={[styles.input, styles.textArea]}
+                    placeholder={t('report_description_placeholder', 'Describe what happened...')}
                     placeholderTextColor={colors.onSurfaceVariant + '70'}
                     value={description}
                     onChangeText={setDescription}
                     multiline
-                    numberOfLines={4}
+                    numberOfLines={3}
                   />
 
                   {submitError && (
-                    <View style={[styles.alertBanner, { backgroundColor: colors.error + '20', borderColor: colors.error + '40', marginBottom: 8 }]}>
-                      <View style={[styles.alertIconWrap, { backgroundColor: colors.error + '30' }]}>
-                        <MaterialIcons name="error-outline" size={20} color={colors.error} />
-                      </View>
-                      <View style={{ flex: 1, paddingRight: 8 }}>
-                        <Text style={[styles.alertTitle, { color: colors.error }]}>{t('error', 'Error')}</Text>
-                        <Text style={[styles.alertBody, { color: colors.onSurface }]}>{t('report_submit_error', 'Could not submit report. Please try again.')}</Text>
-                      </View>
-                    </View>
+                    <Text style={{ color: colors.error, fontFamily: 'PublicSans_400Regular', fontSize: 13 }}>
+                      Failed to submit report. Please try again.
+                    </Text>
                   )}
 
-                  <TouchableOpacity style={[styles.sheetBtn, { backgroundColor: colors.error, shadowColor: colors.error }]}
-                    disabled={isSubmitting}
+                  <TouchableOpacity
+                    style={[styles.sheetBtnPrimary, isSubmitting && styles.sheetBtnDisabled]}
                     onPress={handleSubmitReport}
+                    disabled={isSubmitting}
                   >
-                    {isSubmitting
-                      ? <ActivityIndicator size="small" color={colors.onPrimary} />
-                      : <Text style={[styles.sheetBtnText, { color: colors.onPrimary }]}>
-                          {submitError ? t('report_submit_retry', 'Retry') : t('report_submit_btn')}
-                        </Text>
-                    }
+                    {isSubmitting ? (
+                      <ActivityIndicator color={colors.onPrimary} />
+                    ) : (
+                      <Text style={styles.sheetBtnText}>{t('report_submit_btn')}</Text>
+                    )}
                   </TouchableOpacity>
                 </>
               ) : (
@@ -478,96 +794,657 @@ export default function HomeScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100, gap: 16 },
+  scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 110, gap: 18 },
 
-  // Header
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  brandText: { fontFamily: 'Manrope_700Bold', fontSize: 20, color: colors.onSurface, letterSpacing: -0.3 },
-  profileBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: colors.primaryGlow, borderWidth: 1, borderColor: colors.primary + '30',
-    justifyContent: 'center', alignItems: 'center',
+  // Top Header (Insightlancer)
+  topHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    position: 'relative',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 2,
+  },
+  appIconPill: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  headerCenterWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  headerCenterTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 17,
+    color: colors.onSurface,
+    textAlign: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 2,
+  },
+  participantPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  participantText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+    color: colors.primary,
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 8,
+    right: 9,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: colors.error,
   },
 
-  // Alert banner
-  alertBanner: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-    backgroundColor: colors.warningDim, borderWidth: 1, borderColor: colors.warning + '35',
-    borderRadius: theme.cardRadius, padding: 14,
+  // Greeting
+  greetingWrap: {
+    paddingVertical: 2,
   },
-  alertIconWrap: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: colors.warning + '20', justifyContent: 'center', alignItems: 'center', marginTop: 2,
+  userGreeting: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 24,
+    color: colors.onSurface,
+    letterSpacing: -0.4,
   },
-  alertTitle: { fontFamily: 'Manrope_700Bold', fontSize: 13, color: colors.warning, marginBottom: 3 },
-  alertBody: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, lineHeight: 18 },
+  userGreetingBold: {
+    color: colors.primary,
+  },
+  userSubGreeting: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 14,
+    color: colors.onSurfaceVariant,
+    marginTop: 2,
+  },
 
-  // Hero mic
-  heroWrap: { alignItems: 'center', paddingVertical: 28 },
-  micOuter: { width: 180, height: 180, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  pulseRing: {
-    position: 'absolute', width: 140, height: 140, borderRadius: 70,
-    backgroundColor: colors.primaryGlow,
+  // Search Bar
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    paddingHorizontal: 14,
+    height: 48,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  pulseRing2: {
-    position: 'absolute', width: 140, height: 140, borderRadius: 70,
-    backgroundColor: colors.primaryGlow,
+  searchIcon: {
+    marginRight: 8,
   },
-  micCircle: {
-    width: 110, height: 110, borderRadius: 55,
+  searchInput: {
+    flex: 1,
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 14,
+    color: colors.onSurface,
+    height: '100%',
+  },
+  searchActionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.primary,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: colors.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 24,
-    elevation: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  heroTitle: { fontFamily: 'Manrope_700Bold', fontSize: 18, color: colors.onSurface, textAlign: 'center', marginBottom: 6 },
-  heroSub: { fontFamily: 'PublicSans_400Regular', fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center', maxWidth: 250 },
 
-  // Quick actions
-  actionsRow: { flexDirection: 'row', gap: 12 },
-  actionCard: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: theme.cardRadius,
-    padding: 16, borderWidth: 1, borderColor: colors.surfaceBorder,
+  // Welcome Card
+  welcomeCard: {
+    backgroundColor: colors.surface,
+    borderRadius: theme.cardRadius,
+    borderWidth: 1.5,
+    borderColor: colors.primary + '20',
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  actionIconBg: {
-    width: 46, height: 46, borderRadius: 14,
-    backgroundColor: colors.primaryGlow,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 12,
+  welcomeContent: {
+    flex: 1,
+    paddingRight: 10,
   },
-  actionLabel: { fontFamily: 'Manrope_600SemiBold', fontSize: 13, color: colors.onSurface },
-  actionChevron: { position: 'absolute', top: 16, right: 12 },
+  welcomeTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 16,
+    color: colors.onSurface,
+  },
+  welcomeDesc: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 12,
+    color: colors.onSurfaceVariant,
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  welcomeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
+    alignSelf: 'flex-start',
+    marginTop: 10,
+  },
+  welcomeBtnText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+    color: colors.primary,
+  },
+  welcomeIllustration: {
+    width: 68,
+    height: 68,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  illustCircleBg: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-  // Tip
-  tipCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: colors.surface, borderRadius: theme.badgeRadius,
-    padding: 14, borderWidth: 1, borderColor: colors.surfaceBorder,
+  // Section Headers
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
   },
-  tipText: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, flex: 1 },
+  sectionTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 16,
+    color: colors.onSurface,
+  },
+  sectionLink: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 12,
+    color: colors.onSurfaceVariant,
+  },
 
-  // Modal sheet
+  // 2x2 Ongoing Threats Grid
+  threatGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 12,
+  },
+  threatCard: {
+    width: CARD_W,
+    height: 156,
+    borderRadius: theme.cardRadius,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  threatCardNavy: {
+    backgroundColor: colors.navyCard,
+    borderWidth: 1,
+    borderColor: colors.navyCardBorder,
+    shadowColor: colors.navyCard,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  threatCardWhite: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  threatCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  threatDateNavy: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 11,
+    color: colors.navyCardSub,
+  },
+  threatDate: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 11,
+    color: colors.onSurfaceVariant,
+  },
+  threatHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 3,
+  },
+  threatIconNavyBg: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  threatIconBg: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  threatHeaderTexts: {
+    flex: 1,
+    minWidth: 0,
+  },
+  threatTitleNavy: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12.5,
+    color: colors.navyCardText,
+  },
+  threatSubNavy: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 10.5,
+    color: colors.navyCardSub,
+    marginTop: 1,
+  },
+  threatTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12.5,
+    color: colors.onSurface,
+  },
+  threatSub: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 10.5,
+    color: colors.onSurfaceVariant,
+    marginTop: 1,
+  },
+  threatProgressWrap: {
+    marginTop: 'auto',
+  },
+  threatProgressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  threatProgressTextNavy: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 10,
+    color: colors.navyCardSub,
+  },
+  threatProgressPercentNavy: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+    color: colors.navyCardText,
+  },
+  threatProgressBarTrackNavy: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    overflow: 'hidden',
+  },
+  threatProgressBarFillNavy: {
+    height: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
+  },
+  threatProgressText: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 10,
+    color: colors.onSurfaceVariant,
+  },
+  threatProgressPercent: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+    color: colors.onSurface,
+  },
+  threatProgressBarTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceHigh,
+    overflow: 'hidden',
+  },
+  threatProgressBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+
+  // Verification Tools Row
+  toolsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  toolCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: theme.cardRadius,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    minHeight: 110,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  toolIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  toolTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 11.5,
+    color: colors.onSurface,
+    textAlign: 'center',
+  },
+  toolSub: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 10,
+    color: colors.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+
+  // Voice Quick Launcher Banner
+  voiceBanner: {
+    backgroundColor: colors.surface,
+    borderRadius: theme.cardRadius,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  voiceBannerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minWidth: 0,
+  },
+  voiceBannerTexts: {
+    flex: 1,
+    minWidth: 0,
+  },
+  voiceBannerArrow: {
+    marginLeft: 4,
+  },
+  micCircleMini: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  voiceBannerTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+    color: colors.onSurface,
+  },
+  voiceBannerSub: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 11,
+    color: colors.onSurfaceVariant,
+    marginTop: 2,
+  },
+
+  // 1930 Helpline Banner
+  helplineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.primaryLight,
+    borderRadius: theme.cardRadius,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+  },
+  helplineBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  helplineBadgeText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+    color: colors.onPrimary,
+  },
+  helplineTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 12,
+    color: colors.primary,
+  },
+  helplineDesc: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 11,
+    color: colors.onSurfaceVariant,
+    marginTop: 1,
+  },
+
+  // Participant Study Dialog
+  studyDialog: {
+    width: width - 48,
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    padding: 24,
+    alignSelf: 'center',
+    alignItems: 'center',
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+  },
+  studyDialogIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  studyDialogTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 18,
+    color: colors.onSurface,
+    marginBottom: 6,
+  },
+  studyDialogDesc: {
+    fontFamily: 'PublicSans_400Regular',
+    fontSize: 13,
+    color: colors.onSurfaceVariant,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  studyInput: {
+    width: '100%',
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    paddingHorizontal: 16,
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 16,
+    color: colors.onSurface,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  studyActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  studyBtnCancel: {
+    flex: 1,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: colors.surfaceHigh,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  studyBtnCancelText: {
+    fontFamily: 'Manrope_600SemiBold',
+    fontSize: 14,
+    color: colors.onSurfaceVariant,
+  },
+  studyBtnSave: {
+    flex: 1,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  studyBtnSaveText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 14,
+    color: colors.onPrimary,
+  },
+
+  // Modal Sheet
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
   sheet: {
-    backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 20, paddingTop: 12,
-    shadowColor: colors.onSurface, shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 20,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    paddingTop: 12,
+    shadowColor: colors.onSurface,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
   },
-  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.surfaceBorder, alignSelf: 'center', marginBottom: 16 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  sheetTitle: { fontFamily: 'Manrope_700Bold', fontSize: 18, color: colors.onSurface },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceBorder,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 18,
+    color: colors.onSurface,
+  },
   closeBtn: {
     width: 44,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: -10, // To align nicely while keeping the large touch target
+    marginRight: -10,
   },
   sheetBody: { gap: 14 },
   sheetBtn: {
-    height: 52, borderRadius: 26, backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
     marginTop: 4,
   },
   sheetBtnDisabled: { backgroundColor: colors.surfaceBorder, shadowOpacity: 0 },
@@ -576,13 +1453,23 @@ const styles = StyleSheet.create({
   // Inputs
   inputLabel: { fontFamily: 'Manrope_600SemiBold', fontSize: 13, color: colors.onSurface },
   input: {
-    height: 50, borderRadius: 12, backgroundColor: colors.surfaceHigh,
-    borderWidth: 1, borderColor: colors.surfaceBorder,
-    paddingHorizontal: 16, fontSize: 14,
-    fontFamily: 'PublicSans_400Regular', color: colors.onSurface,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    fontFamily: 'PublicSans_400Regular',
+    color: colors.onSurface,
+  },
+  textArea: {
+    height: 90,
+    paddingTop: 14,
+    textAlignVertical: 'top',
   },
 
-  // Scanner result
+  // Scanner Result
   centerBlock: { alignItems: 'center', paddingVertical: 32, gap: 16 },
   analyzeText: { fontFamily: 'PublicSans_400Regular', fontSize: 14, color: colors.onSurfaceVariant },
   resultCard: { alignItems: 'center', padding: 24, borderRadius: 16, borderWidth: 1, gap: 10 },
@@ -590,60 +1477,88 @@ const styles = StyleSheet.create({
   resultDanger: { backgroundColor: colors.errorDim, borderColor: colors.error + '40' },
   resultVerdict: { fontFamily: 'Manrope_700Bold', fontSize: 18 },
   resultReason: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center' },
-  safeBrowsingBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4, borderWidth: 1, borderColor: colors.surfaceBorder },
+  safeBrowsingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+  },
   safeBrowsingText: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, color: colors.onSurface },
   adviceHead: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: colors.onSurface },
   adviceBody: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, lineHeight: 20 },
 
-  // Report form
-  typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // Report Form
   typeChip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    borderWidth: 1, borderColor: colors.surfaceBorder, backgroundColor: colors.surfaceHigh,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    backgroundColor: colors.surfaceHigh,
   },
-  typeChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryGlow },
+  typeChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
   typeChipText: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant },
   typeChipTextActive: { color: colors.primary, fontFamily: 'Manrope_600SemiBold' },
 
-  // Success
+  // Success Block
   successBlock: { alignItems: 'center', gap: 14, paddingVertical: 8 },
   successIcon: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: colors.successDim, justifyContent: 'center', alignItems: 'center',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.successDim,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   successTitle: { fontFamily: 'Manrope_700Bold', fontSize: 20, color: colors.onSurface, textAlign: 'center' },
   successDesc: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center', lineHeight: 20 },
   helplineBox: {
-    width: '100%', backgroundColor: colors.surfaceHigh, borderRadius: 16,
-    padding: 18, alignItems: 'center', gap: 12,
-    borderWidth: 1, borderColor: colors.surfaceBorder,
+    width: '100%',
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: 16,
+    padding: 18,
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
   },
   helplineHead: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: colors.onSurface },
-  callBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 48, borderRadius: 24, backgroundColor: colors.error,
-    paddingHorizontal: 24, gap: 8,
-    shadowColor: colors.error, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
-  },
-  callBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 15, color: colors.onPrimary },
-  helplineSub: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant, textAlign: 'center' },
   flex1: { flex: 1 },
-  alertHighlight: { fontFamily: 'Manrope_700Bold', color: colors.onSurface },
-  bgErrorDim: { backgroundColor: colors.errorDim },
-  bgWarningDim: { backgroundColor: colors.warningDim },
-  mt12: { marginTop: 12 },
-  primaryBold: { color: colors.primary, fontFamily: 'Manrope_700Bold' },
   reportScroll: { gap: 16, paddingBottom: 32 },
   sheetBtnPrimary: {
-    height: 52, borderRadius: 26, backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
     marginTop: 4,
   },
   callBtnPrimary: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 48, borderRadius: 24, backgroundColor: colors.primary,
-    paddingHorizontal: 24, gap: 8,
-    shadowColor: colors.error, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
-  }
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  callBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 15, color: colors.onPrimary },
+  helplineSub: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant, textAlign: 'center' },
 });

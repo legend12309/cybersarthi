@@ -79,13 +79,11 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
   const fallbackStats: UserStats = {
     totalQuizScore: 0,
     completedSimulations: 0,
-    level: 'Level 2: Vigilant',
-    unlockedBadges: ['Verified Protector'], // Default badge
+    level: 'Level 1: Novice',
+    unlockedBadges: [],
   };
 
   try {
-    // console.log('[BADGES] fetchUserStats called with userId:', userId, 'type:', typeof userId);
-
     // 1. Fetch user's level
     const { data: userData, error: userError } = await withTimeout(
       supabase
@@ -96,7 +94,7 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
     );
 
     let userLevel = fallbackStats.level;
-    if (!userError && userData) {
+    if (!userError && userData?.level) {
       userLevel = userData.level;
     }
 
@@ -107,8 +105,6 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
         .select('*')
         .eq('user_id', userId)
     );
-      
-    // console.log('[BADGES] Quiz scores result:', JSON.stringify(quizData), 'error:', JSON.stringify(quizError));
 
     let totalScore = 0;
     let highestQuizScore = 0;
@@ -125,8 +121,6 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
         .eq('user_id', userId)
         .in('source', ['simulator', 'user_report', 'scanner'])
     );
-      
-    // console.log('[BADGES] Simulator completions result:', JSON.stringify(simData), 'error:', JSON.stringify(simError));
 
     let simCount = 0;
     let scanCount = 0;
@@ -141,34 +135,39 @@ export async function fetchUserStats(userId: string): Promise<UserStats> {
       scanCount = scanRows.length;
     }
 
-    // console.log('[BADGES_CHECK] userId:', userId, 'simCount:', simCount, 'bestQuizScore:', highestQuizScore);
+    // 4. Calculate achievements/unlocked badges based on actual stats
+    // A fresh user starts with 0 badges
+    const unlockedBadges: string[] = [];
 
-    // 4. Calculate achievements/unlocked badges based on stats
-    const unlockedBadges = ['Verified Protector']; // Always unlocked
-
-    if (simCount >= 10) {
-      unlockedBadges.push('Sim Hero');
+    // Verified Protector: earned upon completing first simulation, scan, or quiz
+    if (simCount >= 1 || scanCount >= 1 || totalScore > 0) {
+      unlockedBadges.push('Verified Protector');
     }
     if (simCount >= 5) {
       unlockedBadges.push('Scam Spotter');
+    }
+    if (simCount >= 10) {
+      unlockedBadges.push('Sim Hero');
     }
     if (scanCount >= 10) {
       unlockedBadges.push('Link Sentry');
     }
     
-    // Quiz Master requires an 80% score. The quiz has 5 questions, so 80% is 4 out of 5.
+    // Quiz Master requires an 80% score (4 out of 5)
     if (highestQuizScore >= 4) {
       unlockedBadges.push('Quiz Master');
     }
 
     // Update level in database if it changes
-    let computedLevel = 'Level 2: Vigilant';
+    let computedLevel = 'Level 1: Novice';
     if (unlockedBadges.length >= 5) {
       computedLevel = 'Level 5: Guardian';
     } else if (unlockedBadges.length >= 4) {
       computedLevel = 'Level 4: Defender';
     } else if (unlockedBadges.length >= 3) {
       computedLevel = 'Level 3: Sentry';
+    } else if (unlockedBadges.length >= 1) {
+      computedLevel = 'Level 2: Vigilant';
     }
 
     if (computedLevel !== userLevel) {

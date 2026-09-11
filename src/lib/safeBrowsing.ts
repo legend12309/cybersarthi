@@ -5,7 +5,15 @@ export async function checkSafeBrowsing(url: string): Promise<{ isThreat: boolea
     return { isThreat: false };
   }
 
+  const cleanUrl = url.trim().replace(/^["']|["']$/g, '');
+  if (!cleanUrl) return { isThreat: false };
+
   const endpoint = `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${apiKey}`;
+
+  // Google Safe Browsing requires a scheme (http/https). If user omitted scheme, test both.
+  const threatEntries = /^https?:\/\//i.test(cleanUrl)
+    ? [{ url: cleanUrl }]
+    : [{ url: `https://${cleanUrl}` }, { url: `http://${cleanUrl}` }];
 
   const body = {
     client: { clientId: 'cybersaathi', clientVersion: '1.0.0' },
@@ -13,13 +21,13 @@ export async function checkSafeBrowsing(url: string): Promise<{ isThreat: boolea
       threatTypes: ['MALWARE', 'SOCIAL_ENGINEERING', 'UNWANTED_SOFTWARE', 'POTENTIALLY_HARMFUL_APPLICATION'],
       platformTypes: ['ANY_PLATFORM'],
       threatEntryTypes: ['URL'],
-      threatEntries: [{ url }],
+      threatEntries,
     },
   };
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -33,15 +41,12 @@ export async function checkSafeBrowsing(url: string): Promise<{ isThreat: boolea
     }
     
     const data = await response.json();
-    // console.log('[SAFE_BROWSING] Response:', JSON.stringify(data));
-
     if (data.matches && data.matches.length > 0) {
       return { isThreat: true, threatType: data.matches[0].threatType };
     }
     return { isThreat: false };
   } catch (error) {
-    // console.log('[SAFE_BROWSING] Error:', error);
-    // If this check fails, don't block the whole flow — fall back to Sarvam's verdict alone
+    // If Safe Browsing call fails, fail open gracefully to let Sarvam AI analyze it
     return { isThreat: false };
   }
 }

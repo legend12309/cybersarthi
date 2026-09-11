@@ -7,10 +7,15 @@ import { supabase } from '../lib/supabase';
 interface LanguageContextProps {
   languageCode: string;
   deviceId: string | null;
+  participantId: string | null;
+  userId: string;
+  setParticipantId: (id: string) => Promise<void>;
+  logout: () => Promise<void>;
   changeLanguage: (code: string) => Promise<void>;
   t: (key: string, fallback?: string) => string;
   isInitialized: boolean;
   hasSelectedLanguage: boolean;
+  hasConfirmedParticipantId: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextProps | undefined>(undefined);
@@ -29,8 +34,10 @@ const generateUUID = () => {
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [languageCode, setLanguageCode] = useState<string>('hi-IN'); // Default to Hindi
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [participantId, setParticipantIdState] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [hasSelectedLanguage, setHasSelectedLanguage] = useState<boolean>(false);
+  const [hasConfirmedParticipantId, setHasConfirmedParticipantId] = useState<boolean>(false);
 
   useEffect(() => {
     const initializeProfileAndLanguage = async () => {
@@ -42,6 +49,19 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           await AsyncStorage.setItem('cybersaathi.device_id', storedDeviceId);
         }
         setDeviceId(storedDeviceId);
+
+        // Load or initialize Participant ID (for Academic Research Study)
+        let storedParticipantId = await AsyncStorage.getItem('cybersaathi.participant_id');
+        let confirmedFlag = await AsyncStorage.getItem('cybersaathi.participant_id_confirmed');
+        if (confirmedFlag === 'true') {
+          setHasConfirmedParticipantId(true);
+        }
+        if (!storedParticipantId) {
+          const shortHash = (storedDeviceId.split('_')[1] || '101').substring(0, 3).toUpperCase();
+          storedParticipantId = `P-${shortHash}`;
+          await AsyncStorage.setItem('cybersaathi.participant_id', storedParticipantId);
+        }
+        setParticipantIdState(storedParticipantId);
 
         // 2. Load stored language locally
         const storedLanguage = await AsyncStorage.getItem('cybersaathi.language');
@@ -93,6 +113,36 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const userId = participantId 
+    ? `usr_${participantId.toLowerCase().replace(/[^a-z0-9]/g, '_')}` 
+    : (deviceId || 'usr_guest');
+
+  const setParticipantId = async (id: string) => {
+    const cleanId = id.trim().toUpperCase();
+    if (!cleanId) return;
+    setParticipantIdState(cleanId);
+    setHasConfirmedParticipantId(true);
+    const isolatedUserId = `usr_${cleanId.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    try {
+      await AsyncStorage.setItem('cybersaathi.participant_id', cleanId);
+      await AsyncStorage.setItem('cybersaathi.participant_id_confirmed', 'true');
+      getOrCreateUser(isolatedUserId, languageCode).catch(() => {});
+    } catch (error) {
+      console.error('Failed to save participant ID:', error);
+    }
+  };
+
+  const logout = async () => {
+    setParticipantIdState(null);
+    setHasConfirmedParticipantId(false);
+    try {
+      await AsyncStorage.removeItem('cybersaathi.participant_id');
+      await AsyncStorage.removeItem('cybersaathi.participant_id_confirmed');
+    } catch (error) {
+      console.error('Failed to clear participant session:', error);
+    }
+  };
+
   /**
    * Translate a key into the active language, falling back to English if missing.
    */
@@ -110,7 +160,19 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   return (
-    <LanguageContext.Provider value={{ languageCode, deviceId, changeLanguage, t, isInitialized, hasSelectedLanguage }}>
+    <LanguageContext.Provider value={{ 
+      languageCode, 
+      deviceId, 
+      participantId,
+      userId,
+      setParticipantId,
+      logout,
+      changeLanguage, 
+      t, 
+      isInitialized, 
+      hasSelectedLanguage, 
+      hasConfirmedParticipantId 
+    }}>
       {children}
     </LanguageContext.Provider>
   );

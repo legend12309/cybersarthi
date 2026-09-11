@@ -6,6 +6,7 @@ import { colors, theme } from '../lib/colors';
 import { useLanguage } from '../context/LanguageContext';
 import { submitScamReport } from '../lib/api';
 import { chatWithSarvam, classifyContent } from '../lib/sarvam';
+import { scammerPersonas } from '../data/scammerPersonas';
 import scamsData from '../data/scams.json';
 import { getLocalizedScam } from '../data/localizedScams';
 
@@ -108,13 +109,12 @@ CustomMessageModal.displayName = 'CustomMessageModal';
 
 export default function ScamDetailScreen({ route, navigation }: any) {
   const { scamId } = route.params || { scamId: 'electricity_bill' };
-  const { t, deviceId, languageCode } = useLanguage();
+  const { t, userId, languageCode } = useLanguage();
   const insets = useSafeAreaInsets();
   const [roleplayMode, setRoleplayMode] = useState<'text' | 'voice'>('text');
   const [userChoice,   setUserChoice]   = useState<'scam' | 'safe' | null>(null);
   
-  const ROLEPLAY_ENABLED_SCENARIOS = ['electricity_bill'];
-  const showRoleplayOption = ROLEPLAY_ENABLED_SCENARIOS.includes(scamId);
+  const showRoleplayOption = Boolean(scammerPersonas[scamId]);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -137,10 +137,8 @@ export default function ScamDetailScreen({ route, navigation }: any) {
     setUserChoice(choice);
     setIsSubmitting(true);
     try {
-      if (deviceId) {
-        // console.log('[SIM_SAVE] userId:', deviceId, 'scenarioId:', scamId);
-        const { data, error } = await submitScamReport(deviceId, '', 0, choice === 'safe' ? 'safe' : 'scam', scamId, scamId, 'simulator', choice === 'safe');
-        // console.log('[SIM_SAVE] Result data:', JSON.stringify(data), 'error:', JSON.stringify(error));
+      if (userId) {
+        const { data, error } = await submitScamReport(userId, '', 0, choice === 'safe' ? 'safe' : 'scam', scamId, scamId, 'simulator', choice === 'safe');
       }
     } catch (e) {
       // console.warn('Failed to submit simulator telemetry:', e);
@@ -158,7 +156,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
   };
 
   const handleRoleplayPress = () => {
-    if (scamId !== 'electricity_bill') {
+    if (!scammerPersonas[scamId]) {
       const msg = t('roleplay_unavailable') || 'Coming Soon';
       if (Platform.OS === 'android') {
         ToastAndroid.showWithGravity(msg, ToastAndroid.LONG, ToastAndroid.CENTER);
@@ -341,39 +339,63 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     backgroundColor: colors.background,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 12,
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Manrope_700Bold',
     color: colors.onSurface,
     flex: 1,
   },
 
-  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40, gap: 20 },
+  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40, gap: 16 },
 
   // SMS mockup
   smsCard: {
-    backgroundColor: colors.surface, borderRadius: theme.cardRadius,
-    borderWidth: 1, borderColor: colors.surfaceBorder, overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderRadius: theme.cardRadius,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    overflow: 'hidden',
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
   smsHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 14, backgroundColor: colors.surfaceHigh,
-    borderBottomWidth: 1, borderColor: colors.surfaceBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    backgroundColor: colors.surfaceHigh,
+    borderBottomWidth: 1,
+    borderColor: colors.surfaceBorder,
   },
   smsAvatar: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: colors.primaryGlow,
-    justifyContent: 'center', alignItems: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   smsSender: { fontFamily: 'Manrope_700Bold', fontSize: 15, color: colors.onSurface },
   smsTime: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.onSurfaceVariant, marginTop: 2 },
@@ -392,7 +414,7 @@ const styles = StyleSheet.create({
   promptText: { fontFamily: 'Manrope_700Bold', fontSize: 17, color: colors.onSurface, textAlign: 'center' },
   choiceRow: { flexDirection: 'row', gap: 12, width: '100%' },
   choiceBtn: {
-    flex: 1, height: 54, borderRadius: 27,
+    flex: 1, height: 50, borderRadius: 25,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
   },
@@ -433,7 +455,7 @@ const styles = StyleSheet.create({
   adviceBody: { fontFamily: 'PublicSans_400Regular', fontSize: 14, color: colors.onSurfaceVariant, lineHeight: 21 },
 
   continueBtn: {
-    height: 54, borderRadius: 27, backgroundColor: colors.primary,
+    height: 50, borderRadius: 25, backgroundColor: colors.primary,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
   },
@@ -458,7 +480,7 @@ const styles = StyleSheet.create({
   },
   sheetBody: { gap: 14 },
   sheetBtn: {
-    height: 52, borderRadius: 26, backgroundColor: colors.primary,
+    height: 50, borderRadius: 25, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 3,
     marginTop: 4,
@@ -487,14 +509,27 @@ const styles = StyleSheet.create({
   primaryText: { color: colors.primary },
   multiInput: { height: 100, textAlignVertical: 'top' },
   sheetBtnPrimary: {
-    height: 52, borderRadius: 26, backgroundColor: colors.primary,
+    height: 50, borderRadius: 25, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 3,
     marginTop: 4,
   },
   
   // Roleplay section
-  roleplaySection: { backgroundColor: colors.surfaceHigh, padding: 20, borderRadius: theme.cardRadius, borderWidth: 1, borderColor: colors.primary + '40', alignItems: 'center', gap: 12 },
+  roleplaySection: {
+    backgroundColor: colors.surface,
+    padding: 18,
+    borderRadius: theme.cardRadius,
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   roleplayTitle: { fontFamily: 'Manrope_700Bold', fontSize: 18, color: colors.onSurface },
   roleplaySub: { fontFamily: 'PublicSans_400Regular', fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: 4 },
   toggleRow: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 20, padding: 4, borderWidth: 1, borderColor: colors.surfaceBorder },
@@ -502,7 +537,7 @@ const styles = StyleSheet.create({
   toggleBtnActive: { backgroundColor: colors.primary },
   toggleText: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: colors.onSurface },
   toggleTextActive: { color: colors.onPrimary },
-  startRoleplayBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 24, width: '100%', justifyContent: 'center', marginTop: 8 },
+  startRoleplayBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, height: 50, borderRadius: 25, width: '100%', justifyContent: 'center', marginTop: 8 },
   startRoleplayBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 16, color: colors.onPrimary },
   orDivider: { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 12, marginTop: 12 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.surfaceBorder },

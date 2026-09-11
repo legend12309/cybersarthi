@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as FileSystem from 'expo-file-system/legacy';
 import { unzipSync } from 'fflate';
 import { checkSafeBrowsing } from './safeBrowsing';
+import { getScriptedScammerResponse, evaluateRoleplayHeuristic } from '../data/scammerScripts';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_SARVAM_API_URL || 'https://api.sarvam.ai';
 const API_KEY = process.env.EXPO_PUBLIC_SARVAM_API_KEY || '';
@@ -10,65 +11,99 @@ const getHeaders = () => ({
   'api-subscription-key': API_KEY,
 });
 
-export async function speechToText(audioUri: string, languageCode: string): Promise<string> {
-  // console.log('API Key length:', API_KEY?.length);
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
-  try {
-    const formData = new FormData();
-    formData.append('model', 'saaras:v3');
-    formData.append('mode', 'transcribe');
-    formData.append('language_code', languageCode);
-    formData.append('file', {
-      uri: audioUri,
-      name: 'audio.wav',
-      type: 'audio/wav',
-    } as any);
+export const getSarvamLanguageCode = (appLanguage: string): string => {
+  if (!appLanguage) return 'hi-IN';
+  if (appLanguage.includes('-')) return appLanguage;
+  const map: Record<string, string> = {
+    en: 'en-IN',
+    hi: 'hi-IN',
+    bn: 'bn-IN',
+    te: 'te-IN',
+    ta: 'ta-IN',
+    mr: 'mr-IN',
+    gu: 'gu-IN',
+    kn: 'kn-IN',
+    ml: 'ml-IN',
+    pa: 'pa-IN',
+    or: 'or-IN',
+  };
+  return map[appLanguage] || 'hi-IN';
+};
 
-    const response = await fetch(`${API_BASE_URL}/speech-to-text`, {
-      method: 'POST',
+export async function speechToText(audioUri: string, languageCode: string): Promise<string> {
+  try {
+    const uriLower = audioUri.toLowerCase();
+    let ext = 'm4a';
+    let mimeType = 'audio/x-m4a';
+
+    if (uriLower.endsWith('.wav')) {
+      ext = 'wav';
+      mimeType = 'audio/wav';
+    } else if (uriLower.endsWith('.mp3')) {
+      ext = 'mp3';
+      mimeType = 'audio/mpeg';
+    } else if (uriLower.endsWith('.aac')) {
+      ext = 'aac';
+      mimeType = 'audio/aac';
+    } else if (uriLower.endsWith('.mp4') || uriLower.endsWith('.m4a')) {
+      ext = 'm4a';
+      mimeType = 'audio/x-m4a';
+    }
+
+    const sarvamLang = getSarvamLanguageCode(languageCode);
+
+    // Use expo-file-system legacy uploadAsync which performs native multipart uploads
+    // and avoids React Native Hermes 'Unsupported FormDataPart implementation'
+    const result = await FileSystem.uploadAsync(`${API_BASE_URL}/speech-to-text`, audioUri, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType,
       headers: {
         'api-subscription-key': API_KEY,
       },
-      body: formData,
-      signal: controller.signal as any,
+      parameters: {
+        model: 'saaras:v3',
+        mode: 'transcribe',
+        language_code: sarvamLang,
+      },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API Error ${response.status}: ${errorText}`);
+    if (result.status < 200 || result.status >= 300) {
+      console.warn(`[STT] API returned HTTP ${result.status}:`, result.body);
+      throw new Error(`API Error ${result.status}: ${result.body}`);
     }
 
-    const data = await response.json();
+    const data = JSON.parse(result.body || '{}');
     return data.transcript || data.text || '';
   } catch (error: any) {
-    if (error.name === 'AbortError') {
-      throw new Error('Request timed out. Please check your connection.');
-    }
-    // console.error('STT Error Details:', error);
-    throw new Error('err_stt_failed');
-  } finally {
-    clearTimeout(timeoutId);
+    console.warn('[STT] Speech to text failed:', error?.message || error);
+    throw error;
   }
 }
 
 const LANG_MAP: Record<string, string> = {
   'hi-IN': 'Hindi. आपको केवल हिंदी (Hindi) में ही उत्तर देना अनिवार्य है।',
   'mr-IN': 'Marathi. तुम्हाला फक्त मराठी (Marathi) मध्येच उत्तर देणे बंधनकारक आहे।',
+  'bn-IN': 'Bengali. আপনাকে কেবল বাংলা (Bengali) ভাষাতেই উত্তর দিতে হবে।',
   'ta-IN': 'Tamil. நீங்கள் தமிழ் (Tamil) மொழியில் மட்டுமே பதிலளிக்க வேண்டும்.',
   'te-IN': 'Telugu. మీరు తెలుగు (Telugu) లో మాత్రమే సమాధానం చెప్పాలి.',
   'gu-IN': 'Gujarati. તમારે ફક્ત ગુજરાતી (Gujarati) માં જ જવાબ આપવો ફરજિયાત છે.',
   'en-IN': 'English'
 };
 
+export function extractUrls(text: string): string[] {
+  const urlRegex = /(https?:\/\/[^\s<>"'{}|\\^`]+|www\.[^\s<>"'{}|\\^`]+|[a-zA-Z0-9.-]+\.(?:com|in|org|net|co|top|xyz|biz|info|site|online|club|app|live|vip|ru|cn)[^\s<>"'{}|\\^`]*)/gi;
+  const matches = text.match(urlRegex) || [];
+  return Array.from(new Set(matches.map(u => u.trim().replace(/[.,;!?)]+$/, ''))));
+}
+
 function isContaminated(text: string): boolean {
   const contaminationMarkers = [
     /attempt\s*\d/i,
     /draft\s*\d/i,
     /version\s*\d/i,
-    /\*\*/,
     /let me (try|rewrite|reconsider)/i,
-    /^\s*\*\s/,
     /more conversational/i,
     /simpler language/i,
   ];
@@ -79,7 +114,7 @@ function isIncomplete(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.length === 0) return true;
   const lastChar = trimmed[trimmed.length - 1];
-  const validEndings = ['.', '?', '!', '।', '"', ')'];
+  const validEndings = ['.', '?', '!', '।', '"', ')', ':', '”', '\'', '’', '`', '*', '-'];
   return !validEndings.includes(lastChar);
 }
 
@@ -92,28 +127,25 @@ async function callSarvamChatAPI(transcript: string, languageCode: string, mode:
   const languageName = LANG_MAP[languageCode] || 'English';
   const systemPrompt = mode === 'classification'
     ? `You must respond ONLY in ${languageName}. However, you MUST start your response with the English words "SAFE:" or "SUSPICIOUS:" followed by your explanation in ${languageName}. Do not translate the "SAFE:" or "SUSPICIOUS:" labels.`
-    : `You are CyberSaathi, a direct safety assistant analyzing real scenarios described by users.
+    : `You are CyberSaathi, a friendly and intelligent cybersecurity assistant.
+Answer the user's specific question directly, accurately, and reassuringly.
+Rules:
+- Directly address what the user asked about (e.g. explain the concept, evaluate the scenario, or answer greetings naturally).
+- Do NOT repeat generic disclaimers or canned advice.
+- Mention reporting to 1930 / cybercrime.gov.in ONLY if the user explicitly says they already lost money or have been defrauded.
+- If it is a suspicious message or call, advise them to ignore, block, or check via official apps without repeating boilerplate.
+IMPORTANT VOICE/SPOKEN RULES:
+- Keep your ENTIRE reply strictly between 2 to 3 natural spoken sentences (under 350 characters) so it speaks cleanly via audio.
+- Do NOT use bullet points, numbered lists, asterisks, or markdown formatting.
+- Speak in a natural, polite, and reassuring conversational tone.
+Respond strictly in ${languageName}.`;
 
-Common scenario patterns to recognize immediately:
-- Someone calling/messaging claiming to be from a known institution (college, bank, government) asking for payment to an unfamiliar number/account → Always recommend verifying directly with the institution through official channels, never paying based on the call/message alone
-- Someone asking to share OTP for any reason → Always recommend never sharing OTP
-- Unexpected prize/lottery/refund offers → Always recommend treating as suspicious
-
-When the user describes a situation involving money, payment, OTP, personal info, or an unfamiliar contact:
-1. Identify the core risk in ONE clause
-2. Give a clear recommendation: 'Do not do this' OR 'This seems safe' OR 'Verify first by [specific action]'
-3. Keep your ENTIRE response to maximum 2-3 sentences, regardless of how detailed the user's question was
-
-Do not re-explain the user's scenario back to them. Do not list multiple possibilities. Give ONE direct, confident answer.
-CRITICAL INSTRUCTION: You must output ONLY your final answer. Do not show your thinking process or write drafts.
-Respond in ${languageName}.`;
-
-  const response = await axios.post(
+    const response = await axios.post(
     `${API_BASE_URL}/v1/chat/completions`,
     {
-      model: 'sarvam-105b',
-      temperature: mode === 'classification' ? 0 : 0.4,
-      max_tokens: mode === 'classification' ? 1500 : 1024,
+      model: 'sarvam-105b-conversations',
+      temperature: mode === 'classification' ? 0.1 : 0.35,
+      max_tokens: mode === 'classification' ? 300 : 260,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: transcript },
@@ -124,7 +156,7 @@ Respond in ${languageName}.`;
         ...getHeaders(),
         'Content-Type': 'application/json',
       },
-      timeout: 12000
+      timeout: 10000
     }
   );
   return response;
@@ -138,8 +170,8 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const response = await callSarvamChatAPI(prompt, languageCode, mode);
-      const content = response?.data?.choices?.[0]?.message?.content;
-      const finishReason = response?.data?.choices?.[0]?.finish_reason;
+      const choice = response?.data?.choices?.[0];
+      const content = choice?.message?.content;
       
       if (content && content.trim().length > 0) {
         const text = content.trim();
@@ -148,51 +180,71 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
         }
 
         const contaminated = isContaminated(text);
-        const incomplete = isIncomplete(text);
-        
-        // console.log('[CHAT] Final answer finish_reason:', finishReason);
-        // console.log('[CHAT] Final answer length:', text.length);
-        // console.log('[CHAT] Final answer last 20 chars:', text.slice(-20));
-
-        if (!contaminated && !incomplete) {
+        if (!contaminated) {
           return text;
         }
+      }
 
-        if (!contaminated && incomplete) {
-          lastIncompleteContent = text;
-          // console.log('[CHAT] Rejected - incomplete ending:', incomplete, 'finish_reason:', finishReason);
-        } else {
-          // console.log(`[CHAT] Attempt ${attempt + 1} rejected - content: '${text}', contaminated: ${contaminated}`);
+      // If content was empty but reasoning_content exists, extract final Indic response
+      const reasoning = choice?.message?.reasoning_content;
+      if (reasoning && typeof reasoning === 'string' && mode === 'conversation') {
+        const lines = reasoning.split('\n').map(l => l.trim()).filter(Boolean);
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const line = lines[i].replace(/^["'«»]+|["'«»]+$/g, '').trim();
+          if (line.length > 20 && !line.startsWith('Wait') && !line.startsWith('Let') && !line.startsWith('The user') && !line.startsWith('Check') && !line.startsWith('Key')) {
+            return line;
+          }
         }
       }
       
     } catch (error: any) {
-      // console.log(`[CHAT] Error on attempt ${attempt + 1}:`, error.message);
+      console.warn(`[CHAT] Attempt ${attempt + 1} issue:`, error.message);
       lastErrorMsg = error.response?.data?.message || error.response?.data?.error?.message || error.message;
       const status = error.response?.status;
-      if (status === 500 || status === 403 || status === 429) {
-        // console.log(`[CHAT] Fatal API Error ${status}, throwing explicitly.`);
-        throw new Error(`API Error ${status}: ${lastErrorMsg}`);
-      }
-      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        if (attempt === maxRetries) throw new Error('Request timed out. Please check your connection.');
+      if (status === 429) {
+        throw new Error('API_LIMIT_REACHED');
       }
     }
   }
   
-  // After all retries fail, return a clean, safe, hardcoded fallback - NEVER show raw model text
+  // If model produced a partial answer, salvage it cleanly
   if (lastIncompleteContent && mode === 'conversation') {
-    return truncateToLastSentence(lastIncompleteContent);
+    const salvaged = truncateToLastSentence(lastIncompleteContent);
+    if (salvaged && salvaged.trim().length > 10) {
+      return salvaged;
+    }
   }
 
-  const errorReason = lastErrorMsg ? ` (Error: ${lastErrorMsg})` : '';
+  const fallbackByLang: Record<string, string> = {
+    'hi-IN': 'माफ़ कीजिए, सर्वर से संपर्क नहीं हो सका। कृपया अपना सवाल दोबारा पूछें या इंटरनेट कनेक्शन जाँचें।',
+    'mr-IN': 'माफ करा, सर्व्हरशी संपर्क होऊ शकला नाही. कृपया पुन्हा प्रयत्न करा.',
+    'bn-IN': 'দুঃখিত, সার্ভারের সাথে যোগাযোগ করা যায়নি। দয়া করে আবার চেষ্টা করুন।',
+    'ta-IN': 'மன்னிக்கவும், சேவையகத்துடன் தொடர்பு கொள்ள முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.',
+    'te-IN': 'క్షమించండి, సర్వర్‌తో కనెక్ట్ అవ్వడం సాధ్యం కాలేదు. దయచేసి మళ్ళీ ప్రయత్నించండి.',
+    'gu-IN': 'માફ કરશો, સર્વર સાથે સંપર્ક થઈ શક્યો નથી. કૃપા કરીને ફરી પ્રયાસ કરો.',
+    'en-IN': 'I apologize, could not connect to the assistant. Please try asking again.',
+  };
+
+  const cleanFallback = fallbackByLang[languageCode] || fallbackByLang['en-IN'];
 
   return mode === 'classification' 
     ? 'SUSPICIOUS: Unable to verify safely, please be cautious.'
-    : `माफ़ कीजिए, मैं अभी जवाब नहीं दे पा रहा हूँ। कृपया अपना सवाल थोड़ा छोटा करके फिर पूछें।${errorReason}`;
+    : cleanFallback;
 }
 
+
 export async function classifyContent(content: string, languageCode: string, contentType: 'url' | 'message'): Promise<{verdict: 'safe' | 'suspicious', explanation: string, source?: string}> {
+  const langNames: Record<string, string> = {
+    'hi-IN': 'Hindi',
+    'mr-IN': 'Marathi',
+    'bn-IN': 'Bengali',
+    'ta-IN': 'Tamil',
+    'te-IN': 'Telugu',
+    'gu-IN': 'Gujarati',
+    'en-IN': 'English',
+  };
+  const targetLang = langNames[languageCode] || 'English';
+
   const prompt = contentType === 'url' 
     ? `You are a strict cybersecurity classifier trained to detect both traditional and modern scam patterns common in India:
 TRADITIONAL PATTERNS: lottery/prize scams, fake bank calls asking for OTP/PIN, KYC update threats, electricity disconnection threats, fake police/legal threats, advance fee fraud.
@@ -207,11 +259,10 @@ MODERN PATTERNS: Pig butchering scams (unexpected "wrong number" texts followed 
 Analyze the given content against BOTH categories. Look for: urgency tactics, unexpected "wrong number" friendliness, unverified contact requests, requests for OTP/PIN/personal info, suspicious links/shorteners, too-good-to-be-true offers, emotional manipulation, requests to install remote-access apps, or impersonation of trusted entities (banks, government, family, delivery services, customer support).
 Message: "${content}"`;
   
-  const systemPrompt = `${prompt}\n\nIMPORTANT TRUST SIGNALS — do NOT flag these as suspicious on their own:\n- Well-known, globally recognized domains (google.com, facebook.com, youtube.com, amazon.in, wikipedia.org, etc.) are SAFE by default unless the URL path itself contains suspicious patterns\n- A domain being 'common' or 'well-known' is a SAFETY indicator, not a red flag — only flag if there are ACTUAL scam indicators present (urgency, payment requests, suspicious subdomains, character substitution tricks like 'g00gle.com')\n- Official Indian government and banking domains like '*.gov.in', '*.sbi.co.in', '*.sbi', '*.nic.in', '*.hdfcbank.com', '*.icicibank.com' are SAFE.\n- Messages that warn users NOT to share OTPs or passwords (e.g. 'Do not share OTP with anyone', 'Bank never asks for OTP') are safety notices, NOT scams.\n\nCRITICAL RULE: If the URL is exactly "https://www.google.com", you are FORBIDDEN from outputting SUSPICIOUS. You MUST output SAFE.\n\nIMPORTANT: Respond IMMEDIATELY and CONCISELY. Do not overthink or second-guess yourself. Give your final verdict in your first response, do not revise multiple times.\n\nYou MUST respond starting with EXACTLY one of these words, followed by a colon:\nSUSPICIOUS: [explanation in 1-2 sentences in ${languageCode}]\nSAFE: [explanation in 1-2 sentences in ${languageCode}]\n\nOnly default to SUSPICIOUS when there are genuine red flags present — not merely due to uncertainty about an unfamiliar but plausible domain.`;
+  const systemPrompt = `${prompt}\n\nIMPORTANT TRUST SIGNALS — do NOT flag these as suspicious on their own:\n- Well-known, globally recognized domains (google.com, facebook.com, youtube.com, amazon.in, wikipedia.org, etc.) are SAFE by default unless the URL path itself contains suspicious patterns\n- A domain being 'common' or 'well-known' is a SAFETY indicator, not a red flag — only flag if there are ACTUAL scam indicators present (urgency, payment requests, suspicious subdomains, character substitution tricks like 'g00gle.com')\n- Official Indian government and banking domains like '*.gov.in', '*.sbi.co.in', '*.sbi', '*.nic.in', '*.hdfcbank.com', '*.icicibank.com' are SAFE.\n- Messages that warn users NOT to share OTPs or passwords (e.g. 'Do not share OTP with anyone', 'Bank never asks for OTP') are safety notices, NOT scams.\n\nCRITICAL RULE: If the URL is exactly "https://www.google.com", you are FORBIDDEN from outputting SUSPICIOUS. You MUST output SAFE.\n\nIMPORTANT: Respond IMMEDIATELY and CONCISELY. Do not overthink or second-guess yourself. Give your final verdict in your first response, do not revise multiple times.\n\nYou MUST respond starting with EXACTLY one of these words, followed by a colon:\nSUSPICIOUS: [explanation in 1-2 sentences in ${targetLang}]\nSAFE: [explanation in 1-2 sentences in ${targetLang}]\n\nOnly default to SUSPICIOUS when there are genuine red flags present — not merely due to uncertainty about an unfamiliar but plausible domain.`;
   const fetchSarvamClassification = async () => {
     try {
       const response = await chatWithSarvam(systemPrompt, languageCode, 'classification');
-      // console.log('[CLASSIFY] Success, raw response:', response);
       
       const trimmed = response.trim();
       const cleanText = trimmed.replace(/^[^a-zA-Z\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F\u0A80-\u0AFF]+/, '');
@@ -221,6 +272,7 @@ Message: "${content}"`;
         'SAFE',
         'सुरक्षित',
         'સુરક્ષિત',
+        'নিরাপদ',
         'பாதுகாப்பு', 'பாதுகாப்பானது',
         'సురక్షిత', 'సురక్షితం', 'సురక్షితమైనది'
       ];
@@ -245,8 +297,6 @@ Message: "${content}"`;
       
       return { verdict, explanation, source: 'sarvam' };
     } catch (error: any) {
-      // console.log('[CLASSIFY] FAILED with error:', error);
-      // console.log('[CLASSIFY] Error message:', error?.message);
       throw error;
     }
   };
@@ -257,12 +307,32 @@ Message: "${content}"`;
       checkSafeBrowsing(content),
     ]);
 
-    // console.log('[CLASSIFY] Sarvam verdict:', sarvamResult.verdict, '| Safe Browsing threat:', safeBrowsingResult.isThreat);
-
     if (safeBrowsingResult.isThreat) {
       return {
         verdict: 'suspicious',
         explanation: `Google Safe Browsing has flagged this link as a known ${safeBrowsingResult.threatType?.toLowerCase().replace('_', ' ')} threat. Do not visit this link.`,
+        source: 'google_safe_browsing'
+      };
+    }
+
+    return sarvamResult as {verdict: 'safe' | 'suspicious', explanation: string, source: string};
+  }
+
+  // If contentType === 'message', extract embedded URLs and check with Safe Browsing too
+  const embeddedUrls = extractUrls(content);
+  if (embeddedUrls.length > 0) {
+    const [sarvamResult, safeBrowsingResults] = await Promise.all([
+      fetchSarvamClassification(),
+      Promise.all(embeddedUrls.map(u => checkSafeBrowsing(u))),
+    ]);
+
+    const threatIndex = safeBrowsingResults.findIndex(r => r.isThreat);
+    if (threatIndex !== -1) {
+      const threat = safeBrowsingResults[threatIndex];
+      const threatUrl = embeddedUrls[threatIndex];
+      return {
+        verdict: 'suspicious',
+        explanation: `Google Safe Browsing confirmed a malicious link in this message (${threatUrl} - ${threat.threatType?.toLowerCase().replace('_', ' ')}). Do not open any links or send money.`,
         source: 'google_safe_browsing'
       };
     }
@@ -277,7 +347,8 @@ export async function cleanupTTSCache() {
   try {
     const dirUri = FileSystem.cacheDirectory;
     if (!dirUri) return;
-    const files = await FileSystem.readDirectoryAsync(dirUri);
+    const cleanDir = dirUri.endsWith('/') ? dirUri : `${dirUri}/`;
+    const files = await FileSystem.readDirectoryAsync(cleanDir);
     const ttsFiles = files.filter(f => f.startsWith('sarvam_tts_') && f.endsWith('.wav'));
     
     // Sort by timestamp (newest first)
@@ -290,26 +361,76 @@ export async function cleanupTTSCache() {
     // Keep the most recent 5, delete the rest
     const filesToDelete = ttsFiles.slice(5);
     for (const file of filesToDelete) {
-      await FileSystem.deleteAsync(dirUri + file, { idempotent: true });
+      await FileSystem.deleteAsync(cleanDir + file, { idempotent: true });
     }
   } catch (err) {
-    // console.log('[TTS] Cleanup error:', err);
+    // Fail silently on cleanup
   }
 }
 
 // Helper to clean up text before sending to TTS
 function sanitizeForTTS(text: string): string {
   if (!text) return '';
-  let clean = text.replace(/[*_~]+/g, ''); // Remove markdown formatting
+
+  // 1. Strip bracketed stage directions or parenthetical asides
+  // E.g. "(रोते हुए घबराई आवाज में) पापा! मेरा एक्सीडेंट हो गया..." -> "पापा! मेरा एक्सीडेंट हो गया..."
+  const withoutBrackets = text
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\{[^}]*\}/g, ' ')
+    .replace(/（[^）]*）/g, ' ')
+    .replace(/【[^】]*】/g, ' ');
+
+  // 2. If removing bracket contents emptied the entire text (e.g. the entire sentence was in parentheses),
+  // fallback to removing only the bracket punctuation marks themselves so the spoken dialogue is preserved!
+  let clean = withoutBrackets.trim().length > 0
+    ? withoutBrackets
+    : text.replace(/[{}\[\]()（）【】]/g, ' ');
+
+  clean = clean.replace(/[*_~`#]+/g, ''); // Remove markdown formatting
+  clean = clean.replace(/https?:\/\/\S+/gi, ' link '); // Replace URLs with 'link'
+  clean = clean.replace(/www\.\S+/gi, ' link ');
   clean = clean.replace(/₹/g, ' rupees '); // Replace ₹ symbol
-  clean = clean.replace(/(\d+),(\d+)/g, '$1$2'); // Remove commas in numbers (e.g. 3,240 -> 3240) so it's read as a full number
-  clean = clean.replace(/-/g, ' '); // Replace hyphens with spaces
+  clean = clean.replace(/(\d+),(\d+)/g, '$1$2'); // Remove commas in numbers (e.g. 3,240 -> 3240)
+  clean = clean.replace(/[-–—]/g, ' '); // Replace hyphens and dashes with spaces
+  clean = clean.replace(/\s+/g, ' '); // Collapse repeated whitespace
   return clean.trim();
+}
+
+
+// Helper to truncate text at a clean sentence boundary before sending to TTS
+function truncateToSafeTTSLength(text: string, maxLength: number = 470): string {
+  if (text.length <= maxLength) return text;
+  const truncated = text.substring(0, maxLength);
+  const lastPunctuation = Math.max(
+    truncated.lastIndexOf('।'),
+    truncated.lastIndexOf('.'),
+    truncated.lastIndexOf('!'),
+    truncated.lastIndexOf('?')
+  );
+  if (lastPunctuation > 120) {
+    return truncated.substring(0, lastPunctuation + 1).trim();
+  }
+  const lastSpace = truncated.lastIndexOf(' ');
+  if (lastSpace > 120) {
+    return truncated.substring(0, lastSpace).trim() + '.';
+  }
+  return truncated.trim() + '...';
 }
 
 export async function textToSpeech(text: string, languageCode: string): Promise<string> {
   if (!text || text.trim().length === 0) {
-    throw new Error('No text provided for speech synthesis');
+    return '';
+  }
+
+  // Clean and sanitize text, then enforce sentence-boundary-aware 470 char limit
+  const sanitized = sanitizeForTTS(text);
+  const safeText = truncateToSafeTTSLength(sanitized, 470);
+  
+  // Verify that safeText contains actual speakable characters (alphanumeric or Indic)
+  const hasSpeakableChars = /[a-zA-Z0-9\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F\u0A80-\u0AFF\u0980-\u09FF\u0C80-\u0CFF\u0D00-\u0D7F]/.test(safeText);
+  if (!safeText || safeText.trim().length === 0 || !hasSpeakableChars) {
+    return '';
   }
 
   const maxRetries = 1;
@@ -317,14 +438,12 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
     try {
       // Fire-and-forget cache cleanup (don't block TTS)
       cleanupTTSCache().catch(() => {});
-      // Clean and sanitize text, then enforce 500 char limit
-      const sanitized = sanitizeForTTS(text);
-      const safeText = sanitized.length > 500 ? sanitized.substring(0, 497) + '...' : sanitized;
+
       const response = await axios.post(
         `${API_BASE_URL}/text-to-speech`,
         {
           inputs: [safeText],
-          target_language_code: languageCode,
+          target_language_code: getSarvamLanguageCode(languageCode),
           speaker: 'shubh',
           model: 'bulbul:v3',
           enable_preprocessing: true,
@@ -334,7 +453,7 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
             ...getHeaders(),
             'Content-Type': 'application/json',
           },
-          timeout: 12000
+          timeout: 18000
         }
       );
       
@@ -342,13 +461,30 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
       if (!audio) {
         throw new Error('No audio returned from API');
       }
-      const uri = FileSystem.cacheDirectory + 'sarvam_tts_' + Date.now() + '.wav';
-      await FileSystem.writeAsStringAsync(uri, audio, {
-        encoding: 'base64' as any,
-      });
-      return uri;
+
+      // Try writing audio to file system for high performance native playback
+      const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+      if (baseDir) {
+        try {
+          const cleanDir = baseDir.endsWith('/') ? baseDir : `${baseDir}/`;
+          const uri = `${cleanDir}sarvam_tts_${Date.now()}_${Math.floor(Math.random() * 10000)}.wav`;
+          await FileSystem.writeAsStringAsync(uri, audio, {
+            encoding: 'base64' as any,
+          });
+          return uri;
+        } catch (fsWriteError) {
+          console.warn('[TTS] Failed to write audio file to cache, using base64 data URI:', fsWriteError);
+        }
+      }
+
+      // Fallback to data URI if file system write is not available
+      return `data:audio/wav;base64,${audio}`;
     } catch (error: any) {
+      console.warn(`[TTS] Synthesis attempt ${attempt + 1} failed:`, error?.response?.data || error?.message || error);
       if (attempt === maxRetries) {
+        if (error.response?.status === 429) {
+          throw new Error('API_LIMIT_REACHED');
+        }
         throw new Error('err_tts_failed');
       }
     }
@@ -387,10 +523,12 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
     jobId = createData.job_id;
     // console.log('[VISION] Job initialized:', jobId);
     
-    const ext = imageUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'png';
-    const isJpg = ext === 'jpg' || ext === 'jpeg';
-    const fileName = `screenshot.${isJpg ? 'jpg' : 'png'}`;
-    const mimeType = isJpg ? 'image/jpeg' : 'image/png';
+    const lowerUri = imageUri.toLowerCase();
+    const isJpg = lowerUri.includes('.jpg') || lowerUri.includes('.jpeg');
+    const isWebp = lowerUri.includes('.webp');
+    const ext = isJpg ? 'jpg' : (isWebp ? 'webp' : 'png');
+    const fileName = `screenshot.${ext}`;
+    const mimeType = isJpg ? 'image/jpeg' : (isWebp ? 'image/webp' : 'image/png');
 
     // 2. Get Upload URL
     const uploadRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1/upload-files`, {
@@ -590,60 +728,79 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
   }
 }
 
-export async function roleplayWithSarvam(messages: {role: string, content: string}[]): Promise<string> {
-  const maxRetries = 2;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/v1/chat/completions`,
-        {
-          model: 'sarvam-105b',
-          temperature: 0.3,
-          max_tokens: 1024,
-          messages: messages,
+export async function roleplayWithSarvam(
+  messages: {role: string, content: string}[],
+  languageCode: string = 'hi-IN',
+  scamId: string = 'electricity_bill',
+  exchangeTurn: number = 1,
+  userText: string = ''
+): Promise<string> {
+  // Fast online attempt with sarvam-105b-conversations
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/v1/chat/completions`,
+      {
+        model: 'sarvam-105b-conversations',
+        temperature: 0.55,
+        max_tokens: 160,
+        messages: messages,
+      },
+      { 
+        headers: {
+          ...getHeaders(),
+          'Content-Type': 'application/json',
         },
-        { 
-          headers: {
-            ...getHeaders(),
-            'Content-Type': 'application/json',
-          },
-          timeout: 12000
+        timeout: 5500
+      }
+    );
+    
+    const choice = response?.data?.choices?.[0];
+    const content = choice?.message?.content;
+    if (content && content.trim().length > 0) {
+      return content.trim();
+    }
+
+    // If model produced reasoning content, extract the response cleanly
+    const reasoning = choice?.message?.reasoning_content;
+    if (reasoning && typeof reasoning === 'string') {
+      const lines = reasoning.split('\n').map(l => l.trim()).filter(Boolean);
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].replace(/^["'«»]+|["'«»]+$/g, '').trim();
+        if (line.length > 20 && !line.startsWith('Wait') && !line.startsWith('Let') && !line.startsWith('The user') && !line.startsWith('Check') && !line.startsWith('Key')) {
+          return line;
         }
-      );
-      
-      const content = response?.data?.choices?.[0]?.message?.content;
-      if (content && content.trim().length > 0) {
-        return content.trim();
-      }
-      
-      if (response?.data?.choices?.[0]?.message?.refusal || content === null) {
-        return "Listen, I am losing patience. You need to resolve this right now or face the consequences.";
-      }
-    } catch (error: any) {
-      console.log(`[ROLEPLAY API] Attempt ${attempt + 1} failed:`, error.message);
-      if (attempt === maxRetries) {
-        return "I don't have time for this. Pay now or else.";
       }
     }
+  } catch (error: any) {
+    console.warn(`[ROLEPLAY API] Online call skipped or timed out (${error.message}). Using scenario dialogue matrix.`);
+    if (error.response?.status === 429) {
+      throw new Error('API_LIMIT_REACHED');
+    }
   }
-  return "I don't have time for this. Pay now or else.";
+
+  // Instant zero-lag scenario-adaptive scripted response
+  return getScriptedScammerResponse(scamId, languageCode, exchangeTurn, userText);
 }
 
-export async function evaluateRoleplay(transcript: string, scenarioType: string, languageCode: string): Promise<{verdict: 'PASS' | 'NEEDS_PRACTICE', feedback: string}> {
+export async function evaluateRoleplay(
+  transcript: string,
+  scenarioType: string,
+  languageCode: string
+): Promise<{verdict: 'PASS' | 'NEEDS_PRACTICE', feedback: string}> {
   const languageName = LANG_MAP[languageCode] || 'English';
   const systemPrompt = `Review this conversation where a user was being scammed (Scenario: ${scenarioType}).
 CRITICAL EVALUATION RULES:
 1. If the user agrees to pay, asks how to pay, asks for payment details (like amount or UPI ID), clicks a link, or shares personal/financial info, they FAILED. Verdict must be NEEDS_PRACTICE.
-2. They only PASS if they explicitly refuse to comply, challenge the scammer, recognize the scam, or refuse to pay.
+2. They only PASS if they explicitly refuse to comply, challenge the scammer, recognize the scam, refuse to pay, or hang up/disconnect the call without giving information.
 Give brief, educational feedback in 2-3 sentences, plus a clear PASS or NEEDS_PRACTICE verdict. You MUST start your response with the exact word "PASS:" or "NEEDS_PRACTICE:" followed by your feedback in ${languageName}.`;
 
   try {
     const response = await axios.post(
       `${API_BASE_URL}/v1/chat/completions`,
       {
-        model: 'sarvam-105b',
-        temperature: 0.2,
-        max_tokens: 2048,
+        model: 'sarvam-105b-conversations',
+        temperature: 0.1,
+        max_tokens: 300,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: transcript },
@@ -654,37 +811,36 @@ Give brief, educational feedback in 2-3 sentences, plus a clear PASS or NEEDS_PR
           ...getHeaders(),
           'Content-Type': 'application/json',
         },
-        timeout: 15000
+        timeout: 6500
       }
     );
 
-    const content = response?.data?.choices?.[0]?.message?.content?.trim();
-    if (!content) {
-      let fallbackFeedback = "Congratulations! You showed great instincts by refusing to share sensitive details or OTPs. Always verify unknown callers directly through official channels.";
-      if (languageCode === 'hi-IN') {
-        fallbackFeedback = "बधाई हो! आपने बुद्धिमानी दिखाई और किसी भी संदिग्ध लिंक या ओटीपी को साझा करने से इनकार कर दिया। हमेशा अज्ञात कॉल करने वालों से सावधान रहें!";
-      } else if (languageCode === 'mr-IN') {
-        fallbackFeedback = "अभिनंदन! तुम्ही हुशारी दाखवली आणि संशयास्पद माहिती शेअर करण्यास नकार दिला. अनोळखी फोन कॉल्सपासून नेहमी सावध राहा!";
-      } else if (languageCode === 'ta-IN') {
-        fallbackFeedback = "வாழ்த்துகள்! நீங்கள் புத்திசாலித்தனமாக செயல்பட்டு விவரங்களை பகிர மறுத்துவிட்டீர்கள். அறிமுகமில்லாத அழைப்புகளிடம் எப்போதும் எச்சரிக்கையாக இருங்கள்!";
-      } else if (languageCode === 'te-IN') {
-        fallbackFeedback = "అభినందనలు! మీరు తెలివిగా వ్యవహరించి వివరాలను పంచుకోవడానికి నిరాకరించారు. తెలియని కాల్స్ పట్ల ఎల్లప్పుడూ జాగ్రత్తగా ఉండండి!";
-      } else if (languageCode === 'gu-IN') {
-        fallbackFeedback = "અભિનંદન! તમે બુદ્ધિપૂર્વક વર્તીને માહિતી શેર કરવાનો ઇનકાર કર્યો. અજાણ્યા કોલ્સથી હંમેશા સાવધ રહો!";
+    const choice = response?.data?.choices?.[0];
+    let content = choice?.message?.content?.trim();
+
+    if (!content && choice?.message?.reasoning_content) {
+      const reasoning = choice.message.reasoning_content;
+      if (typeof reasoning === 'string') {
+        const passMatch = reasoning.match(/PASS:\s*([^\n]+)/i);
+        const practiceMatch = reasoning.match(/NEEDS_PRACTICE:\s*([^\n]+)/i);
+        if (passMatch) content = `PASS: ${passMatch[1]}`;
+        else if (practiceMatch) content = `NEEDS_PRACTICE: ${practiceMatch[1]}`;
       }
-      return { verdict: 'PASS', feedback: fallbackFeedback };
     }
 
-    if (content.startsWith('PASS:')) {
-      return { verdict: 'PASS', feedback: content.replace('PASS:', '').trim() };
-    } else if (content.startsWith('NEEDS_PRACTICE:')) {
-      return { verdict: 'NEEDS_PRACTICE', feedback: content.replace('NEEDS_PRACTICE:', '').trim() };
+    if (content) {
+      if (content.startsWith('PASS:')) {
+        return { verdict: 'PASS', feedback: content.replace('PASS:', '').trim() };
+      } else if (content.startsWith('NEEDS_PRACTICE:')) {
+        return { verdict: 'NEEDS_PRACTICE', feedback: content.replace('NEEDS_PRACTICE:', '').trim() };
+      }
     }
-
-    return { verdict: 'NEEDS_PRACTICE', feedback: content };
-  } catch (error) {
-    console.log('[EVALUATE] Error evaluating roleplay:', error);
-    return { verdict: 'NEEDS_PRACTICE', feedback: 'Could not complete evaluation due to a network issue. Remember: never share personal details with unknown callers.' };
+  } catch (error: any) {
+    console.warn('[EVALUATE] Sarvam online evaluation timed out or unavailable:', error.message);
   }
+
+  // Robust, offline-safe heuristic evaluation tailored to the specific scam scenario and language
+  return evaluateRoleplayHeuristic(transcript, scenarioType, languageCode);
 }
+
 

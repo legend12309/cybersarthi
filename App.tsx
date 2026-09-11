@@ -1,6 +1,11 @@
 import 'react-native-url-polyfill/auto';
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+  'Cannot connect to Expo CLI.',
+  'Could not connect to development server',
+]);
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -25,6 +30,7 @@ import VoiceScreen             from './src/screens/VoiceScreen';
 import SimulatorScreen         from './src/screens/SimulatorScreen';
 import BadgesScreen            from './src/screens/BadgesScreen';
 import LanguageSelectionScreen from './src/screens/LanguageSelectionScreen';
+import ParticipantIdScreen    from './src/screens/ParticipantIdScreen';
 import CustomSplashScreen      from './src/screens/SplashScreen';
 import ScamDetailScreen        from './src/screens/ScamDetailScreen';
 import ScamRoleplayScreen      from './src/screens/ScamRoleplayScreen';
@@ -53,18 +59,34 @@ function MainTabs() {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: any = 'help';
-          if (route.name === 'Home')   iconName = focused ? 'home'           : 'home';
+          if (route.name === 'Home')   iconName = focused ? 'home'           : 'home-filled';
           if (route.name === 'Chat')   iconName = focused ? 'mic'            : 'mic-none';
-          if (route.name === 'Sim')    iconName = 'sports-esports';
+          if (route.name === 'Sim')    iconName = focused ? 'sports-esports' : 'sports-esports';
           if (route.name === 'Badges') iconName = focused ? 'emoji-events'   : 'emoji-events';
-          return <MaterialIcons name={iconName} size={size} color={color} />;
+          return (
+            <View style={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 44,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: focused ? colors.primaryLight : 'transparent'
+            }}>
+              <MaterialIcons name={iconName} size={22} color={focused ? colors.primary : colors.onSurfaceVariant} />
+            </View>
+          );
         },
         tabBarActiveTintColor:   colors.primary,
         tabBarInactiveTintColor: colors.onSurfaceVariant,
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingVertical: 2,
+        },
         tabBarLabelStyle: {
           fontFamily: 'Manrope_600SemiBold',
           fontSize: 11,
-          marginBottom: 3,
+          marginTop: 2,
         },
         tabBarStyle: {
           backgroundColor:  colors.surface,
@@ -73,8 +95,11 @@ function MainTabs() {
           height:           62 + insets.bottom,
           paddingBottom:    8 + insets.bottom,
           paddingTop:       6,
-          elevation:        0,
-          shadowOpacity:    0,
+          elevation:        8,
+          shadowColor:      '#0B1527',
+          shadowOffset:     { width: 0, height: -3 },
+          shadowOpacity:    0.05,
+          shadowRadius:     12,
         },
         headerStyle: {
           backgroundColor: colors.surface,
@@ -110,14 +135,14 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1E293B', padding: 24 }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 24 }}>
           <MaterialIcons name="error-outline" size={64} color="#EF4444" style={{ marginBottom: 16 }} />
-          <Text style={{ color: 'white', fontSize: 20, fontFamily: 'Manrope_700Bold', marginBottom: 12, textAlign: 'center' }}>Application Error</Text>
-          <ScrollView style={{ backgroundColor: '#0F172A', borderRadius: 8, padding: 16, width: '100%', maxHeight: 300 }}>
-            <Text style={{ color: '#F87171', fontSize: 13, fontFamily: 'monospace' }}>{String(this.state.error?.stack || this.state.error)}</Text>
+          <Text style={{ color: '#0F172A', fontSize: 20, fontFamily: 'Manrope_700Bold', marginBottom: 12, textAlign: 'center' }}>Application Error</Text>
+          <ScrollView style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, width: '100%', maxHeight: 300, borderWidth: 1, borderColor: '#E2E8F0' }}>
+            <Text style={{ color: '#DC2626', fontSize: 13, fontFamily: 'monospace' }}>{String(this.state.error?.stack || this.state.error)}</Text>
           </ScrollView>
           <TouchableOpacity 
-            style={{ marginTop: 24, backgroundColor: '#3B82F6', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 24 }}
+            style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 24 }}
             onPress={() => this.setState({ hasError: false, error: null })}
           >
             <Text style={{ color: 'white', fontFamily: 'Manrope_700Bold' }}>Try Again</Text>
@@ -154,7 +179,7 @@ function MainApp() {
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <LanguageProvider>
           <NavigationContainer
             theme={{
@@ -182,9 +207,10 @@ function MainApp() {
               }} 
               initialRouteName="Splash"
             >
-              <Stack.Screen name="Splash"     component={CustomSplashScreen} />
-              <Stack.Screen name="Language"   component={LanguageSelectionScreen} />
-              <Stack.Screen name="Main"       component={MainTabs} />
+              <Stack.Screen name="Splash"        component={CustomSplashScreen} />
+              <Stack.Screen name="ParticipantId" component={ParticipantIdScreen} />
+              <Stack.Screen name="Language"      component={LanguageSelectionScreen} />
+              <Stack.Screen name="Main"          component={MainTabs} />
               <Stack.Screen name="ScamDetail" component={ScamDetailScreen} />
               <Stack.Screen name="ScamRoleplay" component={ScamRoleplayScreen} />
               <Stack.Screen name="Quiz"       component={QuizScreen} />
