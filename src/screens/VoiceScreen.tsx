@@ -223,6 +223,67 @@ export default function VoiceScreen({ navigation }: any) {
     if (!isFocused) { cleanupAudioAndRecording(); setAppState('idle'); }
   }, [isFocused]);
 
+  // Update initial welcome message text when language changes on a fresh session
+  useEffect(() => {
+    setMessages(prev => {
+      if (prev.length === 1 && prev[0].id.startsWith('welcome')) {
+        return [{ ...prev[0], text: t('voice_default_instruction') }];
+      }
+      return prev;
+    });
+  }, [languageCode, t]);
+
+  // Auto-read greeting aloud when a new user enters the chat section
+  useEffect(() => {
+    if (!isFocused || !isMounted.current) return;
+
+    const isFreshGreetingSession = (
+      messages.length === 1 &&
+      messages[0].sender === 'ai' &&
+      messages[0].id.startsWith('welcome')
+    );
+
+    if (!isFreshGreetingSession) return;
+    if (spokenLanguageRef.current === languageCode) return;
+
+    // Small delay (450ms) to allow screen transition to complete smoothly before speaking
+    const timer = setTimeout(async () => {
+      if (!isMounted.current || !isFocused) return;
+
+      const welcomeText = messages[0]?.text || t('voice_default_instruction');
+      spokenLanguageRef.current = languageCode;
+
+      playTokenRef.current += 1;
+      const currentToken = playTokenRef.current;
+
+      try {
+        if (player.playing) player.pause();
+        setAppState('playing');
+        setMessages(prev => prev.map(m => ({
+          ...m,
+          isAudioPlaying: m.id === messages[0].id
+        })));
+
+        const audioUri = await textToSpeech(welcomeText, languageCode);
+        if (isMounted.current && currentToken === playTokenRef.current && isFocused && audioUri) {
+          player.replace({ uri: audioUri });
+          player.play();
+        } else if (isMounted.current) {
+          setAppState('idle');
+          setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
+        }
+      } catch (ttsErr) {
+        console.log('[VOICE] Welcome greeting auto-TTS failed (non-fatal):', ttsErr);
+        if (isMounted.current) {
+          setAppState('idle');
+          setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
+        }
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [isFocused, languageCode, messages, player, t]);
+
   useEffect(() => {
     // Auto-scroll when messages change
     const timeoutId = setTimeout(() => {
@@ -373,6 +434,10 @@ export default function VoiceScreen({ navigation }: any) {
   const handleSendMessage = useCallback(async (textToSend: string) => {
     const msgText = textToSend.trim();
     if (!msgText) return;
+
+    if (player.playing) {
+      try { player.pause(); } catch(e) {}
+    }
 
     try {
       // console.log('[PIPELINE] Starting chat...');
@@ -635,9 +700,16 @@ export default function VoiceScreen({ navigation }: any) {
   }, [appState, recorder, t, stopRecordingAndProcess]);
 
   const handleMicPress = useCallback(() => {
+    if (player.playing || appState === 'playing') {
+      try { player.pause(); } catch(e) {}
+      setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
+      setAppState('idle');
+      startRecording();
+      return;
+    }
     if (appState === 'idle') startRecording();
     else if (appState === 'recording') stopRecordingAndProcess();
-  }, [appState, startRecording, stopRecordingAndProcess]);
+  }, [appState, player, startRecording, stopRecordingAndProcess]);
 
   const handleStopSpeech = useCallback(async () => {
     if (player.playing) {
@@ -654,6 +726,7 @@ export default function VoiceScreen({ navigation }: any) {
     setCurrentSessionId(newSessionId);
     setMessages([{ id: 'welcome_' + Date.now(), sender: 'ai', text: welcomeText }]);
     setAppState('idle');
+    spokenLanguageRef.current = null;
   }, [t, player]);
 
   const handleClearChat = handleNewChat;

@@ -110,7 +110,7 @@ export const translations: TranslationsDictionary = {
     voice_status_speaking: 'CyberSaathi is speaking...',
     voice_speak_now: 'Speak now, I am listening to you...',
     voice_processing: 'Processing voice input...',
-    voice_default_instruction: 'I\'m here to help you verify messages, links, or callers instantly.',
+    voice_default_instruction: "Hello! I am CyberSaathi. I'm here to help you verify messages, links, or callers instantly.",
     
 
 
@@ -409,7 +409,7 @@ export const translations: TranslationsDictionary = {
     voice_status_speaking: 'साइबरसाथी बोल रहा है...',
     voice_speak_now: 'अब बोलें, मैं आपको सुन रहा हूँ...',
     voice_processing: 'आवाज इनपुट संसाधित किया जा रहा है...',
-    voice_default_instruction: 'मैं संदेशों, लिंक या कॉल को तुरंत सत्यापित करने में आपकी मदद के लिए यहाँ हूँ।',
+    voice_default_instruction: 'नमस्ते! मैं साइबर साथी हूँ। मैं संदेशों, लिंक या कॉल को तुरंत सत्यापित करने में आपकी मदद के लिए यहाँ हूँ।',
     
 
 
@@ -708,7 +708,7 @@ export const translations: TranslationsDictionary = {
     voice_status_speaking: 'सायबरसाथी बोलत आहे...',
     voice_speak_now: 'आता बोला, मी ऐकत आहे...',
     voice_processing: 'आवाज प्रक्रिया सुरू आहे...',
-    voice_default_instruction: 'मी मेसेज, लिंक किंवा कॉल त्वरित तपासण्यासाठी येथे आहे.',
+    voice_default_instruction: 'नमस्कार! मी सायबर साथी आहे. मी मेसेज, लिंक किंवा कॉल त्वरित तपासण्यासाठी येथे आहे.',
     
 
 
@@ -1002,7 +1002,7 @@ export const translations: TranslationsDictionary = {
     voice_status_speaking: 'சைபர்சாதி பேசுகிறது...',
     voice_speak_now: 'இப்போது பேசுங்கள், நான் கேட்டுக்கொண்டிருக்கிறேன்...',
     voice_processing: 'குரல் உள்ளீடு செயலாக்கப்படுகிறது...',
-    voice_default_instruction: 'செய்திகள், இணைப்புகள் அல்லது அழைப்பாளர்களை உடனடியாக சரிபார்க்க நான் இங்கு இருக்கிறேன்.',
+    voice_default_instruction: 'வணக்கம்! நான் சைபர் சாதி. செய்திகள், இணைப்புகள் அல்லது அழைப்பாளர்களை உடனடியாக சரிபார்க்க நான் இங்கு இருக்கிறேன்.',
     
 
 
@@ -1296,7 +1296,7 @@ export const translations: TranslationsDictionary = {
     voice_status_speaking: 'సైబర్‌సాథీ మాట్లాడుతున్నారు...',
     voice_speak_now: 'ఇప్పుడు మాట్లాడండి, నేను వింటున్నాను...',
     voice_processing: 'వాయిస్ ఇన్పుట్ ప్రాసెస్ అవుతోంది...',
-    voice_default_instruction: 'సందేశాలు, లింకులు లేదా కాలర్‌లను వెంటనే ధృవీకరించడానికి నేను ఇక్కడ ఉన్నాను.',
+    voice_default_instruction: 'నమస్కారం! నేను సైబర్ సాథి. సందేశాలు, లింకులు లేదా కాలర్‌లను వెంటనే ధృవీకరించడానికి నేను ఇక్కడ ఉన్నాను.',
     
 
 
@@ -1590,7 +1590,7 @@ export const translations: TranslationsDictionary = {
     voice_status_speaking: 'સાયબરસાથી બોલી રહ્યું છે...',
     voice_speak_now: 'હવે બોલો, હું સાંભળી રહ્યો છું...',
     voice_processing: 'વોઇસ પ્રોસેસ થઈ રહ્યો છે...',
-    voice_default_instruction: 'હું મેસેજ, લિંક અથવા કોલરને તરત જ ચકાસવામાં તમારી મદદ માટે અહીં છું.',
+    voice_default_instruction: 'નમસ્તે! હું સાયબર સાથી છું. હું મેસેજ, લિંક અથવા કોલરને તરત જ ચકાસવામાં તમારી મદદ માટે અહીં છું.',
     
 
 
