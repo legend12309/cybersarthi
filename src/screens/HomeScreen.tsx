@@ -275,7 +275,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           
           <View style={styles.headerCenterWrap} pointerEvents="none">
-            <Text style={styles.headerCenterTitle}>Home</Text>
+            <Text style={styles.headerCenterTitle}>{t('tab_home', 'Home')}</Text>
           </View>
           
           <View style={styles.headerRight}>
@@ -304,10 +304,10 @@ export default function HomeScreen({ navigation }: any) {
         {/* ── User Greeting (Reference Style) ─────────────────── */}
         <View style={styles.greetingWrap}>
           <Text style={styles.userGreeting}>
-            Hi <Text style={styles.userGreetingBold}>{participantId ? participantId : 'Defender'}!</Text>
+            {t('greeting_hi', 'Hi')} <Text style={styles.userGreetingBold}>{participantId ? participantId : t('defender_rank', 'Defender')}!</Text>
           </Text>
           <Text style={styles.userSubGreeting}>
-            {new Date().getHours() < 12 ? 'Good Morning' : (new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening')}
+            {new Date().getHours() < 12 ? t('greeting_morning', 'Good Morning') : (new Date().getHours() < 17 ? t('greeting_afternoon', 'Good Afternoon') : t('greeting_evening', 'Good Evening'))}
           </Text>
         </View>
 
@@ -334,14 +334,14 @@ export default function HomeScreen({ navigation }: any) {
         {/* ── Welcome Illustration Card (Reference Style) ─────── */}
         <View style={styles.welcomeCard}>
           <View style={styles.welcomeContent}>
-            <Text style={styles.welcomeTitle}>Welcome!</Text>
-            <Text style={styles.welcomeDesc}>Let's safeguard your digital presence</Text>
+            <Text style={styles.welcomeTitle}>{t('home_welcome_title', 'Welcome!')}</Text>
+            <Text style={styles.welcomeDesc}>{t('home_welcome_desc', "Let's safeguard your digital presence")}</Text>
             <TouchableOpacity 
               style={styles.welcomeBtn}
               onPress={() => navigation.navigate('Chat')}
               activeOpacity={0.85}
             >
-              <Text style={styles.welcomeBtnText}>Ask CyberSaathi</Text>
+              <Text style={styles.welcomeBtnText}>{t('ask_cybersaathi', 'Ask CyberSaathi')}</Text>
               <MaterialIcons name="arrow-forward" size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -353,52 +353,53 @@ export default function HomeScreen({ navigation }: any) {
         </View>
 
         {/* ── Ongoing Projects / Threat Scenarios (Reference 2x2 Grid) ── */}
+        {/* ── Ongoing Projects / Threat Scenarios (Reference 2x2 Grid) ── */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Ongoing Scenarios</Text>
+          <Text style={styles.sectionTitle}>{t('home_ongoing_scenarios', 'Ongoing Scenarios')}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Sim')}>
-            <Text style={styles.sectionLink}>view all</Text>
+            <Text style={styles.sectionLink}>{t('view_all', 'view all')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.threatGrid}>
-          {/* Card 1: Deep Navy Hero Card (Matches Reference Left Top Card) */}
+          {/* Card 1: Clean White Card (Electricity Bill) */}
           <TouchableOpacity 
-            style={[styles.threatCard, styles.threatCardNavy]}
+            style={[styles.threatCard, styles.threatCardWhite]}
             activeOpacity={0.85}
             onPress={() => navigation.navigate('ScamDetail', { scamId: 'electricity_bill' })}
           >
             <View style={styles.threatCardTop}>
-              <Text style={styles.threatDateNavy}>{roleplayProgress['electricity_bill'] ? 'Completed' : 'New Scenario'}</Text>
-              <MaterialIcons name="more-vert" size={16} color={colors.navyCardSub} />
+              <Text style={styles.threatDate}>{roleplayProgress['electricity_bill'] ? t('status_completed', 'Completed') : t('status_new_scenario', 'New Scenario')}</Text>
+              <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
             </View>
             <View style={styles.threatHeaderRow}>
-              <View style={styles.threatIconNavyBg}>
-                <MaterialIcons name="bolt" size={18} color="#FFFFFF" />
+              <View style={[styles.threatIconBg, { backgroundColor: colors.primaryLight }]}>
+                <MaterialIcons name="bolt" size={18} color={colors.primary} />
               </View>
               <View style={styles.threatHeaderTexts}>
-                <Text style={styles.threatTitleNavy} numberOfLines={1} ellipsizeMode="tail">Electricity Bill</Text>
-                <Text style={styles.threatSubNavy} numberOfLines={1} ellipsizeMode="tail">Voice Roleplay</Text>
+                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_electricity_title', 'Electricity Bill')}</Text>
+                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('voice_roleplay_tag', 'Voice Roleplay')}</Text>
               </View>
             </View>
             <View style={styles.threatProgressWrap}>
               <View style={styles.threatProgressLabelRow}>
-                <Text style={styles.threatProgressTextNavy}>Progress</Text>
-                <Text style={styles.threatProgressPercentNavy}>{roleplayProgress['electricity_bill'] || 0}%</Text>
+                <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
+                <Text style={styles.threatProgressPercent}>{roleplayProgress['electricity_bill'] || 0}%</Text>
               </View>
-              <View style={styles.threatProgressBarTrackNavy}>
-                <View style={[styles.threatProgressBarFillNavy, { width: `${roleplayProgress['electricity_bill'] || 0}%` }]} />
+              <View style={styles.threatProgressBarTrack}>
+                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['electricity_bill'] || 0}%`, backgroundColor: colors.primary }]} />
               </View>
             </View>
           </TouchableOpacity>
 
-          {/* Card 2: Clean White Card (Matches Reference Right Top Card) */}
+          {/* Card 2: Clean White Card (FedEx Hold) */}
           <TouchableOpacity 
             style={[styles.threatCard, styles.threatCardWhite]}
             activeOpacity={0.85}
             onPress={() => navigation.navigate('ScamDetail', { scamId: 'fedex_parcel' })}
           >
             <View style={styles.threatCardTop}>
-              <Text style={styles.threatDate}>{roleplayProgress['fedex_parcel'] ? 'Completed' : 'New Scenario'}</Text>
+              <Text style={styles.threatDate}>{roleplayProgress['fedex_parcel'] ? t('status_completed', 'Completed') : t('status_new_scenario', 'New Scenario')}</Text>
               <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
             </View>
             <View style={styles.threatHeaderRow}>
@@ -406,13 +407,13 @@ export default function HomeScreen({ navigation }: any) {
                 <MaterialIcons name="local-shipping" size={18} color={colors.primary} />
               </View>
               <View style={styles.threatHeaderTexts}>
-                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">FedEx Hold</Text>
-                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">Digital Arrest</Text>
+                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_fedex_title', 'FedEx Hold')}</Text>
+                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('scam_digital_arrest_sub', 'Digital Arrest')}</Text>
               </View>
             </View>
             <View style={styles.threatProgressWrap}>
               <View style={styles.threatProgressLabelRow}>
-                <Text style={styles.threatProgressText}>Progress</Text>
+                <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
                 <Text style={styles.threatProgressPercent}>{roleplayProgress['fedex_parcel'] || 0}%</Text>
               </View>
               <View style={styles.threatProgressBarTrack}>
@@ -428,7 +429,7 @@ export default function HomeScreen({ navigation }: any) {
             onPress={() => navigation.navigate('ScamDetail', { scamId: 'sbi_kyc' })}
           >
             <View style={styles.threatCardTop}>
-              <Text style={styles.threatDate}>{roleplayProgress['sbi_kyc'] ? 'Completed' : 'New Scenario'}</Text>
+              <Text style={styles.threatDate}>{roleplayProgress['sbi_kyc'] ? t('status_completed', 'Completed') : t('status_new_scenario', 'New Scenario')}</Text>
               <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
             </View>
             <View style={styles.threatHeaderRow}>
@@ -436,13 +437,13 @@ export default function HomeScreen({ navigation }: any) {
                 <MaterialIcons name="account-balance" size={18} color={colors.warning} />
               </View>
               <View style={styles.threatHeaderTexts}>
-                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">SBI PAN Block</Text>
-                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">Phishing SMS</Text>
+                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_sbi_title', 'SBI PAN Block')}</Text>
+                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('scam_phishing_sub', 'Phishing SMS')}</Text>
               </View>
             </View>
             <View style={styles.threatProgressWrap}>
               <View style={styles.threatProgressLabelRow}>
-                <Text style={styles.threatProgressText}>Progress</Text>
+                <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
                 <Text style={styles.threatProgressPercent}>{roleplayProgress['sbi_kyc'] || 0}%</Text>
               </View>
               <View style={styles.threatProgressBarTrack}>
@@ -458,7 +459,7 @@ export default function HomeScreen({ navigation }: any) {
             onPress={() => navigation.navigate('ScamDetail', { scamId: 'whatsapp_family' })}
           >
             <View style={styles.threatCardTop}>
-              <Text style={styles.threatDate}>{roleplayProgress['whatsapp_family'] ? 'Completed' : 'New Scenario'}</Text>
+              <Text style={styles.threatDate}>{roleplayProgress['whatsapp_family'] ? t('status_completed', 'Completed') : t('status_new_scenario', 'New Scenario')}</Text>
               <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
             </View>
             <View style={styles.threatHeaderRow}>
@@ -466,17 +467,17 @@ export default function HomeScreen({ navigation }: any) {
                 <MaterialIcons name="family-restroom" size={18} color={colors.success} />
               </View>
               <View style={styles.threatHeaderTexts}>
-                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">WhatsApp Family</Text>
-                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">Family Scam</Text>
+                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_whatsapp_family_title', 'WhatsApp Family')}</Text>
+                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('scam_family_sub', 'Family Scam')}</Text>
               </View>
             </View>
             <View style={styles.threatProgressWrap}>
               <View style={styles.threatProgressLabelRow}>
-                <Text style={styles.threatProgressText}>Progress</Text>
+                <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
                 <Text style={styles.threatProgressPercent}>{roleplayProgress['whatsapp_family'] || 0}%</Text>
               </View>
               <View style={styles.threatProgressBarTrack}>
-                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['whatsapp_family'] || 0}%`, backgroundColor: colors.accent }]} />
+                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['whatsapp_family'] || 0}%`, backgroundColor: colors.success }]} />
               </View>
             </View>
           </TouchableOpacity>
@@ -484,7 +485,7 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* ── Quick Verification Folders (Reference Folder Rows) ── */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Verification Tools</Text>
+          <Text style={styles.sectionTitle}>{t('home_tools_title', 'Verification Tools')}</Text>
         </View>
 
         <View style={styles.toolsRow}>
@@ -496,8 +497,8 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.toolIconWrap}>
               <MaterialIcons name="qr-code-scanner" size={22} color={colors.primary} />
             </View>
-            <Text style={styles.toolTitle} numberOfLines={1} adjustsFontSizeToFit>Scan Link</Text>
-            <Text style={styles.toolSub} numberOfLines={1}>Verify URLs</Text>
+            <Text style={styles.toolTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home_scan_link', 'Scan Link')}</Text>
+            <Text style={styles.toolSub} numberOfLines={1}>{t('home_verify_urls_sub', 'Verify URLs')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -508,8 +509,8 @@ export default function HomeScreen({ navigation }: any) {
             <View style={[styles.toolIconWrap, { backgroundColor: colors.warningDim }]}>
               <MaterialIcons name="image-search" size={22} color={colors.warning} />
             </View>
-            <Text style={styles.toolTitle} numberOfLines={1} adjustsFontSizeToFit>Screenshot</Text>
-            <Text style={styles.toolSub} numberOfLines={1}>OCR Analysis</Text>
+            <Text style={styles.toolTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home_scan_screenshot', 'Screenshot')}</Text>
+            <Text style={styles.toolSub} numberOfLines={1}>{t('home_ocr_analysis_sub', 'OCR Analysis')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -520,8 +521,8 @@ export default function HomeScreen({ navigation }: any) {
             <View style={[styles.toolIconWrap, { backgroundColor: colors.errorDim }]}>
               <MaterialIcons name="report" size={22} color={colors.error} />
             </View>
-            <Text style={styles.toolTitle} numberOfLines={1} adjustsFontSizeToFit>Report Scam</Text>
-            <Text style={styles.toolSub} numberOfLines={1}>Log incidents</Text>
+            <Text style={styles.toolTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home_report_fraud', 'Report Scam')}</Text>
+            <Text style={styles.toolSub} numberOfLines={1}>{t('home_log_incidents_sub', 'Log incidents')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -537,7 +538,7 @@ export default function HomeScreen({ navigation }: any) {
             </View>
             <View style={styles.voiceBannerTexts}>
               <Text style={styles.voiceBannerTitle} numberOfLines={1} ellipsizeMode="tail">{t('home_mic_title')}</Text>
-              <Text style={styles.voiceBannerSub} numberOfLines={1} ellipsizeMode="tail">Voice-to-voice in {languageCode.split('-')[0].toUpperCase()}</Text>
+              <Text style={styles.voiceBannerSub} numberOfLines={1} ellipsizeMode="tail">{t('voice_to_voice_in', 'Voice-to-voice in')} {languageCode.split('-')[0].toUpperCase()}</Text>
             </View>
           </View>
           <MaterialIcons name="arrow-forward-ios" size={15} color={colors.onSurfaceVariant} style={styles.voiceBannerArrow} />
@@ -553,8 +554,8 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.helplineBadgeText}>1930</Text>
           </View>
           <View style={styles.flex1}>
-            <Text style={styles.helplineTitle} numberOfLines={1}>National Cyber Helpline: 1930</Text>
-            <Text style={styles.helplineDesc} numberOfLines={1}>Tap to report active financial cyber fraud 24/7</Text>
+            <Text style={styles.helplineTitle} numberOfLines={1}>{t('helpline_1930_title', 'National Cyber Helpline: 1930')}</Text>
+            <Text style={styles.helplineDesc} numberOfLines={1}>{t('helpline_1930_desc', 'Tap to report active financial cyber fraud 24/7')}</Text>
           </View>
           <MaterialIcons name="call" size={20} color={colors.primary} />
         </TouchableOpacity>
@@ -569,9 +570,9 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.studyDialogIconWrap}>
               <MaterialIcons name="science" size={32} color={colors.primary} />
             </View>
-            <Text style={styles.studyDialogTitle}>Participant Study ID</Text>
+            <Text style={styles.studyDialogTitle}>{t('study_dialog_title', 'Participant Study ID')}</Text>
             <Text style={styles.studyDialogDesc}>
-              Assign this device to a participant code (e.g. P-101 or EXP-01) to accurately partition research logs.
+              {t('study_dialog_desc', 'Assign this device to a participant code (e.g. P-101 or EXP-01) to accurately partition research logs.')}
             </Text>
             <TextInput
               style={styles.studyInput}
@@ -584,10 +585,10 @@ export default function HomeScreen({ navigation }: any) {
             />
             <View style={styles.studyActions}>
               <TouchableOpacity style={styles.studyBtnCancel} onPress={() => setParticipantModalVisible(false)}>
-                <Text style={styles.studyBtnCancelText}>Cancel</Text>
+                <Text style={styles.studyBtnCancelText}>{t('btn_cancel', 'Cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.studyBtnSave} onPress={handleSaveParticipantId}>
-                <Text style={styles.studyBtnSaveText}>Save ID</Text>
+                <Text style={styles.studyBtnSaveText}>{t('btn_save_id', 'Save ID')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -601,7 +602,7 @@ export default function HomeScreen({ navigation }: any) {
             >
               <MaterialIcons name="logout" size={16} color={colors.error} />
               <Text style={{ color: colors.error, fontFamily: 'Manrope_600SemiBold', fontSize: 13 }}>
-                Log Out / Switch Participant
+                {t('btn_logout_switch', 'Log Out / Switch Participant')}
               </Text>
             </TouchableOpacity>
           </View>

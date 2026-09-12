@@ -137,7 +137,7 @@ export default function BadgesScreen({ navigation }: any) {
           {/* Progress Bar inside Navy Card */}
           <View style={styles.progressWrapNavy}>
             <View style={styles.progressLabelsNavy}>
-              <Text style={styles.progressTextNavy}>Next Level</Text>
+              <Text style={styles.progressTextNavy}>{t('next_level', 'Next Level')}</Text>
               <Text style={styles.progressPercentNavy}>{Math.round(progress * 100)}%</Text>
             </View>
             <View style={styles.progressTrackNavy}>

@@ -11,6 +11,7 @@ import scamsData from '../data/scams.json';
 import { getLocalizedScam } from '../data/localizedScams';
 
 const CustomMessageModal = ({ visible, onClose, languageCode }: { visible: boolean, onClose: () => void, languageCode: string }) => {
+  const { t } = useLanguage();
   const [customMsgInput, setCustomMsgInput] = useState('');
   const [customAnalysisState, setCustomAnalysisState] = useState<'idle'|'scanning'|'result'>('idle');
   const [customAnalysisVerdict, setCustomAnalysisVerdict] = useState<'safe'|'suspicious'|null>(null);
@@ -54,17 +55,17 @@ const CustomMessageModal = ({ visible, onClose, languageCode }: { visible: boole
         <View style={[styles.sheet, { maxHeight: '92%' as any, paddingBottom: Math.max(20, insets.bottom + 10) }]}>
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Analyze Custom Message</Text>
+            <Text style={styles.sheetTitle}>{t('analyze_custom_msg_title', 'Analyze Custom Message')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
             </TouchableOpacity>
           </View>
           {customAnalysisState === 'idle' && (
             <ScrollView contentContainerStyle={styles.sheetBody} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always">
-              <Text style={styles.inputLabel}>Paste a suspicious message to analyze:</Text>
+              <Text style={styles.inputLabel}>{t('paste_msg_analyze', 'Paste a suspicious message to analyze:')}</Text>
               <TextInput
                 style={[styles.input, styles.multiInput]}
-                placeholder="Paste message here..."
+                placeholder={t('paste_msg_placeholder', 'Paste message here...')}
                 placeholderTextColor={colors.onSurfaceVariant + '70'}
                 value={customMsgInput}
                 onChangeText={setCustomMsgInput}
@@ -77,25 +78,25 @@ const CustomMessageModal = ({ visible, onClose, languageCode }: { visible: boole
                 disabled={!customMsgInput.trim()} 
                 onPress={handleAnalyzeCustomMessage}
               >
-                <Text style={btnTextStyle}>Analyze Message</Text>
+                <Text style={btnTextStyle}>{t('analyze_msg_btn', 'Analyze Message')}</Text>
               </TouchableOpacity>
             </ScrollView>
           )}
           {customAnalysisState === 'scanning' && (
             <View style={styles.centerBlock}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.analyzeText}>Analyzing message with AI...</Text>
+              <Text style={styles.analyzeText}>{t('analyzing_msg_ai', 'Analyzing message with AI...')}</Text>
             </View>
           )}
           {customAnalysisState === 'result' && (
             <View style={styles.sheetBody}>
               <View style={[styles.resultCard, customAnalysisVerdict === 'safe' ? styles.resultSafe : styles.resultDanger]}>
                 <MaterialIcons name={customAnalysisVerdict === 'safe' ? 'verified-user' : 'gpp-bad'} size={40} color={customAnalysisVerdict === 'safe' ? colors.success : colors.error} />
-                <Text style={resultVerdictStyle}>{customAnalysisVerdict === 'safe' ? 'Looks Safe' : 'Suspicious'}</Text>
+                <Text style={resultVerdictStyle}>{customAnalysisVerdict === 'safe' ? t('looks_safe', 'Looks Safe') : t('looks_suspicious', 'Suspicious')}</Text>
                 <Text style={styles.resultReason}>{customAnalysisReason}</Text>
               </View>
               <TouchableOpacity style={styles.sheetBtn} onPress={resetCustomAnalysis}>
-                <Text style={styles.sheetBtnText}>Analyze Another</Text>
+                <Text style={styles.sheetBtnText}>{t('analyze_another', 'Analyze Another')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -314,7 +315,7 @@ export default function ScamDetailScreen({ route, navigation }: any) {
               activeOpacity={0.9}
             >
               <MaterialIcons name="search" size={20} color={colors.primary} />
-              <Text style={[styles.continueBtnText, styles.primaryText]}>Analyze Custom Message</Text>
+              <Text style={[styles.continueBtnText, styles.primaryText]}>{t('analyze_custom_msg_title', 'Analyze Custom Message')}</Text>
             </TouchableOpacity>
           </Animated.View>
         )}

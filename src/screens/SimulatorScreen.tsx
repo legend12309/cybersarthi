@@ -92,7 +92,7 @@ export default function SimulatorScreen({ navigation }: any) {
             </View>
             <View style={styles.hotBadge}>
               <MaterialIcons name="local-fire-department" size={12} color="#FFFFFF" />
-              <Text style={styles.hotBadgeText}>FEATURED</Text>
+              <Text style={styles.hotBadgeText}>{t('sim_featured_badge', 'FEATURED')}</Text>
             </View>
           </View>
           <Text style={styles.heroTitleNavy}>{scenarios[0].title}</Text>
@@ -105,7 +105,7 @@ export default function SimulatorScreen({ navigation }: any) {
             </View>
             <View style={styles.roleplayBadgePill}>
               <MaterialIcons name="record-voice-over" size={14} color="#FFFFFF" />
-              <Text style={styles.roleplayBadgeText}>Voice & Text</Text>
+              <Text style={styles.roleplayBadgeText}>{t('sim_voice_text_badge', 'Voice & Text')}</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -178,7 +178,7 @@ export default function SimulatorScreen({ navigation }: any) {
                   </Text>
                   <View style={styles.simAvailableBadge}>
                     <MaterialIcons name="record-voice-over" size={10} color={colors.primary} />
-                    <Text style={styles.simAvailableBadgeText}>Live Sim</Text>
+                    <Text style={styles.simAvailableBadgeText}>{t('live_roleplay_title', 'Live Sim')}</Text>
                   </View>
                 </View>
                 <Text style={styles.scenarioDesc} numberOfLines={1} ellipsizeMode="tail">{s.content}</Text>

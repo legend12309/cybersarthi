@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ActivityIndicator,
   TouchableOpacity, FlatList, Animated, Easing,
   TextInput, KeyboardAvoidingView, Platform, ScrollView,
-  Modal, Alert
+  Modal, Alert, Keyboard
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -96,6 +96,7 @@ export default function VoiceScreen({ navigation }: any) {
   const [currentSessionId, setCurrentSessionId] = useState<string>('session_' + Date.now());
   const [pastSessions, setPastSessions] = useState<ChatSession[]>([]);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const isMounted = useRef(true);
   const flatListRef = useRef<FlatList>(null);
@@ -229,6 +230,28 @@ export default function VoiceScreen({ navigation }: any) {
     }, 100);
     return () => clearTimeout(timeoutId);
   }, [messages]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setIsKeyboardVisible(true);
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setIsKeyboardVisible(false);
+      }
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (appState === 'recording') {
@@ -750,7 +773,7 @@ export default function VoiceScreen({ navigation }: any) {
               <MaterialIcons name="record-voice-over" size={20} color={colors.primary} />
             </View>
             <View style={styles.headerTitleWrap}>
-              <Text style={styles.headerBrandTitle} numberOfLines={1}>Voice Assistant</Text>
+              <Text style={styles.headerBrandTitle} numberOfLines={1}>{t('voice_assistant_title', 'Voice Assistant')}</Text>
               <View style={styles.headerSubRow}>
                 <Text style={styles.headerBrandSub} numberOfLines={1}>{langName}</Text>
                 <View style={styles.headerSubDot} />
@@ -849,7 +872,7 @@ export default function VoiceScreen({ navigation }: any) {
         />
 
         {/* ── Insightlancer Bottom Voice Deck ──────────────────── */}
-        <View style={[styles.voiceDeck, { paddingBottom: Math.max(16, insets.bottom + 8) }]}>
+        <View style={[styles.voiceDeck, { paddingBottom: isKeyboardVisible ? 10 : Math.max(16, insets.bottom + 8) }]}>
           {/* Secondary text input */}
           <ChatInput
             onSubmit={handleTextSubmit}

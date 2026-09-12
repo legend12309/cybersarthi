@@ -113,10 +113,10 @@ export default function QuizScreen({ navigation }: any) {
             </Text>
             <Text style={styles.badgeSub}>
               {score === quizData.length
-                ? 'Outstanding! You aced all cybersecurity scenarios.'
+                ? t('badge_sub_ace', 'Outstanding! You aced all cybersecurity scenarios.')
                 : score >= 3
-                ? 'Great awareness! You recognized critical fraud indicators.'
-                : 'Keep practicing to master recognizing cyber threats.'}
+                ? t('badge_sub_great', 'Great awareness! You recognized critical fraud indicators.')
+                : t('badge_sub_practice', 'Keep practicing to master recognizing cyber threats.')}
             </Text>
           </View>
 

@@ -563,10 +563,11 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
   return (
     <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
-      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         
         {/* Top Header */}
         <View style={styles.header}>
@@ -693,11 +694,12 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
             <ScrollView 
               ref={scrollViewRef} 
+              style={styles.chatScrollView}
               contentContainerStyle={[
                 styles.chatScroll, 
                 evaluation 
                   ? { paddingBottom: 80 + insets.bottom } 
-                  : { paddingBottom: isKeyboardVisible ? 24 : 32 }
+                  : { paddingBottom: isKeyboardVisible ? 20 : 32 }
               ]}
               keyboardShouldPersistTaps="handled"
               onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
@@ -855,7 +857,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
                   {/* Two Bottom Buttons of equal width aligned to the exact same baseline */}
                   <View style={styles.evalBottomButtonsRow}>
                     <TouchableOpacity style={styles.evalPracticeAgainBtn} onPress={handleRestartRoleplay} activeOpacity={0.85}>
-                      <Text style={styles.evalPracticeAgainBtnText}>Practice Again</Text>
+                      <Text style={styles.evalPracticeAgainBtnText}>{t('btn_practice_again', 'Practice Again')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.evalCompleteBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
                       <Text style={styles.evalCompleteBtnText}>{t('complete_scenario', 'Complete')}</Text>
@@ -905,6 +907,9 @@ const styles = StyleSheet.create({
   revealBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.warningDim, paddingVertical: 10, gap: 8, borderBottomWidth: 1, borderColor: colors.warning + '30' },
   revealBtnText: { color: colors.warning, fontFamily: 'Manrope_700Bold', fontSize: 13 },
 
+  chatScrollView: {
+    flex: 1,
+  },
   chatScroll: { paddingHorizontal: 20, paddingTop: 14, gap: 14, paddingBottom: 32 },
   bubble: { maxWidth: '82%', padding: 14, borderRadius: 18 },
   bubbleUser: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 4 },
@@ -1202,13 +1207,19 @@ const styles = StyleSheet.create({
   },
 
   inputArea: { 
+    width: '100%',
     flexDirection: 'row', 
-    paddingHorizontal: 20,
-    paddingVertical: 12, 
-    gap: 12, 
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10, 
     backgroundColor: colors.surface, 
     borderTopWidth: 1, 
-    borderColor: colors.surfaceBorder 
+    borderColor: colors.surfaceBorder,
+    shadowColor: '#0B1527',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   // Call Ended Banner & Buttons (Voice & Text)

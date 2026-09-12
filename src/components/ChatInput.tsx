@@ -33,6 +33,9 @@ export const ChatInput = React.memo(({ onSubmit, disabled, placeholder, styleTyp
         multiline={isVoice}
         maxLength={500}
         editable={!disabled}
+        selectionColor={colors.primary}
+        underlineColorAndroid="transparent"
+        autoCapitalize="sentences"
       />
       <TouchableOpacity
         style={[
@@ -41,8 +44,9 @@ export const ChatInput = React.memo(({ onSubmit, disabled, placeholder, styleTyp
         ]}
         onPress={handleSend}
         disabled={disabled || !text.trim()}
+        activeOpacity={0.8}
       >
-        <MaterialIcons name="send" size={isVoice ? 18 : 24} color={colors.onPrimary} />
+        <MaterialIcons name="send" size={isVoice ? 18 : 22} color={colors.onPrimary} />
       </TouchableOpacity>
     </View>
   );
@@ -90,7 +94,8 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    minHeight: 48,
   },
   roleplayInput: {
     flex: 1,
@@ -98,8 +103,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHigh,
     borderRadius: 24,
     paddingHorizontal: 16,
-    color: colors.onSurface,
+    paddingVertical: 10,
+    color: '#0B1527',
     fontFamily: 'PublicSans_400Regular',
+    fontSize: 15,
+    textAlignVertical: 'center',
+    borderWidth: 1,
+    borderColor: colors.surfaceBorder,
   },
   roleplaySendBtn: {
     width: 48,
@@ -110,6 +120,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   roleplaySendDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
 });
