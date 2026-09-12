@@ -538,11 +538,22 @@ export default function VoiceScreen({ navigation }: any) {
       } catch (sttError: any) {
         // console.log('[STT] error:', sttError);
         if (isMounted.current) {
+          const isNetworkErr = sttError?.message?.includes('Unable to resolve host') || 
+                               sttError?.message?.includes('Network Error') ||
+                               sttError?.message?.includes('ENOTFOUND') ||
+                               sttError?.message?.includes('network');
           const isDurationError = sttError.message?.toLowerCase().includes('duration') || 
                                   sttError.message?.toLowerCase().includes('30 second') ||
                                   sttError.message?.toLowerCase().includes('400');
           let errorMsg = t('err_stt_failed') || 'Could not recognize speech.';
-          if (isDurationError) {
+          if (isNetworkErr) {
+            if (languageCode === 'hi-IN') errorMsg = 'इंटरनेट कनेक्शन नहीं है। कृपया नेटवर्क जांचें और पुनः प्रयास करें।';
+            else if (languageCode === 'mr-IN') errorMsg = 'इंटरनेट कनेक्शन नाही. कृपया नेटवर्क तपासा आणि पुन्हा प्रयत्न करा.';
+            else if (languageCode === 'ta-IN') errorMsg = 'இணைய இணைப்பு இல்லை. தயவுசெய்து நெட்வொர்க்கை சரிபார்க்கவும்.';
+            else if (languageCode === 'te-IN') errorMsg = 'ఇంటర్నెట్ కనెక్షన్ లేదు. దయచేసి నెట్‌వర్క్‌ను తనిఖీ చేయండి.';
+            else if (languageCode === 'gu-IN') errorMsg = 'ઇન્ટરનેટ કનેક્શન નથી. કૃપા કરીને નેટવર્ક તપાસો.';
+            else errorMsg = 'No internet connection. Please check your network and try again.';
+          } else if (isDurationError) {
             if (languageCode === 'hi-IN') errorMsg = 'ऑडियो रिकॉर्डिंग 30 सेकंड से कम होनी चाहिए। कृपया छोटा संदेश आज़माएं।';
             else if (languageCode === 'mr-IN') errorMsg = 'ऑडिओ रेकॉर्डिंग ३० सेकंदांपेक्षा कमी असावे. कृपया लहान मेसेज रेकॉर्ड करा.';
             else if (languageCode === 'ta-IN') errorMsg = 'ஆடியோ பதிவு 30 வினாடிகளுக்கு குறைவாக இருக்க வேண்டும். தயவுசெய்து சிறிய செய்தியை முயற்சிக்கவும்.';

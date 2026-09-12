@@ -550,11 +550,23 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       } else {
          if (isMounted.current) setIsTyping(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.log('[ROLEPLAY] Voice STT error:', err);
       if (isMounted.current) {
         setIsTranscribing(false);
-        ToastAndroid.show(t('err_unexpected', 'Could not process audio. Try again.'), ToastAndroid.SHORT);
+        const isNetworkErr = err?.message?.includes('Unable to resolve host') || 
+                             err?.message?.includes('Network Error') ||
+                             err?.message?.includes('ENOTFOUND') ||
+                             err?.message?.includes('network');
+        const toastMsg = isNetworkErr
+          ? (languageCode === 'hi-IN' ? 'इंटरनेट कनेक्शन नहीं है। कृपया नेटवर्क जांचें।' :
+             languageCode === 'mr-IN' ? 'इंटरनेट कनेक्शन नाही. कृपया नेटवर्क तपासा.' :
+             languageCode === 'ta-IN' ? 'இணைய இணைப்பு இல்லை. நெட்வொர்க்கை சரிபார்க்கவும்.' :
+             languageCode === 'te-IN' ? 'ఇంటర్నెట్ కనెక్షన్ లేదు. దయచేసి నెట్‌వర్క్‌ను తనిఖీ చేయండి.' :
+             languageCode === 'gu-IN' ? 'ઇન્ટરનેટ કનેક્શન નથી. કૃપા કરીને નેટવર્ક તપાસો.' :
+             'No internet connection. Please check your network.')
+          : t('err_unexpected', 'Could not process audio. Try again.');
+        ToastAndroid.show(toastMsg, ToastAndroid.SHORT);
         setIsTyping(false);
         setIsRecording(false);
       }
