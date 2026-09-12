@@ -135,7 +135,7 @@ export default function SimulatorScreen({ navigation }: any) {
             <MaterialIcons name="history-edu" size={24} color={colors.primary} />
           </View>
           <View style={styles.historyTextContainer}>
-            <Text style={styles.historyBannerTitle} numberOfLines={1}>
+            <Text style={styles.historyBannerTitle} numberOfLines={2}>
               {t('sim_past_roleplays_title')}
             </Text>
             <Text style={styles.historyBannerDesc} numberOfLines={2}>
@@ -400,7 +400,7 @@ export default function SimulatorScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100, gap: 16 },
+  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 120, gap: 16 },
 
   header: { gap: 6, marginBottom: 2 },
   levelPill: {
@@ -462,7 +462,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: 6,
+    gap: 8,
   },
   heroActionBtn: {
     flexDirection: 'row',
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 9,
     borderRadius: 16,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
@@ -482,13 +483,13 @@ const styles = StyleSheet.create({
   roleplayBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 14,
   },
-  roleplayBadgeText: { fontFamily: 'PublicSans_400Regular', fontSize: 11, color: colors.navyCardSub },
+  roleplayBadgeText: { fontFamily: 'PublicSans_600SemiBold', fontSize: 11.5, color: '#FFFFFF' },
 
   // Quiz Banner
   quizBanner: {

@@ -75,6 +75,28 @@ export default function HomeScreen({ navigation }: any) {
   const [roleplayProgress, setRoleplayProgress] = useState<Record<string, number>>({});
   const isFocused = useIsFocused();
 
+  const getScenarioStatus = (progress: number = 0) => {
+    if (progress >= 100) {
+      return {
+        label: t('status_completed', 'Completed'),
+        color: colors.success,
+        bg: colors.successDim || '#E8F5E9',
+      };
+    }
+    if (progress > 0) {
+      return {
+        label: t('status_in_progress', 'In Progress'),
+        color: colors.primary,
+        bg: colors.primaryLight,
+      };
+    }
+    return {
+      label: t('status_new_scenario', 'New Scenario'),
+      color: colors.onSurfaceVariant,
+      bg: 'transparent',
+    };
+  };
+
   const isMounted = useRef(true);
   useEffect(() => {
     return () => { isMounted.current = false; };
@@ -262,9 +284,23 @@ export default function HomeScreen({ navigation }: any) {
         {/* ── Top Header (Insightlancer: App / Greeting / Participant ID / Language / Bell) ── */}
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
-            <View style={styles.appIconPill}>
+            <TouchableOpacity 
+              style={styles.appIconPill}
+              onPress={() => {
+                Alert.alert(
+                  'CyberSaathi',
+                  t('app_overview_desc', 'Your AI-powered cyber safety guardian. Practice scam scenarios, verify suspicious messages, and protect your digital life.'),
+                  [
+                    { text: t('tab_simulator', 'Simulator'), onPress: () => navigation.navigate('Simulator' as any) },
+                    { text: t('tab_chat', 'Voice AI'), onPress: () => navigation.navigate('Voice' as any) },
+                    { text: t('btn_ok', 'Close'), style: 'cancel' }
+                  ]
+                );
+              }}
+              activeOpacity={0.8}
+            >
               <MaterialIcons name="grid-view" size={20} color={colors.primary} />
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity 
               style={styles.headerIconBtn} 
               onPress={() => navigation.navigate('Language')}
@@ -275,7 +311,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           
           <View style={styles.headerCenterWrap} pointerEvents="none">
-            <Text style={styles.headerCenterTitle}>{t('tab_home', 'Home')}</Text>
+            <Text style={styles.headerCenterTitle} numberOfLines={1}>{t('tab_home', 'Home')}</Text>
           </View>
           
           <View style={styles.headerRight}>
@@ -363,124 +399,152 @@ export default function HomeScreen({ navigation }: any) {
 
         <View style={styles.threatGrid}>
           {/* Card 1: Clean White Card (Electricity Bill) */}
-          <TouchableOpacity 
-            style={[styles.threatCard, styles.threatCardWhite]}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('ScamDetail', { scamId: 'electricity_bill' })}
-          >
-            <View style={styles.threatCardTop}>
-              <Text style={styles.threatDate}>{roleplayProgress['electricity_bill'] ? t('status_completed', 'Completed') : t('status_new_scenario', 'New Scenario')}</Text>
-              <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
-            </View>
-            <View style={styles.threatHeaderRow}>
-              <View style={[styles.threatIconBg, { backgroundColor: colors.primaryLight }]}>
-                <MaterialIcons name="bolt" size={18} color={colors.primary} />
-              </View>
-              <View style={styles.threatHeaderTexts}>
-                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_electricity_title', 'Electricity Bill')}</Text>
-                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('voice_roleplay_tag', 'Voice Roleplay')}</Text>
-              </View>
-            </View>
-            <View style={styles.threatProgressWrap}>
-              <View style={styles.threatProgressLabelRow}>
-                <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
-                <Text style={styles.threatProgressPercent}>{roleplayProgress['electricity_bill'] || 0}%</Text>
-              </View>
-              <View style={styles.threatProgressBarTrack}>
-                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['electricity_bill'] || 0}%`, backgroundColor: colors.primary }]} />
-              </View>
-            </View>
-          </TouchableOpacity>
+          {(() => {
+            const status = getScenarioStatus(roleplayProgress['electricity_bill'] || 0);
+            return (
+              <TouchableOpacity 
+                style={[styles.threatCard, styles.threatCardWhite]}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('ScamDetail', { scamId: 'electricity_bill' })}
+              >
+                <View style={styles.threatCardTop}>
+                  <View style={[styles.threatStatusBadge, { backgroundColor: status.bg }]}>
+                    <Text style={[styles.threatStatusText, { color: status.color }]}>{status.label}</Text>
+                  </View>
+                  <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
+                </View>
+                <View style={styles.threatHeaderRow}>
+                  <View style={[styles.threatIconBg, { backgroundColor: colors.primaryLight }]}>
+                    <MaterialIcons name="bolt" size={18} color={colors.primary} />
+                  </View>
+                  <View style={styles.threatHeaderTexts}>
+                    <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_electricity_title', 'Electricity Bill')}</Text>
+                    <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('voice_roleplay_tag', 'Voice Roleplay')}</Text>
+                  </View>
+                </View>
+                <View style={styles.threatProgressWrap}>
+                  <View style={styles.threatProgressLabelRow}>
+                    <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
+                    <Text style={styles.threatProgressPercent}>{roleplayProgress['electricity_bill'] || 0}%</Text>
+                  </View>
+                  <View style={styles.threatProgressBarTrack}>
+                    <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['electricity_bill'] || 0}%`, backgroundColor: colors.primary }]} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
 
           {/* Card 2: Clean White Card (FedEx Hold) */}
-          <TouchableOpacity 
-            style={[styles.threatCard, styles.threatCardWhite]}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('ScamDetail', { scamId: 'fedex_parcel' })}
-          >
-            <View style={styles.threatCardTop}>
-              <Text style={styles.threatDate}>{roleplayProgress['fedex_parcel'] ? t('status_completed', 'Completed') : t('status_new_scenario', 'New Scenario')}</Text>
-              <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
-            </View>
-            <View style={styles.threatHeaderRow}>
-              <View style={[styles.threatIconBg, { backgroundColor: colors.primaryLight }]}>
-                <MaterialIcons name="local-shipping" size={18} color={colors.primary} />
-              </View>
-              <View style={styles.threatHeaderTexts}>
-                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_fedex_title', 'FedEx Hold')}</Text>
-                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('scam_digital_arrest_sub', 'Digital Arrest')}</Text>
-              </View>
-            </View>
-            <View style={styles.threatProgressWrap}>
-              <View style={styles.threatProgressLabelRow}>
-                <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
-                <Text style={styles.threatProgressPercent}>{roleplayProgress['fedex_parcel'] || 0}%</Text>
-              </View>
-              <View style={styles.threatProgressBarTrack}>
-                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['fedex_parcel'] || 0}%`, backgroundColor: colors.primary }]} />
-              </View>
-            </View>
-          </TouchableOpacity>
+          {(() => {
+            const status = getScenarioStatus(roleplayProgress['fedex_parcel'] || 0);
+            return (
+              <TouchableOpacity 
+                style={[styles.threatCard, styles.threatCardWhite]}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('ScamDetail', { scamId: 'fedex_parcel' })}
+              >
+                <View style={styles.threatCardTop}>
+                  <View style={[styles.threatStatusBadge, { backgroundColor: status.bg }]}>
+                    <Text style={[styles.threatStatusText, { color: status.color }]}>{status.label}</Text>
+                  </View>
+                  <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
+                </View>
+                <View style={styles.threatHeaderRow}>
+                  <View style={[styles.threatIconBg, { backgroundColor: colors.primaryLight }]}>
+                    <MaterialIcons name="local-shipping" size={18} color={colors.primary} />
+                  </View>
+                  <View style={styles.threatHeaderTexts}>
+                    <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_fedex_title', 'FedEx Hold')}</Text>
+                    <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('scam_digital_arrest_sub', 'Digital Arrest')}</Text>
+                  </View>
+                </View>
+                <View style={styles.threatProgressWrap}>
+                  <View style={styles.threatProgressLabelRow}>
+                    <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
+                    <Text style={styles.threatProgressPercent}>{roleplayProgress['fedex_parcel'] || 0}%</Text>
+                  </View>
+                  <View style={styles.threatProgressBarTrack}>
+                    <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['fedex_parcel'] || 0}%`, backgroundColor: colors.primary }]} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
 
           {/* Card 3: Clean White Card (SBI KYC) */}
-          <TouchableOpacity 
-            style={[styles.threatCard, styles.threatCardWhite]}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('ScamDetail', { scamId: 'sbi_kyc' })}
-          >
-            <View style={styles.threatCardTop}>
-              <Text style={styles.threatDate}>{roleplayProgress['sbi_kyc'] ? t('status_completed', 'Completed') : t('status_new_scenario', 'New Scenario')}</Text>
-              <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
-            </View>
-            <View style={styles.threatHeaderRow}>
-              <View style={[styles.threatIconBg, { backgroundColor: colors.warningDim }]}>
-                <MaterialIcons name="account-balance" size={18} color={colors.warning} />
-              </View>
-              <View style={styles.threatHeaderTexts}>
-                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_sbi_title', 'SBI PAN Block')}</Text>
-                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('scam_phishing_sub', 'Phishing SMS')}</Text>
-              </View>
-            </View>
-            <View style={styles.threatProgressWrap}>
-              <View style={styles.threatProgressLabelRow}>
-                <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
-                <Text style={styles.threatProgressPercent}>{roleplayProgress['sbi_kyc'] || 0}%</Text>
-              </View>
-              <View style={styles.threatProgressBarTrack}>
-                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['sbi_kyc'] || 0}%`, backgroundColor: colors.warning }]} />
-              </View>
-            </View>
-          </TouchableOpacity>
+          {(() => {
+            const status = getScenarioStatus(roleplayProgress['sbi_kyc'] || 0);
+            return (
+              <TouchableOpacity 
+                style={[styles.threatCard, styles.threatCardWhite]}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('ScamDetail', { scamId: 'sbi_kyc' })}
+              >
+                <View style={styles.threatCardTop}>
+                  <View style={[styles.threatStatusBadge, { backgroundColor: status.bg }]}>
+                    <Text style={[styles.threatStatusText, { color: status.color }]}>{status.label}</Text>
+                  </View>
+                  <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
+                </View>
+                <View style={styles.threatHeaderRow}>
+                  <View style={[styles.threatIconBg, { backgroundColor: colors.warningDim }]}>
+                    <MaterialIcons name="account-balance" size={18} color={colors.warning} />
+                  </View>
+                  <View style={styles.threatHeaderTexts}>
+                    <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_sbi_title', 'SBI PAN Block')}</Text>
+                    <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('scam_phishing_sub', 'Phishing SMS')}</Text>
+                  </View>
+                </View>
+                <View style={styles.threatProgressWrap}>
+                  <View style={styles.threatProgressLabelRow}>
+                    <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
+                    <Text style={styles.threatProgressPercent}>{roleplayProgress['sbi_kyc'] || 0}%</Text>
+                  </View>
+                  <View style={styles.threatProgressBarTrack}>
+                    <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['sbi_kyc'] || 0}%`, backgroundColor: colors.warning }]} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
 
           {/* Card 4: Clean White Card (WhatsApp Emergency) */}
-          <TouchableOpacity 
-            style={[styles.threatCard, styles.threatCardWhite]}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('ScamDetail', { scamId: 'whatsapp_family' })}
-          >
-            <View style={styles.threatCardTop}>
-              <Text style={styles.threatDate}>{roleplayProgress['whatsapp_family'] ? t('status_completed', 'Completed') : t('status_new_scenario', 'New Scenario')}</Text>
-              <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
-            </View>
-            <View style={styles.threatHeaderRow}>
-              <View style={[styles.threatIconBg, { backgroundColor: colors.successDim }]}>
-                <MaterialIcons name="family-restroom" size={18} color={colors.success} />
-              </View>
-              <View style={styles.threatHeaderTexts}>
-                <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_whatsapp_family_title', 'WhatsApp Family')}</Text>
-                <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('scam_family_sub', 'Family Scam')}</Text>
-              </View>
-            </View>
-            <View style={styles.threatProgressWrap}>
-              <View style={styles.threatProgressLabelRow}>
-                <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
-                <Text style={styles.threatProgressPercent}>{roleplayProgress['whatsapp_family'] || 0}%</Text>
-              </View>
-              <View style={styles.threatProgressBarTrack}>
-                <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['whatsapp_family'] || 0}%`, backgroundColor: colors.success }]} />
-              </View>
-            </View>
-          </TouchableOpacity>
+          {(() => {
+            const status = getScenarioStatus(roleplayProgress['whatsapp_family'] || 0);
+            return (
+              <TouchableOpacity 
+                style={[styles.threatCard, styles.threatCardWhite]}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('ScamDetail', { scamId: 'whatsapp_family' })}
+              >
+                <View style={styles.threatCardTop}>
+                  <View style={[styles.threatStatusBadge, { backgroundColor: status.bg }]}>
+                    <Text style={[styles.threatStatusText, { color: status.color }]}>{status.label}</Text>
+                  </View>
+                  <MaterialIcons name="more-vert" size={16} color={colors.onSurfaceVariant} />
+                </View>
+                <View style={styles.threatHeaderRow}>
+                  <View style={[styles.threatIconBg, { backgroundColor: colors.successDim }]}>
+                    <MaterialIcons name="family-restroom" size={18} color={colors.success} />
+                  </View>
+                  <View style={styles.threatHeaderTexts}>
+                    <Text style={styles.threatTitle} numberOfLines={1} ellipsizeMode="tail">{t('scam_whatsapp_family_title', 'WhatsApp Family')}</Text>
+                    <Text style={styles.threatSub} numberOfLines={1} ellipsizeMode="tail">{t('scam_family_sub', 'Family Scam')}</Text>
+                  </View>
+                </View>
+                <View style={styles.threatProgressWrap}>
+                  <View style={styles.threatProgressLabelRow}>
+                    <Text style={styles.threatProgressText}>{t('stat_progress', 'Progress')}</Text>
+                    <Text style={styles.threatProgressPercent}>{roleplayProgress['whatsapp_family'] || 0}%</Text>
+                  </View>
+                  <View style={styles.threatProgressBarTrack}>
+                    <View style={[styles.threatProgressBarFill, { width: `${roleplayProgress['whatsapp_family'] || 0}%`, backgroundColor: colors.success }]} />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
         </View>
 
         {/* ── Quick Verification Folders (Reference Folder Rows) ── */}
@@ -803,13 +867,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 6,
-    position: 'relative',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    zIndex: 2,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   appIconPill: {
     width: 38,
@@ -827,14 +891,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   headerCenterWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   headerCenterTitle: {
     fontFamily: 'Manrope_700Bold',
@@ -845,8 +904,9 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     gap: 8,
-    zIndex: 2,
+    flex: 1,
   },
   participantPill: {
     flexDirection: 'row',
@@ -1071,6 +1131,17 @@ const styles = StyleSheet.create({
     fontFamily: 'PublicSans_400Regular',
     fontSize: 11,
     color: colors.onSurfaceVariant,
+  },
+  threatStatusBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  threatStatusText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 10,
+    letterSpacing: 0.2,
   },
   threatHeaderRow: {
     flexDirection: 'row',
