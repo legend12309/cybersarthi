@@ -995,7 +995,7 @@ export const scenarioDialogues: Record<string, Record<string, Record<number, Rec
 
 export function getScriptedScammerResponse(scamId: string, languageCode: string, exchangeTurn: number, userText: string): string {
   const scenario = scenarioDialogues[scamId] || scenarioDialogues.electricity_bill;
-  const lang = scenario[languageCode] || scenario['hi-IN'] || scenario['en-IN'];
+  const lang = scenario[languageCode] || scenario['en-IN'] || scenario['hi-IN'];
   const turnIndex = Math.min(Math.max(1, exchangeTurn), 4);
   const turnReplies = lang[turnIndex] || lang[1];
 

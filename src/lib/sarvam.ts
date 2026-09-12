@@ -368,24 +368,42 @@ export async function cleanupTTSCache() {
   }
 }
 
+export const SCAM_VOICE_CONFIG: Record<string, { speaker: string; pace: number }> = {
+  electricity_bill:   { speaker: 'amit',   pace: 1.12 },
+  fedex_parcel:       { speaker: 'aditya', pace: 1.12 },
+  sbi_kyc:            { speaker: 'shubh',  pace: 1.08 },
+  whatsapp_family:    { speaker: 'aayan',  pace: 1.15 },
+  kbc_lottery:        { speaker: 'sunny',  pace: 1.15 },
+  olx_qr:             { speaker: 'kabir',  pace: 1.12 },
+  wfh_job:            { speaker: 'priya',  pace: 1.08 },
+  trai_disconnect:    { speaker: 'aditya', pace: 1.12 },
+  credit_card_points: { speaker: 'rohan',  pace: 1.10 },
+  digital_arrest:     { speaker: 'kabir',  pace: 1.15 },
+};
+
 // Helper to clean up text before sending to TTS
 function sanitizeForTTS(text: string): string {
   if (!text) return '';
 
-  // 1. Strip bracketed stage directions or parenthetical asides
-  // E.g. "(रोते हुए घबराई आवाज में) पापा! मेरा एक्सीडेंट हो गया..." -> "पापा! मेरा एक्सीडेंट हो गया..."
-  const withoutBrackets = text
+  // 1. If text has stage directions with dialogue after a colon (e.g. "(shouts aside: Ramesh, cut the wire!)"),
+  // preserve the actual spoken dialogue!
+  let clean = text
+    .replace(/\((?:shouts|shouting|crying|sobbing|whispers|aside|screaming|angry|sternly|panicked|chuckles|laughs)[^:]*:\s*([^)]+)\)/gi, '$1')
+    .replace(/\((?:चिल्लाते हुए|रोते हुए|गुस्से में|डरकर|बाजूला ओरडत)[^:]*:\s*([^)]+)\)/gi, '$1');
+
+  // 2. Strip bracketed stage direction labels like (angry), (shouting), (aside), etc.
+  const withoutBrackets = clean
+    .replace(/\([^)]*(?:shout|crying|aside|whisper|tone|sound|voice|stage|sound|noise|चिल्ला|रोते|गुस्से)[^)]*\)/gi, ' ')
     .replace(/\([^)]*\)/g, ' ')
     .replace(/\[[^\]]*\]/g, ' ')
     .replace(/\{[^}]*\}/g, ' ')
     .replace(/（[^）]*）/g, ' ')
     .replace(/【[^】]*】/g, ' ');
 
-  // 2. If removing bracket contents emptied the entire text (e.g. the entire sentence was in parentheses),
-  // fallback to removing only the bracket punctuation marks themselves so the spoken dialogue is preserved!
-  let clean = withoutBrackets.trim().length > 0
+  // 3. Fallback if stripping emptied the string
+  clean = withoutBrackets.trim().length > 0
     ? withoutBrackets
-    : text.replace(/[{}\[\]()（）【】]/g, ' ');
+    : clean.replace(/[{}\[\]()（）【】]/g, ' ');
 
   clean = clean.replace(/[*_~`#]+/g, ''); // Remove markdown formatting
   clean = clean.replace(/https?:\/\/\S+/gi, ' link '); // Replace URLs with 'link'
@@ -418,7 +436,13 @@ function truncateToSafeTTSLength(text: string, maxLength: number = 470): string 
   return truncated.trim() + '...';
 }
 
-export async function textToSpeech(text: string, languageCode: string): Promise<string> {
+export interface TTSOptions {
+  scamId?: string;
+  speaker?: string;
+  pace?: number;
+}
+
+export async function textToSpeech(text: string, languageCode: string, options?: TTSOptions): Promise<string> {
   if (!text || text.trim().length === 0) {
     return '';
   }
@@ -433,21 +457,34 @@ export async function textToSpeech(text: string, languageCode: string): Promise<
     return '';
   }
 
+  const voiceConfig = options?.scamId ? SCAM_VOICE_CONFIG[options.scamId] : null;
+  const preferredSpeaker = options?.speaker || voiceConfig?.speaker || 'shubh';
+  const preferredPace = options?.pace || voiceConfig?.pace || 1.0;
+
   const maxRetries = 1;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       // Fire-and-forget cache cleanup (don't block TTS)
       cleanupTTSCache().catch(() => {});
 
+      // On retry fallback to standard speaker 'shubh' at pace 1.0 to guarantee synthesis
+      const currentSpeaker = attempt === 0 ? preferredSpeaker : 'shubh';
+      const currentPace = attempt === 0 ? preferredPace : 1.0;
+
+      const payload: any = {
+        inputs: [safeText],
+        target_language_code: getSarvamLanguageCode(languageCode),
+        speaker: currentSpeaker,
+        model: 'bulbul:v3',
+        enable_preprocessing: true,
+      };
+      if (currentPace !== 1.0) {
+        payload.pace = currentPace;
+      }
+
       const response = await axios.post(
         `${API_BASE_URL}/text-to-speech`,
-        {
-          inputs: [safeText],
-          target_language_code: getSarvamLanguageCode(languageCode),
-          speaker: 'shubh',
-          model: 'bulbul:v3',
-          enable_preprocessing: true,
-        },
+        payload,
         { 
           headers: {
             ...getHeaders(),
@@ -728,6 +765,27 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
   }
 }
 
+function isRoleplayPersonaBroken(text: string): boolean {
+  if (!text || text.trim().length === 0) return true;
+  const lower = text.toLowerCase();
+  const brokenPatterns = [
+    /as an ai/i,
+    /as a language model/i,
+    /i cannot (assist|comply|threaten|help you with)/i,
+    /i am an ai/i,
+    /as a virtual assistant/i,
+    /i am a virtual assistant/i,
+    /मैं एक (एआई|भाषा मॉडल|आर्टिफिशियल|सहायक)/i,
+    /मी एक (एआय|भाषा मॉडेल|सहाय्यक)/i,
+    /நான் ஒரு (ஏஐ|செயற்கை நுண்ணறிவு)/i,
+    /నేను ఒక AI/i,
+    /હું એક AI/i,
+    /apologize for the misunderstanding/i,
+    /please be polite/i,
+  ];
+  return brokenPatterns.some(p => p.test(lower));
+}
+
 export async function roleplayWithSarvam(
   messages: {role: string, content: string}[],
   languageCode: string = 'hi-IN',
@@ -741,7 +799,7 @@ export async function roleplayWithSarvam(
       `${API_BASE_URL}/v1/chat/completions`,
       {
         model: 'sarvam-105b-conversations',
-        temperature: 0.55,
+        temperature: 0.45,
         max_tokens: 160,
         messages: messages,
       },
@@ -750,14 +808,18 @@ export async function roleplayWithSarvam(
           ...getHeaders(),
           'Content-Type': 'application/json',
         },
-        timeout: 5500
+        timeout: 9000
       }
     );
     
     const choice = response?.data?.choices?.[0];
     const content = choice?.message?.content;
     if (content && content.trim().length > 0) {
-      return content.trim();
+      const cleanContent = content.trim();
+      if (!isRoleplayPersonaBroken(cleanContent)) {
+        return cleanContent;
+      }
+      console.warn('[ROLEPLAY API] Model produced polite/assistant leak, falling back to scenario dialogue matrix.');
     }
 
     // If model produced reasoning content, extract the response cleanly
@@ -767,7 +829,9 @@ export async function roleplayWithSarvam(
       for (let i = lines.length - 1; i >= 0; i--) {
         const line = lines[i].replace(/^["'«»]+|["'«»]+$/g, '').trim();
         if (line.length > 20 && !line.startsWith('Wait') && !line.startsWith('Let') && !line.startsWith('The user') && !line.startsWith('Check') && !line.startsWith('Key')) {
-          return line;
+          if (!isRoleplayPersonaBroken(line)) {
+            return line;
+          }
         }
       }
     }

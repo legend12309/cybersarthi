@@ -266,7 +266,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         try { if (player.playing) player.pause(); } catch(e) {}
 
         setIsAudioLoading(true);
-        textToSpeech(firstMsg, languageCode)
+        textToSpeech(firstMsg, languageCode, { scamId })
           .then((audioUri) => {
             if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
               try {
@@ -358,6 +358,53 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     performEvaluationRef.current = performEvaluation;
   }, [performEvaluation]);
 
+  const getScenarioTurnInstruction = (
+    targetScamId: string,
+    turnNumber: number,
+    isFinal: boolean,
+    langName: string
+  ): string => {
+    const langRule = langName === 'English'
+      ? 'Respond strictly in English.'
+      : `Respond strictly and entirely in ${langName}. Do not use English.`;
+
+    if (!isFinal) {
+      const contextPrompt: Record<string, string> = {
+        electricity_bill: 'Escalate urgency regarding immediate disconnection of power within 5 minutes. Counter the consumer\'s argument aggressively.',
+        fedex_parcel: 'Threaten criminal arrest and immediate police dispatch for the narcotics parcel seized under their Aadhaar.',
+        sbi_kyc: 'Warn of irreversible account freeze and RBI blacklist if PAN KYC verification is not completed right now.',
+        whatsapp_family: 'Plead desperately and in panic for urgent medical injection and hospital admission fees before the doctor walks away.',
+        kbc_lottery: 'Urge immediate deposit of refundable GST clearance fee to claim the ₹25,00,000 lottery prize before roll-over.',
+        olx_qr: 'Demand immediate PIN verification for the Army defense payment link before the military transport truck leaves.',
+        wfh_job: 'Create intense FOMO around the last VIP commission task slot before it expires in 60 seconds.',
+        trai_disconnect: 'Warn that all SIM cards under their Aadhaar will be terminated at the telecom tower in minutes.',
+        credit_card_points: 'Warn that ₹7,380 cash reward points will lapse permanently at midnight without redemption OTP.',
+        digital_arrest: 'Command complete obedience under Supreme Court Warrant. Threaten immediate SWAT raid if they disconnect.',
+      };
+
+      const specificDirective = contextPrompt[targetScamId] || 'Aggressively counter the user\'s objection and maintain high pressure.';
+
+      return `\n\n[Turn ${turnNumber}: ${langRule} ${specificDirective} Speak directly as the caller into the phone. Strictly under 2 short punchy sentences. Do NOT use stage directions, parentheses, or asterisks. Never break character.]`;
+    }
+
+    const finalThreats: Record<string, string> = {
+      electricity_bill: 'Deliver your final ultimatum: Order lineman Ramesh right now to pull the main cutout switch and cut the drop wire immediately!',
+      fedex_parcel: 'Deliver your final ultimatum: Declare the non-bailable FIR active and dispatch the Mumbai Crime Branch tactical unit to raid their coordinates!',
+      sbi_kyc: 'Deliver your final ultimatum: Declare their bank account permanently frozen and all assets transferred to the RBI Dormant Escrow blacklist!',
+      whatsapp_family: 'Deliver your final desperate plea: Cry out that the doctor is walking away and you are being denied emergency treatment because they refused!',
+      kbc_lottery: 'Deliver your final ultimatum: State that the ₹25 Lakh winning cheque has been permanently canceled and transferred to the runner-up!',
+      olx_qr: 'Deliver your final ultimatum: Declare that military police complaint is filed for wasting an army officer\'s duty time and blocking defense logistics!',
+      wfh_job: 'Deliver your final ultimatum: Declare their candidate profile blacklisted across all recruitment portals and VIP earnings forfeited!',
+      trai_disconnect: 'Deliver your final ultimatum: Confirm the deactivation signal has been transmitted to tower antennas to cut off all their SIM cards right now!',
+      credit_card_points: 'Deliver your final ultimatum: Declare that their ₹7,380 cash reward voucher has been permanently deleted from bank servers!',
+      digital_arrest: 'Deliver your final ultimatum: Terminate the digital arrest window and order the armed SWAT team to breach their residence immediately!',
+    };
+
+    const threat = finalThreats[targetScamId] || 'Deliver your ultimate high-stakes threat and hang up!';
+
+    return `\n\n[Turn ${turnNumber} - FINAL ULTIMATUM: ${langRule} ${threat} Speak directly as the caller into the phone. Strictly under 2 short punchy sentences. Do NOT use stage directions, parentheses, or asterisks. Never break character.]`;
+  };
+
   const processUserMessage = useCallback(async (userMsg: string) => {
     const newMessages: Message[] = [...messages, { id: 'u_' + Date.now(), role: 'user', content: userMsg }];
     setMessages(newMessages);
@@ -375,9 +422,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       };
       const currentLangName = langNames[languageCode] || 'English';
 
-      const turnInstruction = isFinalTurn
-        ? `\n\n(Turn ${nextExchange} - FINAL ULTIMATUM: Deliver your most aggressive final threat or tell technician Ramesh to pull the fuse right now. Respond strictly and entirely in ${currentLangName}. Keep your reply strictly under 2 short punchy sentences. Do not use English.)`
-        : `\n\n(Turn ${nextExchange}: Respond strictly and entirely in ${currentLangName}. Actively counter and weaponize what the user specifically argued. Keep it fast-paced, authoritative, and strictly under 2 short punchy sentences. Do not use English.)`;
+      const turnInstruction = getScenarioTurnInstruction(scamId, nextExchange, isFinalTurn, currentLangName);
 
       const finalMessages = apiMessages.map((m, idx) => {
         if (idx === apiMessages.length - 1 && m.role === 'user') {
@@ -411,7 +456,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         try { if (player.playing) player.pause(); } catch(e) {}
 
         setIsAudioLoading(true);
-        textToSpeech(scammerResponse, languageCode)
+        textToSpeech(scammerResponse, languageCode, { scamId })
           .then((audioUri) => {
             if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
               try {
@@ -451,6 +496,31 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
           content: fallbackMsg
         }]);
         setIsTyping(false);
+
+        if (mode === 'voice') {
+          playTokenRef.current += 1;
+          const currentToken = playTokenRef.current;
+          try { if (player.playing) player.pause(); } catch(e) {}
+
+          setIsAudioLoading(true);
+          textToSpeech(fallbackMsg, languageCode, { scamId })
+            .then((audioUri) => {
+              if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
+                try {
+                  player.replace({ uri: audioUri });
+                  player.play();
+                } catch (playErr) {
+                  console.log('[ROLEPLAY] Fallback player error:', playErr);
+                }
+              }
+            })
+            .catch((ttsErr) => {
+              console.log('[ROLEPLAY] Fallback TTS failed:', ttsErr);
+            })
+            .finally(() => {
+              if (isMounted.current) setIsAudioLoading(false);
+            });
+        }
       }
     }
   }, [messages, exchanges, scamId, languageCode, languageName, mode, player, performEvaluation]);
