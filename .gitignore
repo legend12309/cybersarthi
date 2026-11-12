@@ -45,6 +45,7 @@ example
 # local env files
 .env
 .env.*
+!.env.example
 
 # test/scratch files
 test.js
