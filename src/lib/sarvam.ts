@@ -431,7 +431,7 @@ function sanitizeForTTS(text: string): string {
 
 
 // Helper to truncate text at a clean sentence boundary before sending to TTS
-function truncateToSafeTTSLength(text: string, maxLength: number = 470): string {
+function truncateToSafeTTSLength(text: string, maxLength: number = 280): string {
   if (text.length <= maxLength) return text;
   const truncated = text.substring(0, maxLength);
   const lastPunctuation = Math.max(
@@ -440,11 +440,11 @@ function truncateToSafeTTSLength(text: string, maxLength: number = 470): string 
     truncated.lastIndexOf('!'),
     truncated.lastIndexOf('?')
   );
-  if (lastPunctuation > 120) {
+  if (lastPunctuation > 80) {
     return truncated.substring(0, lastPunctuation + 1).trim();
   }
   const lastSpace = truncated.lastIndexOf(' ');
-  if (lastSpace > 120) {
+  if (lastSpace > 80) {
     return truncated.substring(0, lastSpace).trim() + '.';
   }
   return truncated.trim() + '...';
@@ -461,9 +461,9 @@ export async function textToSpeech(text: string, languageCode: string, options?:
     return '';
   }
 
-  // Clean and sanitize text, then enforce sentence-boundary-aware 470 char limit
+  // Clean and sanitize text, then enforce sentence-boundary-aware 280 char limit for fast synthesis
   const sanitized = sanitizeForTTS(text);
-  const safeText = truncateToSafeTTSLength(sanitized, 470);
+  const safeText = truncateToSafeTTSLength(sanitized, 280);
   
   // Verify that safeText contains actual speakable characters (alphanumeric or Indic)
   const hasSpeakableChars = /[a-zA-Z0-9\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F\u0A80-\u0AFF\u0980-\u09FF\u0C80-\u0CFF\u0D00-\u0D7F]/.test(safeText);

@@ -29,7 +29,7 @@ export interface ChatSession {
   messages: Message[];
 }
 
-type AppState = 'idle' | 'starting' | 'recording' | 'thinking' | 'playing';
+type AppState = 'idle' | 'starting' | 'recording' | 'thinking' | 'synthesizing' | 'playing';
 
 const LANGUAGE_LABELS: Record<string, string> = {
   'hi-IN': 'हिन्दी',
@@ -457,20 +457,22 @@ export default function VoiceScreen({ navigation }: any) {
       
       const aiMsgId = 'a_' + Date.now();
       const aiMsg: Message = { id: aiMsgId, sender: 'ai', text: aiText };
+      // 1. INSTANT RESPONSE: Show AI text immediately so user doesn't wait
       setMessages(prev => {
         const next = [...prev, aiMsg];
         saveCurrentSession(next, currentSessionId);
         return next;
       });
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 60);
 
-      // Start TTS and playback with safe fallback
-      setAppState('playing');
-      setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: m.id === aiMsgId })));
+      // 2. Synthesize audio while text is already visible
+      setAppState('synthesizing');
 
       try {
         const audio = await textToSpeech(aiText, languageCode);
         if (isMounted.current && audio) {
+          setAppState('playing');
+          setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: m.id === aiMsgId })));
           player.replace({ uri: audio });
           player.play();
         } else if (isMounted.current) {
@@ -540,19 +542,21 @@ export default function VoiceScreen({ navigation }: any) {
       
       const aiMsgId = 'a_' + Date.now();
       const aiMsg: Message = { id: aiMsgId, sender: 'ai', text: aiText };
+      // Show verification verdict text immediately
       setMessages(prev => {
         const next = [...prev, aiMsg];
         saveCurrentSession(next, currentSessionId);
         return next;
       });
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 60);
 
-      setAppState('playing');
-      setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: m.id === aiMsgId })));
+      setAppState('synthesizing');
 
       try {
         const audio = await textToSpeech(audioText, languageCode);
         if (isMounted.current && audio) {
+          setAppState('playing');
+          setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: m.id === aiMsgId })));
           player.replace({ uri: audio });
           player.play();
         } else if (isMounted.current) {
@@ -820,6 +824,13 @@ export default function VoiceScreen({ navigation }: any) {
         if (isTe) return 'ఆలోచన...';
         if (isGu) return 'વિચારે છે...';
         return 'Thinking...';
+      case 'synthesizing':
+        if (isHi) return 'आवाज तैयार...';
+        if (isMr) return 'आवाज तयार...';
+        if (isTa) return 'குரல் தயாராகிறது...';
+        if (isTe) return 'వాయిస్ సిద్ధం...';
+        if (isGu) return 'અવાજ તૈયાર...';
+        return 'Voicing...';
       case 'playing':
         if (isHi) return 'बोल रहा है...';
         if (isMr) return 'बोलत आहे...';
@@ -827,16 +838,19 @@ export default function VoiceScreen({ navigation }: any) {
         if (isTe) return 'మాట్లాడుతోంది...';
         if (isGu) return 'બોલે છે...';
         return 'Speaking...';
+      default:
+        return 'Ready';
     }
   };
 
   const statusInfo = {
-    idle:      { color: colors.success,  label: getStatusLabel('idle', languageCode) },
-    starting:  { color: colors.warning,  label: getStatusLabel('starting', languageCode) },
-    recording: { color: colors.error,    label: getStatusLabel('recording', languageCode) },
-    thinking:  { color: colors.primary,  label: getStatusLabel('thinking', languageCode) },
-    playing:   { color: colors.primary,  label: getStatusLabel('playing', languageCode) },
-  }[appState];
+    idle:         { color: colors.success,  label: getStatusLabel('idle', languageCode) },
+    starting:     { color: colors.warning,  label: getStatusLabel('starting', languageCode) },
+    recording:    { color: colors.error,    label: getStatusLabel('recording', languageCode) },
+    thinking:     { color: colors.primary,  label: getStatusLabel('thinking', languageCode) },
+    synthesizing: { color: colors.warning,  label: getStatusLabel('synthesizing', languageCode) },
+    playing:      { color: colors.primary,  label: getStatusLabel('playing', languageCode) },
+  }[appState] || { color: colors.success, label: getStatusLabel('idle', languageCode) };
 
   const activePrompts = QUICK_PROMPTS[languageCode] || QUICK_PROMPTS.default;
   const langName = LANGUAGE_LABELS[languageCode] || 'Hindi';
@@ -976,13 +990,14 @@ export default function VoiceScreen({ navigation }: any) {
                 styles.heroMicBtn,
                 appState === 'recording' && styles.heroMicBtnRec,
                 appState === 'thinking' && styles.heroMicBtnThinking,
+                appState === 'synthesizing' && styles.heroMicBtnThinking,
                 appState === 'playing' && styles.heroMicBtnPlaying,
               ]}
               onPress={handleMicPress}
-              disabled={appState === 'starting' || appState === 'thinking' || appState === 'playing'}
+              disabled={appState === 'starting' || appState === 'thinking' || appState === 'synthesizing' || appState === 'playing'}
               activeOpacity={0.85}
             >
-              {appState === 'thinking' ? (
+              {(appState === 'thinking' || appState === 'synthesizing') ? (
                 <ActivityIndicator size="large" color="#FFFFFF" />
               ) : appState === 'playing' ? (
                 <MaterialIcons name="volume-up" size={32} color="#FFFFFF" />
@@ -999,6 +1014,7 @@ export default function VoiceScreen({ navigation }: any) {
             {appState === 'idle' ? `Tap to speak in ${langName}`
               : appState === 'recording' ? 'Listening... Tap to send & analyze'
               : appState === 'thinking' ? 'CyberSaathi is thinking...'
+              : appState === 'synthesizing' ? 'Preparing voice response...'
               : 'Speaking response • Tap to stop'}
           </Text>
         </View>
