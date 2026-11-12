@@ -127,27 +127,23 @@ async function callSarvamChatAPI(transcript: string, languageCode: string, mode:
   const languageName = LANG_MAP[languageCode] || 'English';
   const systemPrompt = mode === 'classification'
     ? `You must respond ONLY in ${languageName}. However, you MUST start your response with the English words "SAFE:" or "SUSPICIOUS:" followed by your explanation in ${languageName}. Do not translate the "SAFE:" or "SUSPICIOUS:" labels.`
-    : `You are CyberSaathi, a friendly and intelligent cybersecurity assistant.
-Answer the user's specific question directly, accurately, and reassuringly.
+    : `You are CyberSaathi, an advanced, highly knowledgeable, and friendly cybersecurity AI guardian.
+Provide an intelligent, thorough, and articulate explanation directly addressing what the user asked about.
 Rules:
-- Directly address what the user asked about (e.g. explain the concept, evaluate the scenario, or answer greetings naturally).
-- Do NOT repeat generic disclaimers or canned advice.
-- Mention reporting to 1930 / cybercrime.gov.in ONLY if the user explicitly says they already lost money or have been defrauded.
-- If it is a suspicious message or call, advise them to ignore, block, or check via official apps without repeating boilerplate.
-IMPORTANT VOICE/SPOKEN RULES:
-- Keep your ENTIRE reply strictly between 2 to 3 natural spoken sentences (under 350 characters) so it speaks cleanly via audio.
-- Do NOT use bullet points, numbered lists, asterisks, or markdown formatting.
-- Speak in a natural, polite, and reassuring conversational tone.
+- Directly answer the query with complete technical and practical accuracy.
+- Explain the underlying fraud mechanisms, deceptive tactics, or cybersecurity best practices clearly.
+- Mention reporting to 1930 / cybercrime.gov.in whenever relevant to fraud resolution or emergency recovery.
+- Do NOT artificially cut your thoughts short. Speak in a helpful, articulate, and reassuring conversational tone.
 Respond strictly in ${languageName}.`;
 
-    const cleanUserText = (transcript || '').trim().substring(0, 3000) || 'Analyze this message or URL.';
+    const cleanUserText = (transcript || '').trim().substring(0, 5000) || 'Analyze this message or URL.';
 
     const response = await axios.post(
     `${API_BASE_URL}/v1/chat/completions`,
     {
       model: 'sarvam-105b-conversations',
-      temperature: mode === 'classification' ? 0.1 : 0.35,
-      max_tokens: mode === 'classification' ? 300 : 260,
+      temperature: mode === 'classification' ? 0.1 : 0.45,
+      max_tokens: mode === 'classification' ? 600 : 1024,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: cleanUserText },
@@ -158,7 +154,7 @@ Respond strictly in ${languageName}.`;
         ...getHeaders(),
         'Content-Type': 'application/json',
       },
-      timeout: 10000
+      timeout: 25000
     }
   );
   return response;
@@ -430,8 +426,8 @@ function sanitizeForTTS(text: string): string {
 }
 
 
-// Helper to truncate text at a clean sentence boundary before sending to TTS
-function truncateToSafeTTSLength(text: string, maxLength: number = 280): string {
+// Helper to format text cleanly before sending to TTS (preserves full sentences up to API limit)
+function truncateToSafeTTSLength(text: string, maxLength: number = 800): string {
   if (text.length <= maxLength) return text;
   const truncated = text.substring(0, maxLength);
   const lastPunctuation = Math.max(
@@ -440,11 +436,11 @@ function truncateToSafeTTSLength(text: string, maxLength: number = 280): string 
     truncated.lastIndexOf('!'),
     truncated.lastIndexOf('?')
   );
-  if (lastPunctuation > 80) {
+  if (lastPunctuation > 200) {
     return truncated.substring(0, lastPunctuation + 1).trim();
   }
   const lastSpace = truncated.lastIndexOf(' ');
-  if (lastSpace > 80) {
+  if (lastSpace > 200) {
     return truncated.substring(0, lastSpace).trim() + '.';
   }
   return truncated.trim() + '...';
@@ -461,9 +457,9 @@ export async function textToSpeech(text: string, languageCode: string, options?:
     return '';
   }
 
-  // Clean and sanitize text, then enforce sentence-boundary-aware 280 char limit for fast synthesis
+  // Clean and sanitize text, allowing full natural speech output
   const sanitized = sanitizeForTTS(text);
-  const safeText = truncateToSafeTTSLength(sanitized, 280);
+  const safeText = truncateToSafeTTSLength(sanitized, 800);
   
   // Verify that safeText contains actual speakable characters (alphanumeric or Indic)
   const hasSpeakableChars = /[a-zA-Z0-9\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F\u0A80-\u0AFF\u0980-\u09FF\u0C80-\u0CFF\u0D00-\u0D7F]/.test(safeText);
@@ -822,14 +818,14 @@ export async function roleplayWithSarvam(
   exchangeTurn: number = 1,
   userText: string = ''
 ): Promise<string> {
-  // Fast online attempt with sarvam-105b-conversations
+  // Full-potential LLM call with sarvam-105b-conversations
   try {
     const response = await axios.post(
       `${API_BASE_URL}/v1/chat/completions`,
       {
         model: 'sarvam-105b-conversations',
-        temperature: 0.45,
-        max_tokens: 160,
+        temperature: 0.65,
+        max_tokens: 512,
         messages: messages,
       },
       { 
@@ -837,7 +833,7 @@ export async function roleplayWithSarvam(
           ...getHeaders(),
           'Content-Type': 'application/json',
         },
-        timeout: 9000
+        timeout: 20000
       }
     );
     
@@ -892,8 +888,8 @@ Give brief, educational feedback in 2-3 sentences, plus a clear PASS or NEEDS_PR
       `${API_BASE_URL}/v1/chat/completions`,
       {
         model: 'sarvam-105b-conversations',
-        temperature: 0.1,
-        max_tokens: 300,
+        temperature: 0.2,
+        max_tokens: 600,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: transcript },
@@ -904,7 +900,7 @@ Give brief, educational feedback in 2-3 sentences, plus a clear PASS or NEEDS_PR
           ...getHeaders(),
           'Content-Type': 'application/json',
         },
-        timeout: 6500
+        timeout: 15000
       }
     );
 
