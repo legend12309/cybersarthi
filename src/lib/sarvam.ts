@@ -127,13 +127,14 @@ async function callSarvamChatAPI(transcript: string, languageCode: string, mode:
   const languageName = LANG_MAP[languageCode] || 'English';
   const systemPrompt = mode === 'classification'
     ? `You must respond ONLY in ${languageName}. However, you MUST start your response with the English words "SAFE:" or "SUSPICIOUS:" followed by your explanation in ${languageName}. Do not translate the "SAFE:" or "SUSPICIOUS:" labels.`
-    : `You are CyberSaathi, an advanced, highly knowledgeable, and friendly cybersecurity AI guardian.
-Provide an intelligent, thorough, and articulate explanation directly addressing what the user asked about.
+    : `You are CyberSaathi, a voice assistant for cyber safety and scam protection.
+Provide a crisp, direct, and conversational answer in 2 to 3 short sentences.
 Rules:
-- Directly answer the query with complete technical and practical accuracy.
-- Explain the underlying fraud mechanisms, deceptive tactics, or cybersecurity best practices clearly.
-- Mention reporting to 1930 / cybercrime.gov.in whenever relevant to fraud resolution or emergency recovery.
-- Do NOT artificially cut your thoughts short. Speak in a helpful, articulate, and reassuring conversational tone.
+- Give immediate, practical advice without long essays, background lectures, or filler introductions.
+- Clearly tell the user whether it is suspicious or safe, and give 1 immediate action step (e.g. never share OTP, disconnect call, block number).
+- Mention emergency helpline 1930 / cybercrime.gov.in only if relevant to fraud recovery or money loss.
+- Strictly keep the response under 3 concise sentences so it sounds natural when spoken aloud.
+- Do NOT output bullet points, markdown formatting, or long lists.
 Respond strictly in ${languageName}.`;
 
     const cleanUserText = (transcript || '').trim().substring(0, 5000) || 'Analyze this message or URL.';
@@ -143,7 +144,7 @@ Respond strictly in ${languageName}.`;
     {
       model: 'sarvam-105b-conversations',
       temperature: mode === 'classification' ? 0.1 : 0.45,
-      max_tokens: mode === 'classification' ? 600 : 1024,
+      max_tokens: mode === 'classification' ? 300 : 250,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: cleanUserText },
@@ -172,10 +173,12 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
       const content = choice?.message?.content;
       
       if (content && content.trim().length > 0) {
-        const text = content.trim();
+        let text = content.trim();
         if (mode === 'classification') {
           return text;
         }
+        text = text.replace(/^[\"\'«»“]+|[\"\'«»”]+$/g, '').trim();
+        text = text.replace(/^(\**|###)?\s*(CyberSaathi|साइबरसाथी|Assistant)\s*:\s*/i, '').trim();
 
         const contaminated = isContaminated(text);
         if (!contaminated) {

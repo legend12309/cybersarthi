@@ -432,6 +432,9 @@ export default function VoiceScreen({ navigation }: any) {
     const msgText = textToSend.trim();
     if (!msgText) return;
 
+    playTokenRef.current += 1;
+    const currentToken = playTokenRef.current;
+
     if (player.playing) {
       try { player.pause(); } catch(e) {}
     }
@@ -470,12 +473,12 @@ export default function VoiceScreen({ navigation }: any) {
 
       try {
         const audio = await textToSpeech(aiText, languageCode);
-        if (isMounted.current && audio) {
+        if (isMounted.current && currentToken === playTokenRef.current && audio) {
           setAppState('playing');
           setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: m.id === aiMsgId })));
           player.replace({ uri: audio });
           player.play();
-        } else if (isMounted.current) {
+        } else if (isMounted.current && currentToken === playTokenRef.current) {
           setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
           setAppState('idle');
         }
@@ -650,8 +653,8 @@ export default function VoiceScreen({ navigation }: any) {
     }
   }, [appState, recorder, languageCode, t, handleSendMessage]);
 
-  const startRecording = useCallback(async () => {
-    if (appState !== 'idle') {
+  const startRecording = useCallback(async (force: boolean = false) => {
+    if (!force && appState !== 'idle') {
       // console.log('[MIC] Ignored press, appState is not idle:', appState);
       return;
     }
@@ -701,11 +704,12 @@ export default function VoiceScreen({ navigation }: any) {
   }, [appState, recorder, t, stopRecordingAndProcess]);
 
   const handleMicPress = useCallback(() => {
-    if (player.playing || appState === 'playing') {
+    playTokenRef.current += 1;
+    if (player.playing || appState === 'playing' || appState === 'synthesizing') {
       try { player.pause(); } catch(e) {}
       setMessages(prev => prev.map(m => ({ ...m, isAudioPlaying: false })));
       setAppState('idle');
-      startRecording();
+      startRecording(true);
       return;
     }
     if (appState === 'idle') startRecording();
