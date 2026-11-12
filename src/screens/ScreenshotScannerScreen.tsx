@@ -16,27 +16,29 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
   const { t, languageCode } = useLanguage();
   const insets = useSafeAreaInsets();
 
-  const [loadingState, setLoadingState] = useState<'idle' | 'reading' | 'classifying' | 'done' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [loadingState, setLoadingState] = useState<'idle' | 'reading' | 'classifying' | 'done' | 'error'>(
+    imageUri ? 'reading' : 'error'
+  );
+  const [errorMessage, setErrorMessage] = useState(imageUri ? '' : t('scanner_err_image'));
   
   const [verdict, setVerdict] = useState<'safe' | 'suspicious' | null>(null);
   const [explanation, setExplanation] = useState('');
   const [advice, setAdvice] = useState('');
 
   const isMounted = useRef(true);
-  useEffect(() => {
-    return () => { isMounted.current = false; };
-  }, []);
 
   const startAnalysis = useCallback(async () => {
+    if (!imageUri) {
+      setLoadingState('error');
+      setErrorMessage(t('scanner_err_image'));
+      return;
+    }
     try {
-      if (!isMounted.current) return;
       setLoadingState('reading');
       setErrorMessage('');
 
       // Step 1: Sarvam Vision OCR
       const extractedText = await analyzeScreenshot(imageUri, languageCode);
-      
       if (!isMounted.current) return;
       if (!extractedText || extractedText.trim().length === 0) {
         setLoadingState('error');
@@ -47,7 +49,6 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
       // Step 2: Classifier
       setLoadingState('classifying');
       const result = await classifyContent(extractedText, languageCode, 'message');
-      
       if (!isMounted.current) return;
       setVerdict(result.verdict);
       setExplanation(result.explanation);
@@ -55,7 +56,6 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
       setLoadingState('done');
     } catch (err: any) {
       if (!isMounted.current) return;
-      // console.error('[VISION] Analysis Error:', err);
       setLoadingState('error');
       if (err.message?.includes('No readable text') || err.message?.includes('no text')) {
         setErrorMessage(t('scanner_err_no_text'));
@@ -66,13 +66,12 @@ export default function ScreenshotScannerScreen({ route, navigation }: any) {
   }, [imageUri, languageCode, t]);
 
   useEffect(() => {
+    isMounted.current = true;
     if (imageUri) {
-      startAnalysis();
-    } else {
-      setLoadingState('error');
-      setErrorMessage(t('scanner_err_image'));
+      void startAnalysis();
     }
-  }, [imageUri, startAnalysis, t]);
+    return () => { isMounted.current = false; };
+  }, [imageUri, startAnalysis]);
 
   const isSafe = verdict === 'safe';
 

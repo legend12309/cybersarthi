@@ -93,7 +93,7 @@ export default function VoiceScreen({ navigation }: any) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const player = useAudioPlayer();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string>('session_' + Date.now());
+  const [currentSessionId, setCurrentSessionId] = useState<string>(() => 'session_' + Date.now());
   const [pastSessions, setPastSessions] = useState<ChatSession[]>([]);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -105,11 +105,23 @@ export default function VoiceScreen({ navigation }: any) {
   const spokenLanguageRef = useRef<string | null>(null);
 
   // Dual ripple animations for mic orb
-  const pulseScale    = useRef(new Animated.Value(1)).current;
-  const pulseOpacity  = useRef(new Animated.Value(0.5)).current;
-  const pulse2Scale   = useRef(new Animated.Value(1)).current;
-  const pulse2Opacity = useRef(new Animated.Value(0.35)).current;
-  const pulseLoop     = useRef<Animated.CompositeAnimation | null>(null);
+  const [pulseScale]    = useState(() => new Animated.Value(1));
+  const [pulseOpacity]  = useState(() => new Animated.Value(0));
+  const [pulse2Scale]   = useState(() => new Animated.Value(1));
+  const [pulse2Opacity] = useState(() => new Animated.Value(0));
+  const pulseLoop       = useRef<Animated.CompositeAnimation | null>(null);
+
+  const cleanupAudioAndRecording = useCallback(() => {
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+    try { recorder.stop().catch(() => {}); } catch(e) {}
+    try { if (player.playing) player.pause(); } catch(e) {}
+    try {
+      AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch(() => {});
+    } catch(e) {}
+  }, [recorder, player]);
 
   // Helper to persist chat sessions per user
   const saveCurrentSession = useCallback(async (updatedMessages: Message[], sessionId: string) => {
@@ -212,26 +224,18 @@ export default function VoiceScreen({ navigation }: any) {
       }
     });
 
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      cleanupAudioAndRecording();
+      setAppState('idle');
+    });
+
     return () => { 
       isMounted.current = false; 
       subscription.remove();
+      unsubscribeBlur();
       cleanupAudioAndRecording(); 
     };
-  }, [languageCode, player]);
-
-  useEffect(() => {
-    if (!isFocused) { cleanupAudioAndRecording(); setAppState('idle'); }
-  }, [isFocused]);
-
-  // Update initial welcome message text when language changes on a fresh session
-  useEffect(() => {
-    setMessages(prev => {
-      if (prev.length === 1 && prev[0].id.startsWith('welcome')) {
-        return [{ ...prev[0], text: t('voice_default_instruction') }];
-      }
-      return prev;
-    });
-  }, [languageCode, t]);
+  }, [cleanupAudioAndRecording, languageCode, navigation, player]);
 
   // Auto-read greeting aloud when a new user enters the chat section
   useEffect(() => {
@@ -316,36 +320,29 @@ export default function VoiceScreen({ navigation }: any) {
 
   useEffect(() => {
     if (appState === 'recording') {
+      pulseScale.setValue(1);
+      pulseOpacity.setValue(0.55);
+      pulse2Scale.setValue(1);
+      pulse2Opacity.setValue(0.4);
+
       pulseLoop.current = Animated.loop(
         Animated.parallel([
-          Animated.timing(pulseScale, { toValue: 1.38, duration: 1600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0, duration: 1600, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(pulse2Scale, { toValue: 1.2, duration: 1600, delay: 450, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(pulse2Opacity, { toValue: 0, duration: 1600, delay: 450, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseScale, { toValue: 1.24, duration: 1500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseOpacity, { toValue: 0, duration: 1500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulse2Scale, { toValue: 1.14, duration: 1500, delay: 350, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulse2Opacity, { toValue: 0, duration: 1500, delay: 350, easing: Easing.out(Easing.ease), useNativeDriver: true }),
         ])
       );
       pulseLoop.current.start();
     } else {
       pulseLoop.current?.stop();
       pulseScale.setValue(1);
-      pulseOpacity.setValue(0.5);
+      pulseOpacity.setValue(0);
       pulse2Scale.setValue(1);
-      pulse2Opacity.setValue(0.35);
+      pulse2Opacity.setValue(0);
     }
     return () => pulseLoop.current?.stop();
   }, [appState]);
-
-  const cleanupAudioAndRecording = () => {
-    if (recordingTimeoutRef.current) {
-      clearTimeout(recordingTimeoutRef.current);
-      recordingTimeoutRef.current = null;
-    }
-    try { recorder.stop().catch(() => {}); } catch(e) {}
-    try { if (player.playing) player.pause(); } catch(e) {}
-    try {
-      AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch(() => {});
-    } catch(e) {}
-  };
 
   const getOfflineAIReply = (text: string, lang: string): string => {
     const q = text.toLowerCase().trim();
@@ -956,7 +953,7 @@ export default function VoiceScreen({ navigation }: any) {
         />
 
         {/* ── Insightlancer Bottom Voice Deck ──────────────────── */}
-        <View style={[styles.voiceDeck, { paddingBottom: isKeyboardVisible ? 10 : Math.max(16, insets.bottom + 8) }]}>
+        <View style={[styles.voiceDeck, { paddingBottom: isKeyboardVisible ? 8 : 12 }]}>
           {/* Secondary text input */}
           <ChatInput
             onSubmit={handleTextSubmit}
@@ -988,11 +985,11 @@ export default function VoiceScreen({ navigation }: any) {
               {appState === 'thinking' ? (
                 <ActivityIndicator size="large" color="#FFFFFF" />
               ) : appState === 'playing' ? (
-                <MaterialIcons name="volume-up" size={34} color="#FFFFFF" />
+                <MaterialIcons name="volume-up" size={32} color="#FFFFFF" />
               ) : appState === 'recording' ? (
-                <MaterialIcons name="stop" size={34} color="#FFFFFF" />
+                <MaterialIcons name="stop" size={32} color="#FFFFFF" />
               ) : (
-                <MaterialIcons name="mic" size={34} color="#FFFFFF" />
+                <MaterialIcons name="mic" size={32} color="#FFFFFF" />
               )}
             </TouchableOpacity>
           </View>
@@ -1116,7 +1113,7 @@ const MessageItem = React.memo(({
             <Text style={styles.aiSenderText}>CyberSaathi</Text>
             <TouchableOpacity 
               style={styles.replayIconBtn}
-              onPress={() => item.isAudioPlaying ? onStopSpeech() : onReplaySpeech(item.text, item.id)}
+              onPress={() => item.isAudioPlaying ? onStopSpeech() : onReplaySpeech(item.id.startsWith('welcome') ? t('voice_default_instruction') : item.text, item.id)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <MaterialIcons 
@@ -1129,7 +1126,7 @@ const MessageItem = React.memo(({
         )}
         <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
           <Text style={[styles.bubbleText, isAI ? styles.aiText : styles.userText]}>
-            {item.text}
+            {item.id.startsWith('welcome') ? t('voice_default_instruction') : item.text}
           </Text>
           {item.isAudioPlaying && (
             <TouchableOpacity style={styles.stopSpeech} onPress={onStopSpeech}>
@@ -1424,7 +1421,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     borderTopWidth: 1,
     borderColor: colors.surfaceBorder,
-    paddingTop: 12,
+    paddingTop: 10,
     shadowColor: '#0B1527',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.05,
@@ -1433,40 +1430,42 @@ const styles = StyleSheet.create({
   },
   orbWrap: {
     position: 'relative',
-    marginVertical: 12,
+    width: 80,
+    height: 80,
+    marginVertical: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pulseRingOuter: {
     position: 'absolute',
-    top: -10,
-    left: -10,
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: colors.error,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(239, 68, 68, 0.14)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(239, 68, 68, 0.35)',
   },
   pulseRingInner: {
     position: 'absolute',
-    top: -6,
-    left: -6,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.error,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(239, 68, 68, 0.22)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(239, 68, 68, 0.45)',
   },
   heroMicBtn: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
   },
   heroMicBtnRec: { backgroundColor: colors.error, shadowColor: colors.error },
   heroMicBtnThinking: { backgroundColor: colors.warning, shadowColor: colors.warning },
@@ -1476,7 +1475,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.onSurfaceVariant,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 4,
+    marginBottom: 2,
   },
   flex1: { flex: 1 },
 

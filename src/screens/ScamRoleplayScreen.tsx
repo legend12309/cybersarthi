@@ -14,6 +14,83 @@ import scamsData from '../data/scams.json';
 
 type Message = { id: string, role: 'user' | 'assistant' | 'system' | 'system_context', content: string };
 
+const getInitialScammerMessage = (scam: string, lang: string) => {
+  const openings: Record<string, Record<string, string>> = {
+    electricity_bill: {
+      'hi-IN': "नमस्ते, मैं राज्य बिजली बोर्ड से वरिष्ठ प्रवर्तन अधिकारी अमित शर्मा (आईडी #EZ-8821) बोल रहा हूँ। आपके कनेक्शन #4521 पर ₹3,240 का बकाया बिल है। हमारा लाइनमैन आपके ट्रांसफार्मर पर पहुँच चुका है और 10 मिनट में बिजली काटने का वर्क आर्डर जारी है।",
+      'mr-IN': "नमस्कार, मी राज्य वीज मंडळातून वरिष्ठ अधिकारी अमित शर्मा (आयडी #EZ-8821) बोलत आहे. तुमच्या कनेक्शन #4521 वर ₹3,240 चे बिल प्रलंबित आहे. आमचे तंत्रज्ञ तुमच्या भागात पोहोचले असून पुढील 10 मिनिटांत वीज कापण्याचे आदेश आहेत.",
+      'bn-IN': "নমস্কার, আমি রাজ্য বিদ্যুৎ পর্ষদ থেকে বরিষ্ঠ আধিকারিক অমিত শর্মা (আইডি #EZ-8821) বলছি। আপনার কানেকশন #4521-এ ₹৩,২৪০ বকেয়া আছে। আমাদের লাইনম্যান এলাকায় পৌঁছে গেছে এবং ১০ মিনিটের মধ্যে সংযোগ বিচ্ছিন্ন করার নির্দেশ রয়েছে।",
+      'ta-IN': "வணக்கம், நான் மின்சார வாரியத்தின் தலைமை அதிகாரி அமித் சர்மா (ஐடி #EZ-8821) பேசுகிறேன். இணைப்பு #4521-ல் ₹3,240 கட்டணம் நிலுவையில் உள்ளது. இன்னும் 10 நிமிடங்களில் மின்சாரம் துண்டிக்கப்பட உத்தரவு பிறப்பிக்கப்பட்டுள்ளது.",
+      'te-IN': "నమస్తే, నేను విద్యుత్ బోర్డు సీనియర్ అధికారి అమిత్ శర్మ (ఐడీ #EZ-8821) మాట్లాడుతున్నాను. మీ కనెక్షన్ #4521 పై ₹3,240 బకాయి ఉంది. 10 నిమిషాల్లో కనెక్షన్ కట్ చేయడానికి లైన్‌మెన్ సిద్ధంగా ఉన్నారు.",
+      'gu-IN': "નમસ્તે, હું વીજળી બોર્ડના વરિષ્ઠ અધિકારી અમિત શર્મા (આઈડી #EZ-8821) બોલું છું. તમારા કનેક્શન #4521 પર ₹3,240 નું બિલ બાકી છે. 10 મિનિટમાં પાવર કટ કરવાનો વર્ક ઓર્ડર જારી થયેલ છે.",
+      'en-IN': "Hello, this is Senior Enforcement Officer Amit Sharma (ID #EZ-8821) from the State Electricity Board. Disconnection Work Order #WO-9941 is active for connection #4521 with an overdue balance of ₹3,240. The field technician is at your transformer right now.",
+    },
+    fedex_parcel: {
+      'hi-IN': "हेलो! मैं मुंबई कस्टम्स व एंटी-नारकोटिक्स विंग से इंस्पेक्टर विक्रम राठौर बोल रहा हूँ। आपके आधार से लिंक पार्सल #FDX-984399 में 150 ग्राम ड्रग्स और जाली पासपोर्ट जब्त हुए हैं। आपके खिलाफ गैर-जमानती अरेस्ट वारंट जारी हुआ है!",
+      'mr-IN': "हॅलो! मी मुंबई कस्टम्स अँटी-नारकोटिक्स विंगमधून इन्स्पेक्टर विक्रम राठोड बोलतोय. तुमच्या आधारशी लिंक पार्सल #FDX-984399 मध्ये अमली पदार्थ जप्त झाले आहेत. तुमच्याविरुद्ध अरेस्ट वॉरंट निघाले आहे!",
+      'en-IN': "This is Inspector Vikram Rathore from Mumbai Customs & Anti-Narcotics Wing (Badge #NCB-409). International FedEx parcel #FDX-984399 in your name has been seized with 150g MDMA narcotics. An arrest warrant is active against you!",
+    },
+    sbi_kyc: {
+      'hi-IN': "नमस्ते, मैं भारतीय स्टेट बैंक सेंट्रल हेड ऑफिस मुंबई से मुख्य प्रबंधक राजेश मल्होत्रा बोल रहा हूँ। पैन कार्ड अपडेट न होने के कारण आपका योनो एसबीआई खाता और एटीएम कार्ड आज ब्लॉक कर दिया गया है।",
+      'mr-IN': "नमस्कार, मी स्टेट बँक मुख्य कार्यालयातून मॅनेजर राजेश मल्होत्रा बोलत आहे. पॅन कार्ड लिंक नसल्याने तुमचे योनो खाते आणि एटीएम आज ब्लॉक करण्यात आले आहे.",
+      'en-IN': "Hello, this is Senior Chief Manager Rajesh Malhotra from SBI Centralized Fraud & KYC Operations, Mumbai. Your SBI YONO account and ATM card have been frozen due to an expired PAN card.",
+    },
+    whatsapp_family: {
+      'hi-IN': "(रोते हुए घबराई आवाज में) पापा/मम्मी! मेरा बहुत बुरा एक्सीडेंट हो गया है, फोन चकनाचूर हो गया। मैं अस्पताल की इमरजेंसी में हूँ, ऑपरेशन के लिए तुरंत ₹15,000 चाहिए वरना डॉक्टर इलाज शुरू नहीं करेंगे!",
+      'mr-IN': "(रडत घाबरलेल्या आवाजात) बाबा/आई! माझा खूप मोठा अपघात झालाय, फोन फुटला. मी हॉस्पिटलच्या इमर्जन्सी वॉर्डमध्ये आहे, तत्काळ ₹15,000 पाठवा नाहीतर डॉक्टर उपचार करणार नाहीत!",
+      'en-IN': "(crying and panicked) Hello? I had a terrible road accident and my phone got crushed! I am in the hospital emergency casualty ward right now and need ₹15,000 immediately for emergency admission!",
+    },
+    kbc_lottery: {
+      'hi-IN': "बहुत-बहुत बधाई हो! मैं केबीसी जियो हेड ऑफिस मुंबई से राणा प्रताप सिंह बोल रहा हूँ। आपके मोबाइल नंबर ने केबीसी 2026 लकी ड्रा में 25 लाख रुपये का पहला इनाम जीता है!",
+      'mr-IN': "खूप खूप अभिनंदन! मी केबीसी जिओ कार्यालयातून राणा प्रताप सिंह बोलत आहे. तुमच्या मोबाईल क्रमांकाने 25 लाखांची पहिली लॉटरी जिंकली आहे!",
+      'en-IN': "Congratulations! This is Rana Pratap Singh, Operations Manager for KBC Head Office & Jio All-India Lucky Draw. Your mobile number has won the 1st Mega Prize of ₹25,00,000!",
+    },
+    olx_qr: {
+      'hi-IN': "नमस्ते, मैं आर्मी कैंटोनमेंट से सूबेदार मेजर कुलदीप यादव बोल रहा हूँ। मुझे आपका सोफा तुरंत खरीदना है, कल सुबह मेरी पुणे पोस्टिंग है। मैं आर्मी मर्चेंट क्यूआर कोड भेज रहा हूँ, स्कैन करके अपना पेमेंट ले लीजिए।",
+      'mr-IN': "नमस्कार, मी मिलिटरी कॅम्पमधून मेजर कुलदीप यादव बोलतोय. मला तुमचे फर्निचर ताबडतोब खरेदी करायचे आहे. मी आर्मी क्यूआर कोड पाठवला आहे, लगेच स्कॅन करून पैसे घ्या.",
+      'en-IN': "Hello, this is Subedar Major Kuldeep Yadav from the Military Cantonment. I want to buy your listed item right away before my army transfer tomorrow. I am sending you our Army Merchant QR code to receive the payment.",
+    },
+    wfh_job: {
+      'hi-IN': "नमस्ते! मैं स्नेहा कपूर, ग्लोबल डिजिटल मार्केटिंग से टैलेंट एक्विजिशन हेड बात कर रही हूँ। आप घर बैठे रोजाना सिर्फ यूट्यूब वीडियो लाइक करके ₹3,000 से ₹5,000 कमा सकते हैं। तुरंत ₹150 का वेलकम बोनस पाएं!",
+      'mr-IN': "नमस्कार! मी स्नेहा कपूर, ग्लोबल मार्केटिंगमधून बोलतेय. तुम्ही घरबसल्या युट्यूब व्हिडिओ लाईक करून रोज ₹३,००० ते ₹५,००० कमवू शकता. लगेच ₹१५० वेलकम बोनस घ्या!",
+      'en-IN': "Hello! This is Sneha Kapoor, Global Talent Acquisition Lead. You can easily earn ₹3,000 to ₹5,000 daily from home simply by liking YouTube videos. Get an instant ₹150 welcome bonus right now!",
+    },
+    trai_disconnect: {
+      'hi-IN': "ट्राई अनुपालन नोटिस: मैं दूरसंचार विभाग (TRAI) केंद्रीय प्रवर्तन विंग से आदित्य सक्सेना बोल रहा हूँ। आपके नंबर से 17 आपराधिक शिकायतें मिली हैं। अगले 2 घंटे में आपका सिम कार्ड पूरी तरह बंद कर दिया जाएगा!",
+      'mr-IN': "ट्राई नोटीस: मी दूरसंचार विभागातून (TRAI) अधिकारी आदित्य सक्सेना बोलतोय. तुमच्या नंबरवरून गैरव्यवहाराच्या तक्रारी आल्या आहेत. पुढील २ तासांत तुमचे सर्व सिम कार्ड ब्लॉक केले जातील!",
+      'en-IN': "TRAI Compliance Notice: This is Aditya Saxena from the Telecom Regulatory Authority of India Enforcement Unit. 17 criminal complaints are filed against your mobile. Your SIM card will be deactivated in 2 hours!",
+    },
+    credit_card_points: {
+      'hi-IN': "नमस्कार सर, मैं बैंक कार्ड रिवॉर्ड्स हेड ऑफिस से संजय वर्मा बोल रहा हूँ। आपके क्रेडिट कार्ड पर 18,450 रिवॉर्ड पॉइंट्स (कीमत ₹7,380) आज रात 12 बजे एक्सपायर हो रहे हैं। इन्हें तुरंत अपने बैंक खाते में नकद ट्रांसफर करवाएं।",
+      'mr-IN': "नमस्कार, मी बँक कार्ड रिवॉर्ड्स विभागातून संजय वर्मा बोलतोय. तुमच्या क्रेडिट कार्डचे 18,450 रिवॉर्ड पॉईंट्स (रुपये 7,380) आज रात्री संपत आहेत. हे पैसे थेट खात्यात ट्रान्सफर करून घ्या.",
+      'en-IN': "Hello, this is Sanjay Verma from Bank Card Loyalty & Rewards Division. You have 18,450 reward points worth ₹7,380 expiring at midnight. Let me help you credit this directly as cash into your bank account.",
+    },
+    digital_arrest: {
+      'hi-IN': "सावधान! मैं सीबीआई हेडक्वार्टर नई दिल्ली से डीसीपी संदीप सिंघल बोल रहा हूँ। आप ₹3.8 करोड़ के मनी लॉन्ड्रिंग केस में मुख्य संदिग्ध हैं। आप इस वक्त 'डिजिटल अरेस्ट' में हैं! कॉल काटा तो 15 मिनट में स्वाट टीम आपके घर का दरवाजा तोड़ेगी!",
+      'mr-IN': "सावधान! मी सीबीआय नवी दिल्लीतून डीसीपी संदीप सिंघल बोलतोय. तुम्ही ₹३.८ कोटी मनी लाँड्रिंग प्रकरणात संशयित आहात. तुम्ही सध्या 'डिजिटल अरेस्ट' मध्ये आहात! कॉल कट केला तर पोलीस तुमच्या घरी पोहोचेल!",
+      'en-IN': "SILENCE! This is DCP Sandeep Singhal, Cyber Crime Special Task Force, CBI Headquarters, New Delhi. You are the prime suspect in a ₹3.8 Crore money laundering case. You are under immediate DIGITAL ARREST right now! Do not disconnect this call!",
+    },
+  };
+
+  const scamDict = openings[scam] || openings.electricity_bill;
+  return scamDict[lang] || scamDict['en-IN'] || scamDict['hi-IN'];
+};
+
+const getSystemContextDescription = (scam: string, title: string) => {
+  switch (scam) {
+    case 'fedex_parcel': return 'You received a call from an alleged Customs & Narcotics inspector claiming illegal drugs were found in a FedEx parcel in your name.';
+    case 'sbi_kyc': return 'You received an urgent call from an alleged Bank Manager claiming your account is blocked due to an expired PAN card.';
+    case 'whatsapp_family': return 'You received an emergency call from someone claiming to be your family member in a serious road accident needing urgent medical money.';
+    case 'kbc_lottery': return 'You received an excited call claiming your mobile number won a ₹25 Lakhs KBC lottery prize.';
+    case 'olx_qr': return 'You received a call from an alleged Army Officer wanting to buy your item online using a reverse QR code payment.';
+    case 'wfh_job': return 'You received a call offering ₹3,000-₹5,000/day for a work-from-home YouTube video rating job.';
+    case 'trai_disconnect': return 'You received a call from someone claiming to be a TRAI official warning that your SIM card will be deactivated in 2 hours.';
+    case 'credit_card_points': return 'You received a call from a bank rewards specialist claiming you have ₹7,380 worth of expiring reward points.';
+    case 'digital_arrest': return 'You received a threatening call from an alleged CBI Officer placing you under immediate "Digital Arrest" for money laundering.';
+    default: return `You received a suspicious call regarding ${title}. The caller demands immediate action.`;
+  }
+};
+
 export default function ScamRoleplayScreen({ route, navigation }: any) {
   const { scamId, mode } = route.params || { scamId: 'electricity_bill', mode: 'text' };
   const { t, deviceId, userId, languageCode, participantId } = useLanguage();
@@ -40,8 +117,8 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   // Audio Hooks & Animations
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const player = useAudioPlayer();
-  const pulseScale = useRef(new Animated.Value(1)).current;
-  const pulseOpacity = useRef(new Animated.Value(0.4)).current;
+  const [pulseScale] = useState(() => new Animated.Value(1));
+  const [pulseOpacity] = useState(() => new Animated.Value(0.4));
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
   const recordingTimeoutRef = useRef<any>(null);
   const startedLanguageRef = useRef<string | null>(null);
@@ -66,6 +143,72 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   const persona = rawPersona.replace('${languageName}', languageName);
   
   const scamInfo = scamsData.find(s => s.id === scamId) || scamsData[0];
+
+  const cleanupAudioAndRecording = () => {
+    if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+    if (finalEvalTimeoutRef.current) {
+      clearTimeout(finalEvalTimeoutRef.current);
+      finalEvalTimeoutRef.current = null;
+    }
+    try { recorder.stop().catch(() => {}); } catch(e) {}
+    try { if (player.playing) player.pause(); } catch(e) {}
+    try {
+      AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch(() => {});
+    } catch(e) {}
+  };
+
+  const startRoleplay = async () => {
+    if (startedLanguageRef.current === languageCode) return;
+    startedLanguageRef.current = languageCode;
+    try {
+      const firstMsg = getInitialScammerMessage(scamId, languageCode);
+      const contextDesc = getSystemContextDescription(scamId, scamInfo?.title || 'Unknown Scenario');
+      const contextMessages: Message[] = [
+        { id: 'sysctx', role: 'system_context', content: contextDesc },
+        { id: 'sys', role: 'system', content: persona },
+        { id: 'usr0', role: 'user', content: t('initial_user_hello', 'Hello?') },
+      ];
+      const assistantMsg: Message = { id: 'ast0', role: 'assistant', content: firstMsg };
+      
+      // Render initial message immediately with zero delay
+      setMessages([...contextMessages, assistantMsg]);
+      setIsTyping(false);
+
+      if (mode === 'voice') {
+        playTokenRef.current += 1;
+        const currentToken = playTokenRef.current;
+        try { if (player.playing) player.pause(); } catch(e) {}
+
+        setIsAudioLoading(true);
+        textToSpeech(firstMsg, languageCode, { scamId })
+          .then((audioUri) => {
+            if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
+              try {
+                player.replace({ uri: audioUri });
+                player.play();
+              } catch (playErr) {
+                console.log('[ROLEPLAY] Player error on start:', playErr);
+              }
+            }
+          })
+          .catch((ttsErr) => {
+            console.log('[ROLEPLAY] TTS failed on start, continuing in text mode:', ttsErr);
+          })
+          .finally(() => {
+            if (isMounted.current) setIsAudioLoading(false);
+          });
+      }
+    } catch (error: any) { 
+      if (error.message === 'API_LIMIT_REACHED') { 
+        Alert.alert('Research Limit Reached', 'The API token budget for this month has been reached. Please contact the study coordinator to rotate the API key.'); 
+        return; 
+      }
+      console.log('[ROLEPLAY] Error starting roleplay:', error);
+      if (isMounted.current) {
+        setIsTyping(false);
+      }
+    }
+  };
 
   useEffect(() => {
     isMounted.current = true;
@@ -152,146 +295,6 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       hideSub.remove();
     };
   }, []);
-
-  const cleanupAudioAndRecording = () => {
-    if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
-    if (finalEvalTimeoutRef.current) {
-      clearTimeout(finalEvalTimeoutRef.current);
-      finalEvalTimeoutRef.current = null;
-    }
-    try { recorder.stop().catch(() => {}); } catch(e) {}
-    try { if (player.playing) player.pause(); } catch(e) {}
-    try {
-      AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, playThroughEarpiece: false } as any).catch(() => {});
-    } catch(e) {}
-  };
-
-  const getInitialScammerMessage = (scam: string, lang: string) => {
-    const openings: Record<string, Record<string, string>> = {
-      electricity_bill: {
-        'hi-IN': "नमस्ते, मैं राज्य बिजली बोर्ड से वरिष्ठ प्रवर्तन अधिकारी अमित शर्मा (आईडी #EZ-8821) बोल रहा हूँ। आपके कनेक्शन #4521 पर ₹3,240 का बकाया बिल है। हमारा लाइनमैन आपके ट्रांसफार्मर पर पहुँच चुका है और 10 मिनट में बिजली काटने का वर्क आर्डर जारी है।",
-        'mr-IN': "नमस्कार, मी राज्य वीज मंडळातून वरिष्ठ अधिकारी अमित शर्मा (आयडी #EZ-8821) बोलत आहे. तुमच्या कनेक्शन #4521 वर ₹3,240 चे बिल प्रलंबित आहे. आमचे तंत्रज्ञ तुमच्या भागात पोहोचले असून पुढील 10 मिनिटांत वीज कापण्याचे आदेश आहेत.",
-        'bn-IN': "নমস্কার, আমি রাজ্য বিদ্যুৎ পর্ষদ থেকে বরিষ্ঠ আধিকারিক অমিত শর্মা (আইডি #EZ-8821) বলছি। আপনার কানেকশন #4521-এ ₹৩,২৪০ বকেয়া আছে। আমাদের লাইনম্যান এলাকায় পৌঁছে গেছে এবং ১০ মিনিটের মধ্যে সংযোগ বিচ্ছিন্ন করার নির্দেশ রয়েছে।",
-        'ta-IN': "வணக்கம், நான் மின்சார வாரியத்தின் தலைமை அதிகாரி அமித் சர்மா (ஐடி #EZ-8821) பேசுகிறேன். இணைப்பு #4521-ல் ₹3,240 கட்டணம் நிலுவையில் உள்ளது. இன்னும் 10 நிமிடங்களில் மின்சாரம் துண்டிக்கப்பட உத்தரவு பிறப்பிக்கப்பட்டுள்ளது.",
-        'te-IN': "నమస్తే, నేను విద్యుత్ బోర్డు సీనియర్ అధికారి అమిత్ శర్మ (ఐడీ #EZ-8821) మాట్లాడుతున్నాను. మీ కనెక్షన్ #4521 పై ₹3,240 బకాయి ఉంది. 10 నిమిషాల్లో కనెక్షన్ కట్ చేయడానికి లైన్‌మెన్ సిద్ధంగా ఉన్నారు.",
-        'gu-IN': "નમસ્તે, હું વીજળી બોર્ડના વરિષ્ઠ અધિકારી અમિત શર્મા (આઈડી #EZ-8821) બોલું છું. તમારા કનેક્શન #4521 પર ₹3,240 નું બિલ બાકી છે. 10 મિનિટમાં પાવર કટ કરવાનો વર્ક ઓર્ડર જારી થયેલ છે.",
-        'en-IN': "Hello, this is Senior Enforcement Officer Amit Sharma (ID #EZ-8821) from the State Electricity Board. Disconnection Work Order #WO-9941 is active for connection #4521 with an overdue balance of ₹3,240. The field technician is at your transformer right now.",
-      },
-      fedex_parcel: {
-        'hi-IN': "हेलो! मैं मुंबई कस्टम्स व एंटी-नारकोटिक्स विंग से इंस्पेक्टर विक्रम राठौर बोल रहा हूँ। आपके आधार से लिंक पार्सल #FDX-984399 में 150 ग्राम ड्रग्स और जाली पासपोर्ट जब्त हुए हैं। आपके खिलाफ गैर-जमानती अरेस्ट वारंट जारी हुआ है!",
-        'mr-IN': "हॅलो! मी मुंबई कस्टम्स अँटी-नारकोटिक्स विंगमधून इन्स्पेक्टर विक्रम राठोड बोलतोय. तुमच्या आधारशी लिंक पार्सल #FDX-984399 मध्ये अमली पदार्थ जप्त झाले आहेत. तुमच्याविरुद्ध अरेस्ट वॉरंट निघाले आहे!",
-        'en-IN': "This is Inspector Vikram Rathore from Mumbai Customs & Anti-Narcotics Wing (Badge #NCB-409). International FedEx parcel #FDX-984399 in your name has been seized with 150g MDMA narcotics. An arrest warrant is active against you!",
-      },
-      sbi_kyc: {
-        'hi-IN': "नमस्ते, मैं भारतीय स्टेट बैंक सेंट्रल हेड ऑफिस मुंबई से मुख्य प्रबंधक राजेश मल्होत्रा बोल रहा हूँ। पैन कार्ड अपडेट न होने के कारण आपका योनो एसबीआई खाता और एटीएम कार्ड आज ब्लॉक कर दिया गया है।",
-        'mr-IN': "नमस्कार, मी स्टेट बँक मुख्य कार्यालयातून मॅनेजर राजेश मल्होत्रा बोलत आहे. पॅन कार्ड लिंक नसल्याने तुमचे योनो खाते आणि एटीएम आज ब्लॉक करण्यात आले आहे.",
-        'en-IN': "Hello, this is Senior Chief Manager Rajesh Malhotra from SBI Centralized Fraud & KYC Operations, Mumbai. Your SBI YONO account and ATM card have been frozen due to an expired PAN card.",
-      },
-      whatsapp_family: {
-        'hi-IN': "(रोते हुए घबराई आवाज में) पापा/मम्मी! मेरा बहुत बुरा एक्सीडेंट हो गया है, फोन चकनाचूर हो गया। मैं अस्पताल की इमरजेंसी में हूँ, ऑपरेशन के लिए तुरंत ₹15,000 चाहिए वरना डॉक्टर इलाज शुरू नहीं करेंगे!",
-        'mr-IN': "(रडत घाबरलेल्या आवाजात) बाबा/आई! माझा खूप मोठा अपघात झालाय, फोन फुटला. मी हॉस्पिटलच्या इमर्जन्सी वॉर्डमध्ये आहे, तत्काळ ₹15,000 पाठवा नाहीतर डॉक्टर उपचार करणार नाहीत!",
-        'en-IN': "(crying and panicked) Hello? I had a terrible road accident and my phone got crushed! I am in the hospital emergency casualty ward right now and need ₹15,000 immediately for emergency admission!",
-      },
-      kbc_lottery: {
-        'hi-IN': "बहुत-बहुत बधाई हो! मैं केबीसी जियो हेड ऑफिस मुंबई से राणा प्रताप सिंह बोल रहा हूँ। आपके मोबाइल नंबर ने केबीसी 2026 लकी ड्रा में 25 लाख रुपये का पहला इनाम जीता है!",
-        'mr-IN': "खूप खूप अभिनंदन! मी केबीसी जिओ कार्यालयातून राणा प्रताप सिंह बोलत आहे. तुमच्या मोबाईल क्रमांकाने 25 लाखांची पहिली लॉटरी जिंकली आहे!",
-        'en-IN': "Congratulations! This is Rana Pratap Singh, Operations Manager for KBC Head Office & Jio All-India Lucky Draw. Your mobile number has won the 1st Mega Prize of ₹25,00,000!",
-      },
-      olx_qr: {
-        'hi-IN': "नमस्ते, मैं आर्मी कैंटोनमेंट से सूबेदार मेजर कुलदीप यादव बोल रहा हूँ। मुझे आपका सोफा तुरंत खरीदना है, कल सुबह मेरी पुणे पोस्टिंग है। मैं आर्मी मर्चेंट क्यूआर कोड भेज रहा हूँ, स्कैन करके अपना पेमेंट ले लीजिए।",
-        'mr-IN': "नमस्कार, मी मिलिटरी कॅम्पमधून मेजर कुलदीप यादव बोलतोय. मला तुमचे फर्निचर ताबडतोब खरेदी करायचे आहे. मी आर्मी क्यूआर कोड पाठवला आहे, लगेच स्कॅन करून पैसे घ्या.",
-        'en-IN': "Hello, this is Subedar Major Kuldeep Yadav from the Military Cantonment. I want to buy your listed item right away before my army transfer tomorrow. I am sending you our Army Merchant QR code to receive the payment.",
-      },
-      wfh_job: {
-        'hi-IN': "नमस्ते! मैं स्नेहा कपूर, ग्लोबल डिजिटल मार्केटिंग से टैलेंट एक्विजिशन हेड बात कर रही हूँ। आप घर बैठे रोजाना सिर्फ यूट्यूब वीडियो लाइक करके ₹3,000 से ₹5,000 कमा सकते हैं। तुरंत ₹150 का वेलकम बोनस पाएं!",
-        'mr-IN': "नमस्कार! मी स्नेहा कपूर, ग्लोबल मार्केटिंगमधून बोलतेय. तुम्ही घरबसल्या युट्यूब व्हिडिओ लाईक करून रोज ₹३,००० ते ₹५,००० कमवू शकता. लगेच ₹१५० वेलकम बोनस घ्या!",
-        'en-IN': "Hello! This is Sneha Kapoor, Global Talent Acquisition Lead. You can easily earn ₹3,000 to ₹5,000 daily from home simply by liking YouTube videos. Get an instant ₹150 welcome bonus right now!",
-      },
-      trai_disconnect: {
-        'hi-IN': "ट्राई अनुपालन नोटिस: मैं दूरसंचार विभाग (TRAI) केंद्रीय प्रवर्तन विंग से आदित्य सक्सेना बोल रहा हूँ। आपके नंबर से 17 आपराधिक शिकायतें मिली हैं। अगले 2 घंटे में आपका सिम कार्ड पूरी तरह बंद कर दिया जाएगा!",
-        'mr-IN': "ट्राई नोटीस: मी दूरसंचार विभागातून (TRAI) अधिकारी आदित्य सक्सेना बोलतोय. तुमच्या नंबरवरून गैरव्यवहाराच्या तक्रारी आल्या आहेत. पुढील २ तासांत तुमचे सर्व सिम कार्ड ब्लॉक केले जातील!",
-        'en-IN': "TRAI Compliance Notice: This is Aditya Saxena from the Telecom Regulatory Authority of India Enforcement Unit. 17 criminal complaints are filed against your mobile. Your SIM card will be deactivated in 2 hours!",
-      },
-      credit_card_points: {
-        'hi-IN': "नमस्कार सर, मैं बैंक कार्ड रिवॉर्ड्स हेड ऑफिस से संजय वर्मा बोल रहा हूँ। आपके क्रेडिट कार्ड पर 18,450 रिवॉर्ड पॉइंट्स (कीमत ₹7,380) आज रात 12 बजे एक्सपायर हो रहे हैं। इन्हें तुरंत अपने बैंक खाते में नकद ट्रांसफर करवाएं।",
-        'mr-IN': "नमस्कार, मी बँक कार्ड रिवॉर्ड्स विभागातून संजय वर्मा बोलतोय. तुमच्या क्रेडिट कार्डचे 18,450 रिवॉर्ड पॉईंट्स (रुपये 7,380) आज रात्री संपत आहेत. हे पैसे थेट खात्यात ट्रान्सफर करून घ्या.",
-        'en-IN': "Hello, this is Sanjay Verma from Bank Card Loyalty & Rewards Division. You have 18,450 reward points worth ₹7,380 expiring at midnight. Let me help you credit this directly as cash into your bank account.",
-      },
-      digital_arrest: {
-        'hi-IN': "सावधान! मैं सीबीआई हेडक्वार्टर नई दिल्ली से डीसीपी संदीप सिंघल बोल रहा हूँ। आप ₹3.8 करोड़ के मनी लॉन्ड्रिंग केस में मुख्य संदिग्ध हैं। आप इस वक्त 'डिजिटल अरेस्ट' में हैं! कॉल काटा तो 15 मिनट में स्वाट टीम आपके घर का दरवाजा तोड़ेगी!",
-        'mr-IN': "सावधान! मी सीबीआय नवी दिल्लीतून डीसीपी संदीप सिंघल बोलतोय. तुम्ही ₹३.८ कोटी मनी लाँड्रिंग प्रकरणात संशयित आहात. तुम्ही सध्या 'डिजिटल अरेस्ट' मध्ये आहात! कॉल कट केला तर पोलीस तुमच्या घरी पोहोचेल!",
-        'en-IN': "SILENCE! This is DCP Sandeep Singhal, Cyber Crime Special Task Force, CBI Headquarters, New Delhi. You are the prime suspect in a ₹3.8 Crore money laundering case. You are under immediate DIGITAL ARREST right now! Do not disconnect this call!",
-      },
-    };
-
-    const scamDict = openings[scam] || openings.electricity_bill;
-    return scamDict[lang] || scamDict['en-IN'] || scamDict['hi-IN'];
-  };
-
-  const getSystemContextDescription = (scam: string, title: string) => {
-    switch (scam) {
-      case 'fedex_parcel': return 'You received a call from an alleged Customs & Narcotics inspector claiming illegal drugs were found in a FedEx parcel in your name.';
-      case 'sbi_kyc': return 'You received an urgent call from an alleged Bank Manager claiming your account is blocked due to an expired PAN card.';
-      case 'whatsapp_family': return 'You received an emergency call from someone claiming to be your family member in a serious road accident needing urgent medical money.';
-      case 'kbc_lottery': return 'You received an excited call claiming your mobile number won a ₹25 Lakhs KBC lottery prize.';
-      case 'olx_qr': return 'You received a call from an alleged Army Officer wanting to buy your item online using a reverse QR code payment.';
-      case 'wfh_job': return 'You received a call offering ₹3,000-₹5,000/day for a work-from-home YouTube video rating job.';
-      case 'trai_disconnect': return 'You received a call from someone claiming to be a TRAI official warning that your SIM card will be deactivated in 2 hours.';
-      case 'credit_card_points': return 'You received a call from a bank rewards specialist claiming you have ₹7,380 worth of expiring reward points.';
-      case 'digital_arrest': return 'You received a threatening call from an alleged CBI Officer placing you under immediate "Digital Arrest" for money laundering.';
-      default: return `You received a suspicious call regarding ${title}. The caller demands immediate action.`;
-    }
-  };
-
-  const startRoleplay = async () => {
-    if (startedLanguageRef.current === languageCode) return;
-    startedLanguageRef.current = languageCode;
-    try {
-      const firstMsg = getInitialScammerMessage(scamId, languageCode);
-      const contextDesc = getSystemContextDescription(scamId, scamInfo?.title || 'Unknown Scenario');
-      const contextMessages: Message[] = [
-        { id: 'sysctx', role: 'system_context', content: contextDesc },
-        { id: 'sys', role: 'system', content: persona },
-        { id: 'usr0', role: 'user', content: t('initial_user_hello', 'Hello?') },
-      ];
-      const assistantMsg: Message = { id: 'ast0', role: 'assistant', content: firstMsg };
-      
-      // Render initial message immediately with zero delay
-      setMessages([...contextMessages, assistantMsg]);
-      setIsTyping(false);
-
-      if (mode === 'voice') {
-        playTokenRef.current += 1;
-        const currentToken = playTokenRef.current;
-        try { if (player.playing) player.pause(); } catch(e) {}
-
-        setIsAudioLoading(true);
-        textToSpeech(firstMsg, languageCode, { scamId })
-          .then((audioUri) => {
-            if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
-              try {
-                player.replace({ uri: audioUri });
-                player.play();
-              } catch (playErr) {
-                console.log('[ROLEPLAY] Player error on start:', playErr);
-              }
-            }
-          })
-          .catch((ttsErr) => {
-            console.log('[ROLEPLAY] TTS failed on start, continuing in text mode:', ttsErr);
-          })
-          .finally(() => {
-            if (isMounted.current) setIsAudioLoading(false);
-          });
-      }
-    } catch (error: any) { if (error.message === 'API_LIMIT_REACHED') { Alert.alert('Research Limit Reached', 'The API token budget for this month has been reached. Please contact the study coordinator to rotate the API key.'); return; }
-      console.log('[ROLEPLAY] Error starting roleplay:', error);
-      if (isMounted.current) {
-        // Don't crash — just show the messages without audio and let user continue
-        setIsTyping(false);
-      }
-    }
-  };
 
   const performEvaluation = useCallback(async (finalMessages: Message[]) => {
     pendingFinalEvalRef.current = null;
@@ -713,7 +716,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
             </View>
 
             {/* Bottom Controls Row: When Call is Ended vs Ongoing */}
-            <View style={[styles.liveCallControlsRow, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+            <View style={[styles.liveCallControlsRow, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
               {isCallEnded ? (
                 <View style={styles.callEndedVoiceWrap}>
                   <TouchableOpacity 
@@ -779,9 +782,9 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
               style={styles.chatScrollView}
               contentContainerStyle={[
                 styles.chatScroll, 
-                evaluation 
-                  ? { paddingBottom: 80 + insets.bottom } 
-                  : { paddingBottom: isKeyboardVisible ? 20 : 32 }
+                (evaluation || isCallEnded)
+                  ? { paddingBottom: Math.max(insets.bottom, 24) + 60 } 
+                  : { paddingBottom: isKeyboardVisible ? 20 : Math.max(insets.bottom, 20) + 24 }
               ]}
               keyboardShouldPersistTaps="handled"
               onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
@@ -952,7 +955,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
             {!evaluation && !isCallEnded && mode === 'text' && (
               <View style={[
                 styles.inputArea, 
-                { paddingBottom: isKeyboardVisible ? 6 : Math.max(insets.bottom, 12) + 6 }
+                { paddingBottom: isKeyboardVisible ? 6 : Math.max(insets.bottom, 14) + 10 }
               ]}>
                 <ChatInput
                   onSubmit={handleSendText}

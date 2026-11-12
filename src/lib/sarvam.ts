@@ -140,6 +140,8 @@ IMPORTANT VOICE/SPOKEN RULES:
 - Speak in a natural, polite, and reassuring conversational tone.
 Respond strictly in ${languageName}.`;
 
+    const cleanUserText = (transcript || '').trim().substring(0, 3000) || 'Analyze this message or URL.';
+
     const response = await axios.post(
     `${API_BASE_URL}/v1/chat/completions`,
     {
@@ -148,7 +150,7 @@ Respond strictly in ${languageName}.`;
       max_tokens: mode === 'classification' ? 300 : 260,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: transcript },
+        { role: 'user', content: cleanUserText },
       ],
     },
     { 
@@ -198,7 +200,8 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
       }
       
     } catch (error: any) {
-      console.warn(`[CHAT] Attempt ${attempt + 1} issue:`, error.message);
+      const errDetails = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      console.warn(`[CHAT] Attempt ${attempt + 1} issue:`, errDetails);
       lastErrorMsg = error.response?.data?.message || error.response?.data?.error?.message || error.message;
       const status = error.response?.status;
       if (status === 429) {
@@ -234,6 +237,15 @@ export async function chatWithSarvam(prompt: string, languageCode: string, mode:
 
 
 export async function classifyContent(content: string, languageCode: string, contentType: 'url' | 'message'): Promise<{verdict: 'safe' | 'suspicious', explanation: string, source?: string}> {
+  const trimmed = (content || '').trim();
+  if (!trimmed) {
+    return {
+      verdict: 'safe',
+      explanation: 'No content or link found to analyze.',
+      source: 'sarvam'
+    };
+  }
+
   const langNames: Record<string, string> = {
     'hi-IN': 'Hindi',
     'mr-IN': 'Marathi',
@@ -244,6 +256,7 @@ export async function classifyContent(content: string, languageCode: string, con
     'en-IN': 'English',
   };
   const targetLang = langNames[languageCode] || 'English';
+  const sanitizedContent = trimmed.substring(0, 2000);
 
   const prompt = contentType === 'url' 
     ? `You are a strict cybersecurity classifier trained to detect both traditional and modern scam patterns common in India:
@@ -251,13 +264,13 @@ TRADITIONAL PATTERNS: lottery/prize scams, fake bank calls asking for OTP/PIN, K
 MODERN PATTERNS: Pig butchering scams (unexpected "wrong number" texts followed by excessive politeness, mentions of foreign locations/businesses, and requests to move to WhatsApp/Telegram), AI voice cloning scams (fake voice calls from 'family members'), deepfake video call scams, fake investment/crypto schemes promising high returns, fake delivery/customs fee scams via WhatsApp, QR code payment redirection scams, fake job offers via Telegram/WhatsApp groups, romance scams via dating apps, fake loan apps with predatory terms, screen-sharing remote access scams (AnyDesk/TeamViewer), SIM swap social engineering attempts, fake customer support numbers found via search ads.
 
 Analyze the given content against BOTH categories. Look for: urgency tactics, unexpected "wrong number" friendliness, unverified contact requests, requests for OTP/PIN/personal info, suspicious links/shorteners, too-good-to-be-true offers, emotional manipulation, requests to install remote-access apps, or impersonation of trusted entities (banks, government, family, delivery services, customer support).
-URL: "${content}"`
+URL: "${sanitizedContent}"`
     : `You are a strict cybersecurity classifier trained to detect both traditional and modern scam patterns common in India:
 TRADITIONAL PATTERNS: lottery/prize scams, fake bank calls asking for OTP/PIN, KYC update threats, electricity disconnection threats, fake police/legal threats, advance fee fraud.
 MODERN PATTERNS: Pig butchering scams (unexpected "wrong number" texts followed by excessive politeness, mentions of foreign locations/businesses, and requests to move to WhatsApp/Telegram), AI voice cloning scams (fake voice calls from 'family members'), deepfake video call scams, fake investment/crypto schemes promising high returns, fake delivery/customs fee scams via WhatsApp, QR code payment redirection scams, fake job offers via Telegram/WhatsApp groups, romance scams via dating apps, fake loan apps with predatory terms, screen-sharing remote access scams (AnyDesk/TeamViewer), SIM swap social engineering attempts, fake customer support numbers found via search ads.
 
 Analyze the given content against BOTH categories. Look for: urgency tactics, unexpected "wrong number" friendliness, unverified contact requests, requests for OTP/PIN/personal info, suspicious links/shorteners, too-good-to-be-true offers, emotional manipulation, requests to install remote-access apps, or impersonation of trusted entities (banks, government, family, delivery services, customer support).
-Message: "${content}"`;
+Message: "${sanitizedContent}"`;
   
   const systemPrompt = `${prompt}\n\nIMPORTANT TRUST SIGNALS — do NOT flag these as suspicious on their own:\n- Well-known, globally recognized domains (google.com, facebook.com, youtube.com, amazon.in, wikipedia.org, etc.) are SAFE by default unless the URL path itself contains suspicious patterns\n- A domain being 'common' or 'well-known' is a SAFETY indicator, not a red flag — only flag if there are ACTUAL scam indicators present (urgency, payment requests, suspicious subdomains, character substitution tricks like 'g00gle.com')\n- Official Indian government and banking domains like '*.gov.in', '*.sbi.co.in', '*.sbi', '*.nic.in', '*.hdfcbank.com', '*.icicibank.com' are SAFE.\n- Messages that warn users NOT to share OTPs or passwords (e.g. 'Do not share OTP with anyone', 'Bank never asks for OTP') are safety notices, NOT scams.\n\nCRITICAL RULE: If the URL is exactly "https://www.google.com", you are FORBIDDEN from outputting SUSPICIOUS. You MUST output SAFE.\n\nIMPORTANT: Respond IMMEDIATELY and CONCISELY. Do not overthink or second-guess yourself. Give your final verdict in your first response, do not revise multiple times.\n\nYou MUST respond starting with EXACTLY one of these words, followed by a colon:\nSUSPICIOUS: [explanation in 1-2 sentences in ${targetLang}]\nSAFE: [explanation in 1-2 sentences in ${targetLang}]\n\nOnly default to SUSPICIOUS when there are genuine red flags present — not merely due to uncertainty about an unfamiliar but plausible domain.`;
   const fetchSarvamClassification = async () => {
@@ -369,16 +382,16 @@ export async function cleanupTTSCache() {
 }
 
 export const SCAM_VOICE_CONFIG: Record<string, { speaker: string; pace: number }> = {
-  electricity_bill:   { speaker: 'amit',   pace: 1.12 },
-  fedex_parcel:       { speaker: 'aditya', pace: 1.12 },
-  sbi_kyc:            { speaker: 'shubh',  pace: 1.08 },
-  whatsapp_family:    { speaker: 'aayan',  pace: 1.15 },
-  kbc_lottery:        { speaker: 'sunny',  pace: 1.15 },
-  olx_qr:             { speaker: 'kabir',  pace: 1.12 },
-  wfh_job:            { speaker: 'priya',  pace: 1.08 },
-  trai_disconnect:    { speaker: 'aditya', pace: 1.12 },
-  credit_card_points: { speaker: 'rohan',  pace: 1.10 },
-  digital_arrest:     { speaker: 'kabir',  pace: 1.15 },
+  electricity_bill:   { speaker: 'shubh',  pace: 1.00 },
+  fedex_parcel:       { speaker: 'aditya', pace: 1.00 },
+  sbi_kyc:            { speaker: 'shubh',  pace: 1.00 },
+  whatsapp_family:    { speaker: 'rohan',  pace: 1.00 },
+  kbc_lottery:        { speaker: 'rohan',  pace: 1.01 },
+  olx_qr:             { speaker: 'rohan',  pace: 1.00 },
+  wfh_job:            { speaker: 'priya',  pace: 1.00 },
+  trai_disconnect:    { speaker: 'ratan',  pace: 1.00 },
+  credit_card_points: { speaker: 'shubh',  pace: 1.00 },
+  digital_arrest:     { speaker: 'ratan',  pace: 1.00 },
 };
 
 // Helper to clean up text before sending to TTS
@@ -410,7 +423,8 @@ function sanitizeForTTS(text: string): string {
   clean = clean.replace(/www\.\S+/gi, ' link ');
   clean = clean.replace(/₹/g, ' rupees '); // Replace ₹ symbol
   clean = clean.replace(/(\d+),(\d+)/g, '$1$2'); // Remove commas in numbers (e.g. 3,240 -> 3240)
-  clean = clean.replace(/[-–—]/g, ' '); // Replace hyphens and dashes with spaces
+  clean = clean.replace(/[–—]/g, ', '); // Convert em/en dashes into natural breathing pauses
+  clean = clean.replace(/-/g, ' '); // Replace single hyphen with space
   clean = clean.replace(/\s+/g, ' '); // Collapse repeated whitespace
   return clean.trim();
 }
@@ -535,6 +549,9 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
   const timeoutId = setTimeout(() => abortController.abort(), 60000); // 60s global timeout
   let jobId: string | null = null;
   try {
+    const validDocLanguages = ['hi-IN', 'en-IN', 'bn-IN', 'gu-IN', 'kn-IN', 'ml-IN', 'mr-IN', 'or-IN', 'pa-IN', 'ta-IN', 'te-IN', 'ur-IN'];
+    const docLang = validDocLanguages.includes(languageCode) ? languageCode : 'hi-IN';
+
     // 1. Create Job
     const createRes = await fetch(`${API_BASE_URL}/doc-digitization/job/v1`, {
       method: 'POST',
@@ -545,7 +562,7 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
       signal: abortController.signal as any,
       body: JSON.stringify({
         job_parameters: {
-          language: languageCode,
+          language: docLang,
           output_format: 'md',
         },
       }),
@@ -747,6 +764,18 @@ export async function analyzeScreenshot(imageUri: string, languageCode: string):
       extractedText = Array.from(mdBuffer).map(c => String.fromCharCode(c)).join('');
     }
     
+    // Strip embedded base64 data URIs and heavy image tags from OCR output
+    extractedText = extractedText
+      .replace(/!\[.*?\]\(data:image\/[^;]+;base64,[^\)]+\)/gi, '')
+      .replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/gi, '')
+      .replace(/<img[^>]*>/gi, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    if (extractedText.length > 2500) {
+      extractedText = extractedText.substring(0, 2500);
+    }
+
     // console.log('[VISION] Extracted text:', extractedText);
     return extractedText;
   } catch (error: any) {

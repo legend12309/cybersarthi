@@ -56,6 +56,11 @@ export default function HomeScreen({ navigation }: any) {
   const [reportModalVisible,      setReportModalVisible]      = useState(false);
   const [participantModalVisible, setParticipantModalVisible] = useState(false);
   const [tempParticipantId,       setTempParticipantId]       = useState(participantId || '');
+  const [prevParticipantId,       setPrevParticipantId]       = useState(participantId);
+  if (participantId !== prevParticipantId) {
+    setPrevParticipantId(participantId);
+    setTempParticipantId(participantId || '');
+  }
   const [searchQuery,             setSearchQuery]             = useState('');
 
   const [reportError, setReportError] = useState('');
@@ -128,15 +133,9 @@ export default function HomeScreen({ navigation }: any) {
           setRoleplayProgress({});
         }
       });
-    } else {
-      setRoleplayProgress({});
     }
     return () => { active = false; };
   }, [isFocused, userId, deviceId]);
-
-  useEffect(() => {
-    if (participantId) setTempParticipantId(participantId);
-  }, [participantId]);
 
   const isSafe = scanResult === 'safe';
 
@@ -168,9 +167,12 @@ export default function HomeScreen({ navigation }: any) {
   }, []);
 
   const handleScanLink = useCallback(async () => {
-    const url = linkInput.trim();
+    let url = linkInput.trim();
     Keyboard.dismiss();
     if (!url) return;
+    if (!/^https?:\/\//i.test(url) && !url.startsWith('www.')) {
+      url = 'https://' + url;
+    }
     setScanState('scanning');
     
     try {
@@ -183,7 +185,9 @@ export default function HomeScreen({ navigation }: any) {
       setScanSource(source || 'sarvam');
       
       if (userId) {
-        await saveLinkScan(userId, url, verdict, explanation);
+        saveLinkScan(userId, url, verdict, explanation).catch((err) => {
+          console.warn('saveLinkScan background notice:', err);
+        });
       }
     } catch (e) {
       if (!isMounted.current) return;
@@ -291,8 +295,8 @@ export default function HomeScreen({ navigation }: any) {
                   'CyberSaathi',
                   t('app_overview_desc', 'Your AI-powered cyber safety guardian. Practice scam scenarios, verify suspicious messages, and protect your digital life.'),
                   [
-                    { text: t('tab_simulator', 'Simulator'), onPress: () => navigation.navigate('Simulator' as any) },
-                    { text: t('tab_chat', 'Voice AI'), onPress: () => navigation.navigate('Voice' as any) },
+                    { text: t('tab_simulator', 'Simulator'), onPress: () => navigation.navigate('Sim') },
+                    { text: t('tab_chat', 'Voice AI'), onPress: () => navigation.navigate('Chat') },
                     { text: t('btn_ok', 'Close'), style: 'cancel' }
                   ]
                 );

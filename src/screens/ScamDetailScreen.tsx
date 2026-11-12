@@ -118,8 +118,8 @@ export default function ScamDetailScreen({ route, navigation }: any) {
   const showRoleplayOption = Boolean(scammerPersonas[scamId]);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(0));
+  const [slideAnim] = useState(() => new Animated.Value(20));
   const isMounted = useRef(true);
 
   const [customAnalysisModalVisible, setCustomAnalysisModalVisible] = useState(false);

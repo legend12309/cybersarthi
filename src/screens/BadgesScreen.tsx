@@ -42,7 +42,6 @@ export default function BadgesScreen({ navigation }: any) {
   useEffect(() => {
     let active = true;
     if (isFocused && userId) {
-      setLoading(true);
       fetchUserStats(userId)
         .then(data => {
           if (active) { setStats(data); setLoading(false); }

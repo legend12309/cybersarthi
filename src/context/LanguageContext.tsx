@@ -74,8 +74,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         const activeLanguage = storedLanguage || 'hi-IN';
 
+        const activeUserId = storedParticipantId 
+          ? `usr_${storedParticipantId.toLowerCase().replace(/[^a-z0-9]/g, '_')}` 
+          : storedDeviceId;
+
         // 3. Register/fetch user from Supabase database
-        const dbProfile = await getOrCreateUser(storedDeviceId, activeLanguage);
+        const dbProfile = await getOrCreateUser(activeUserId, activeLanguage);
+        if (storedDeviceId && storedDeviceId !== activeUserId) {
+          getOrCreateUser(storedDeviceId, activeLanguage).catch(() => {});
+        }
         
         // If database profile has a different language, sync it
         if (dbProfile && dbProfile.language && dbProfile.language !== activeLanguage && !storedLanguage) {
@@ -94,22 +101,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const changeLanguage = async (code: string) => {
-    const prevCode = languageCode;
-    const prevSelected = hasSelectedLanguage;
     setLanguageCode(code);
     setHasSelectedLanguage(true);
     try {
       await AsyncStorage.setItem('cybersaathi.language', code);
-      if (deviceId) {
-        // Sync language to Supabase backend database profile
-        const { error } = await supabase.from('users').update({ preferred_language: code }).eq('device_id', deviceId);
-        if (error) throw error;
-      }
-    } catch (error) {
-      console.error('Failed to change language, rolling back local state:', error);
-      setLanguageCode(prevCode);
-      setHasSelectedLanguage(prevSelected);
-      await AsyncStorage.setItem('cybersaathi.language', prevCode);
+    } catch (localErr) {
+      console.warn('Failed to save language locally:', localErr);
+    }
+    if (deviceId) {
+      // Best-effort sync to Supabase backend profile
+      Promise.resolve(supabase.from('users').update({ preferred_language: code }).eq('device_id', deviceId)).catch(() => {});
     }
   };
 

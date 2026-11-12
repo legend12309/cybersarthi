@@ -24,6 +24,33 @@ export interface UserProfile {
   level: string;
 }
 
+/**
+ * Ensures the user record exists in the 'users' table so foreign key constraints
+ * (e.g. scam_reports_user_id_fkey, link_scans_user_id_fkey) are never violated.
+ */
+export async function ensureUserExists(userId: string, languageCode: string = 'hi-IN'): Promise<void> {
+  if (!userId) return;
+  try {
+    await withTimeout(
+      supabase
+        .from('users')
+        .upsert(
+          {
+            id: userId,
+            device_id: userId,
+            preferred_language: languageCode,
+            language: languageCode,
+            level: 'Level 2: Vigilant',
+          },
+          { onConflict: 'id' }
+        ),
+      6000
+    );
+  } catch (err) {
+    console.warn('ensureUserExists non-critical warning:', err);
+  }
+}
+
 export async function getOrCreateUser(deviceId: string, languageCode: string): Promise<UserProfile> {
   const fallbackProfile: UserProfile = {
     id: deviceId,
@@ -36,10 +63,16 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
       supabase
         .from('users')
         .upsert(
-          { id: deviceId, device_id: deviceId, preferred_language: languageCode },
-          { onConflict: 'device_id' }
+          {
+            id: deviceId,
+            device_id: deviceId,
+            preferred_language: languageCode,
+            language: languageCode,
+            level: 'Level 2: Vigilant',
+          },
+          { onConflict: 'id' }
         )
-        .select('id, preferred_language')
+        .select('id, preferred_language, language')
         .single()
     );
 
@@ -50,7 +83,7 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
 
     return {
       id: data.id,
-      language: data.preferred_language,
+      language: data.preferred_language || data.language || languageCode,
       level: 'Level 2: Vigilant'
     };
   } catch (error) {
@@ -59,21 +92,33 @@ export async function getOrCreateUser(deviceId: string, languageCode: string): P
   }
 }
 
-export async function submitScamReport(userId: string, phone: string, amount: number, description: string, scamType: string, fraudType: string = 'other', source: string = 'user_report', isVulnerable: boolean = false): Promise<{ data: any, error: any }> {
+export async function submitScamReport(
+  userId: string,
+  phone: string,
+  amount: number,
+  description: string,
+  scamType: string,
+  fraudType: string = 'other',
+  source: string = 'user_report',
+  isVulnerable: boolean = false
+): Promise<{ data: any, error: any }> {
   try {
+    if (userId) {
+      await ensureUserExists(userId);
+    }
     const { data, error } = await withTimeout(
       supabase
         .from('scam_reports')
         .insert([
           {
             user_id: userId,
-            scammer_phone: phone,
-            amount_lost: amount,
-            description: description,
-            scam_type: scamType,
-            fraud_type: fraudType,
-            source: source,
-            is_vulnerable: isVulnerable
+            scammer_phone: phone?.trim() || null,
+            amount_lost: Number(amount) || 0,
+            description: description?.trim() || null,
+            scam_type: scamType || 'other',
+            fraud_type: fraudType || 'other',
+            source: source || 'user_report',
+            is_vulnerable: Boolean(isVulnerable),
           },
         ])
         .select()
@@ -89,6 +134,9 @@ export async function submitScamReport(userId: string, phone: string, amount: nu
 
 export async function saveQuizScore(userId: string, topic: string, score: number, total: number): Promise<{ data: any, error: any }> {
   try {
+    if (userId) {
+      await ensureUserExists(userId);
+    }
     const { data, error } = await withTimeout(
       supabase
         .from('quiz_scores')
@@ -114,6 +162,9 @@ export async function saveQuizScore(userId: string, topic: string, score: number
 
 export async function saveLinkScan(userId: string, url: string, verdict: string, explanation: string): Promise<void> {
   try {
+    if (userId) {
+      await ensureUserExists(userId);
+    }
     const { error } = await withTimeout(
       supabase
         .from('link_scans')
@@ -129,10 +180,9 @@ export async function saveLinkScan(userId: string, url: string, verdict: string,
 
     if (error) {
       console.warn('Supabase saveLinkScan error:', error);
-      throw error;
     }
   } catch (error) {
-    console.error('Supabase saveLinkScan unexpected error:', error);
+    console.warn('Supabase saveLinkScan unexpected error:', error);
   }
 }
 

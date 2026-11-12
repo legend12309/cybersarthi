@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginHorizontal: 16,
-    marginBottom: 10,
+    marginBottom: 6,
     borderWidth: 1,
     borderColor: colors.surfaceBorder,
     alignSelf: 'stretch',

@@ -20,15 +20,16 @@ const LANGUAGES = [
 
 export default function LanguageSelectionScreen({ navigation }: any) {
   const { t, changeLanguage, languageCode, hasConfirmedParticipantId } = useLanguage();
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(languageCode || null);
+  const [prevLanguageCode, setPrevLanguageCode] = useState(languageCode);
+  if (languageCode !== prevLanguageCode) {
+    setPrevLanguageCode(languageCode);
+    setSelected(languageCode);
+  }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const cardWidth = (width - 40 - 12) / 2;
-
-  useEffect(() => {
-    if (languageCode) setSelected(languageCode);
-  }, [languageCode]);
 
   const handleContinue = async () => {
     if (!selected || isSubmitting) return;

@@ -83,30 +83,38 @@ export default function SimulatorScreen({ navigation }: any) {
 
         {/* Hero Featured Card (Insightlancer Deep Navy Card) */}
         <TouchableOpacity style={styles.heroCardNavy}
-          onPress={() => navigation.navigate('ScamDetail', { scamId: scenarios[0].id })}
+          onPress={() => navigation.navigate('ScamDetail', { scamId: scenarios[0]?.id || 'electricity_bill' })}
           activeOpacity={0.85}
         >
           <View style={styles.heroCardTop}>
             <View style={styles.heroIconNavyBg}>
-              <MaterialIcons name={scenarios[0].icon as any} size={24} color="#FFFFFF" />
+              <MaterialIcons name={scenarios[0]?.icon as any || 'receipt-long'} size={24} color="#FFFFFF" />
             </View>
             <View style={styles.hotBadge}>
               <MaterialIcons name="local-fire-department" size={12} color="#FFFFFF" />
               <Text style={styles.hotBadgeText}>{t('sim_featured_badge', 'FEATURED')}</Text>
             </View>
           </View>
-          <Text style={styles.heroTitleNavy}>{scenarios[0].title}</Text>
-          <Text style={styles.heroDescNavy} numberOfLines={2}>{scenarios[0].content}</Text>
+          <Text style={styles.heroTitleNavy}>{scenarios[0]?.title}</Text>
+          <Text style={styles.heroDescNavy} numberOfLines={2}>{scenarios[0]?.content}</Text>
           
           <View style={styles.heroActionRow}>
-            <View style={styles.heroActionBtn}>
-              <Text style={styles.heroActionBtnText}>{t('sim_card_electricity_button') || 'Try Scenario'}</Text>
+            <TouchableOpacity 
+              style={styles.heroActionBtn}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('ScamRoleplay', { scamId: scenarios[0]?.id || 'electricity_bill', mode: 'voice' })}
+            >
+              <Text style={styles.heroActionBtnText} numberOfLines={1}>{t('sim_card_electricity_button') || 'Try Scenario'}</Text>
               <MaterialIcons name="arrow-forward" size={16} color={colors.primary} />
-            </View>
-            <View style={styles.roleplayBadgePill}>
-              <MaterialIcons name="record-voice-over" size={14} color="#FFFFFF" />
-              <Text style={styles.roleplayBadgeText}>{t('sim_voice_text_badge', 'Voice & Text')}</Text>
-            </View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.roleplayBadgePill}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('ScamDetail', { scamId: scenarios[0]?.id || 'electricity_bill' })}
+            >
+              <MaterialIcons name="record-voice-over" size={15} color="#FFFFFF" />
+              <Text style={styles.roleplayBadgeText} numberOfLines={1}>{t('sim_voice_text_badge', 'Voice & Text')}</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
 
@@ -462,34 +470,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
-    gap: 8,
+    marginTop: 8,
+    gap: 10,
   },
   heroActionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: '#FFFFFF',
+    height: 46,
     paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 16,
+    borderRadius: 23,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.12,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
-  heroActionBtnText: { fontFamily: 'Manrope_700Bold', fontSize: 13, color: colors.primary },
+  heroActionBtnText: {
+    fontFamily: 'Manrope_700Bold',
+    fontSize: 13.5,
+    color: colors.primary,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
   roleplayBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    height: 46,
+    paddingHorizontal: 14,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
-  roleplayBadgeText: { fontFamily: 'PublicSans_600SemiBold', fontSize: 11.5, color: '#FFFFFF' },
+  roleplayBadgeText: {
+    fontFamily: 'PublicSans_600SemiBold',
+    fontSize: 12,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
 
   // Quiz Banner
   quizBanner: {

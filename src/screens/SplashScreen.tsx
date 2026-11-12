@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +13,7 @@ export default function SplashScreen({ navigation }: any) {
   const { t, isInitialized, hasSelectedLanguage, hasConfirmedParticipantId } = useLanguage();
   const insets = useSafeAreaInsets();
 
-  const fadeAnim = useRef(new Animated.Value(0)).current; // Fade‑in logo & text
+  const [fadeAnim] = useState(() => new Animated.Value(0)); // Fade‑in logo & text
 
   // Fade‑in on mount
   useEffect(() => {
