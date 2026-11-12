@@ -91,6 +91,16 @@ const getSystemContextDescription = (scam: string, title: string) => {
   }
 };
 
+export function cleanSpokenDialogue(text: string): string {
+  if (!text) return '';
+  let clean = text.trim();
+  clean = clean.replace(/^(\**|\[)?\s*(?:Amit Sharma|Officer Amit Sharma|Officer Amit|Inspector Vikram|Vikram Rathore|Rajesh Malhotra|Scammer|Assistant|Caller|Officer|Doctor|Agent|कॉल करने वाला|अमित शर्मा|इंस्पेक्टर विक्रम)[^:\n]*[:\-\]]\s*/i, '');
+  clean = clean.replace(/\([^)]*(?:shout|crying|aside|whisper|tone|sound|voice|stage|sound|noise|चिल्ला|रोते|गुस्से|हंसते|खांसते)[^)]*\)/gi, '');
+  clean = clean.replace(/\[[^\]]*\]/g, '');
+  clean = clean.replace(/^[\"\'«»“]+|[\"\'«»”]+$/g, '').trim();
+  return clean;
+}
+
 export default function ScamRoleplayScreen({ route, navigation }: any) {
   const { scamId, mode } = route.params || { scamId: 'electricity_bill', mode: 'text' };
   const { t, deviceId, userId, languageCode, participantId } = useLanguage();
@@ -110,6 +120,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   
   const [isRecording, setIsRecording] = useState(false);
+  const [isScammerSpeaking, setIsScammerSpeaking] = useState(false);
   
   const scrollViewRef = useRef<any>(null);
   const isMounted = useRef(true);
@@ -162,6 +173,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       clearTimeout(finalEvalTimeoutRef.current);
       finalEvalTimeoutRef.current = null;
     }
+    setIsScammerSpeaking(false);
     try { recorder.stop().catch(() => {}); } catch(e) {}
     try { if (player.playing) player.pause(); } catch(e) {}
     try {
@@ -173,7 +185,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     if (startedLanguageRef.current === languageCode) return;
     startedLanguageRef.current = languageCode;
     try {
-      const firstMsg = getInitialScammerMessage(scamId, languageCode);
+      const firstMsg = cleanSpokenDialogue(getInitialScammerMessage(scamId, languageCode));
       const contextDesc = getSystemContextDescription(scamId, scamInfo?.title || 'Unknown Scenario');
       const contextMessages: Message[] = [
         { id: 'sysctx', role: 'system_context', content: contextDesc },
@@ -198,6 +210,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
               try {
                 player.replace({ uri: audioUri });
                 player.play();
+                setIsScammerSpeaking(true);
               } catch (playErr) {
                 console.log('[ROLEPLAY] Player error on start:', playErr);
               }
@@ -250,17 +263,25 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     }
     
     const subscription = (player as any).addListener('playbackStatusUpdate', (status: any) => {
-      if (status.didJustFinish || status.error) {
-        setIsTyping(false);
+      if (status.playing) {
+        setIsScammerSpeaking(true);
         setIsAudioLoading(false);
-        if (pendingFinalEvalRef.current) {
-          const msgsToEval = pendingFinalEvalRef.current;
-          pendingFinalEvalRef.current = null;
-          if (finalEvalTimeoutRef.current) {
-            clearTimeout(finalEvalTimeoutRef.current);
-            finalEvalTimeoutRef.current = null;
+        setIsTyping(false);
+      }
+      if (status.didJustFinish || status.error || (!status.playing && !status.isBuffering)) {
+        if (status.didJustFinish || status.error) {
+          setIsScammerSpeaking(false);
+          setIsTyping(false);
+          setIsAudioLoading(false);
+          if (pendingFinalEvalRef.current) {
+            const msgsToEval = pendingFinalEvalRef.current;
+            pendingFinalEvalRef.current = null;
+            if (finalEvalTimeoutRef.current) {
+              clearTimeout(finalEvalTimeoutRef.current);
+              finalEvalTimeoutRef.current = null;
+            }
+            performEvaluationRef.current(msgsToEval);
           }
-          performEvaluationRef.current(msgsToEval);
         }
       }
     });
@@ -280,11 +301,11 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   }, [mode]);
 
   useEffect(() => {
-    if (isRecording) {
+    if (isRecording || isScammerSpeaking || isAudioLoading || isTyping) {
       pulseLoop.current = Animated.loop(
         Animated.parallel([
-          Animated.timing(pulseScale, { toValue: 1.6, duration: 1500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0, duration: 1500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseScale, { toValue: 1.6, duration: 1200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(pulseOpacity, { toValue: 0, duration: 1200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
         ])
       );
       pulseLoop.current.start();
@@ -294,7 +315,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       pulseOpacity.setValue(0.4);
     }
     return () => pulseLoop.current?.stop();
-  }, [isRecording]);
+  }, [isRecording, isScammerSpeaking, isAudioLoading, isTyping]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
@@ -414,7 +435,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
       const specificDirective = contextPrompt[targetScamId] || 'Aggressively counter the user\'s objection and maintain high pressure.';
 
-      return `\n\n[Turn ${turnNumber}: ${langRule} ${specificDirective} Speak directly as the caller into the phone. Strictly under 2 short punchy sentences. Do NOT use stage directions, parentheses, or asterisks. Never break character.]`;
+      return `\n\n[Turn ${turnNumber}: ${langRule} ${specificDirective} Maintain realistic psychological pressure on the phone. Respond specifically and naturally to what the user just stated. Do NOT use stage directions, parentheses, asterisks, brackets, or character prefixes like "Amit:". Output ONLY the spoken dialogue. Never break character.]`;
     }
 
     const finalThreats: Record<string, string> = {
@@ -432,7 +453,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
     const threat = finalThreats[targetScamId] || 'Deliver your ultimate high-stakes threat and hang up!';
 
-    return `\n\n[Turn ${turnNumber} - FINAL ULTIMATUM: ${langRule} ${threat} Speak directly as the caller into the phone. Strictly under 2 short punchy sentences. Do NOT use stage directions, parentheses, or asterisks. Never break character.]`;
+    return `\n\n[Turn ${turnNumber} - FINAL ULTIMATUM: ${langRule} ${threat} Deliver this decisive, high-stakes conclusion with maximum conviction. Do NOT use stage directions, parentheses, asterisks, brackets, or character prefixes like "Amit:". Output ONLY the spoken dialogue. Never break character.]`;
   };
 
   const processUserMessage = useCallback(async (userMsg: string) => {
@@ -465,7 +486,9 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         return m;
       });
 
-      const scammerResponse = await roleplayWithSarvam(finalMessages as any, languageCode, scamId, nextExchange, userMsg);
+      const rawScammerResponse = await roleplayWithSarvam(finalMessages as any, languageCode, scamId, nextExchange, userMsg);
+      if (!isMounted.current) return;
+      const scammerResponse = cleanSpokenDialogue(rawScammerResponse);
       if (!isMounted.current) return;
 
       const updatedMessagesWithScammer: Message[] = [
@@ -815,7 +838,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
                   styles.liveCallPulseRing,
                   { transform: [{ scale: pulseScale }], opacity: pulseOpacity }
                 ]} />
-                <View style={[styles.liveCallAvatar, (isRecording || isTyping || isAudioLoading) && styles.liveCallAvatarActive]}>
+                <View style={[styles.liveCallAvatar, (isRecording || isScammerSpeaking || isTyping || isAudioLoading) && styles.liveCallAvatarActive]}>
                   <MaterialIcons name="phone-in-talk" size={42} color="#FFFFFF" />
                 </View>
               </View>
@@ -827,21 +850,31 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
                   : isCallEnded
                   ? t('eval_call_ended', '🔴 Call Disconnected by Scammer')
                   : isRecording 
-                  ? t('call_listening', 'Listening to your voice...') 
+                  ? t('call_listening', 'Listening to you... Tap when done') 
                   : isTranscribing 
                   ? t('call_processing', 'Processing your speech...') 
                   : isTyping 
-                  ? t('call_replying', 'Scammer is replying...') 
+                  ? t('call_replying', 'Scammer is thinking...') 
                   : isAudioLoading 
+                  ? t('call_connecting_voice', 'Connecting voice line...') 
+                  : isScammerSpeaking
                   ? t('call_speaking', 'Scammer is speaking...') 
-                  : t('call_connected_tap', 'Connected • Tap mic to speak')}
+                  : t('call_connected_tap', 'Connected • Tap mic to answer')}
               </Text>
 
               {/* Latest Live Transcript Snippet */}
               <View style={styles.liveCallTranscriptBox}>
-                <MaterialIcons name="graphic-eq" size={18} color={colors.primary} />
+                <MaterialIcons 
+                  name={isScammerSpeaking ? "graphic-eq" : isRecording ? "mic" : isTranscribing ? "hourglass-empty" : "hearing"} 
+                  size={18} 
+                  color={colors.primary} 
+                />
                 <Text style={styles.liveCallTranscriptText} numberOfLines={3}>
-                  {messages[messages.length - 1]?.content || 'Listening for connection...'}
+                  {isRecording 
+                    ? t('call_you_speaking', 'You are speaking into the phone...') 
+                    : isTranscribing 
+                    ? t('call_transcribing_text', 'Processing your voice response...') 
+                    : (messages[messages.length - 1]?.content || 'Listening for connection...')}
                 </Text>
               </View>
             </View>
@@ -878,7 +911,15 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
                     >
                       <MaterialIcons name={isRecording ? 'stop' : 'mic'} size={28} color="#FFFFFF" />
                     </TouchableOpacity>
-                    <Text style={styles.callBtnLabel}>{isRecording ? t('btn_send', 'Send') : (isTyping || isTranscribing) ? t('btn_wait', 'Wait') : t('btn_speak', 'Speak')}</Text>
+                    <Text style={styles.callBtnLabel}>
+                      {isRecording 
+                        ? t('btn_send', 'Done') 
+                        : (isTyping || isTranscribing) 
+                        ? t('btn_wait', 'Wait') 
+                        : isScammerSpeaking
+                        ? t('btn_interrupt', 'Reply')
+                        : t('btn_speak', 'Speak')}
+                    </Text>
                   </View>
 
                   {/* Hang up / Flag as Scam Button */}

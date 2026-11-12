@@ -391,7 +391,7 @@ export const SCAM_VOICE_CONFIG: Record<string, { speaker: string; pace: number }
 };
 
 // Helper to clean up text before sending to TTS
-function sanitizeForTTS(text: string): string {
+function sanitizeForTTS(text: string, languageCode: string = 'en-IN'): string {
   if (!text) return '';
 
   // 1. If text has stage directions with dialogue after a colon (e.g. "(shouts aside: Ramesh, cut the wire!)"),
@@ -417,7 +417,21 @@ function sanitizeForTTS(text: string): string {
   clean = clean.replace(/[*_~`#]+/g, ''); // Remove markdown formatting
   clean = clean.replace(/https?:\/\/\S+/gi, ' link '); // Replace URLs with 'link'
   clean = clean.replace(/www\.\S+/gi, ' link ');
-  clean = clean.replace(/₹/g, ' rupees '); // Replace ₹ symbol
+
+  const currencyWord = (languageCode === 'hi-IN' || languageCode === 'mr-IN')
+    ? ' रुपये '
+    : languageCode === 'ta-IN'
+    ? ' ரூபாய் '
+    : languageCode === 'te-IN'
+    ? ' రూపాయలు '
+    : languageCode === 'gu-IN'
+    ? ' રૂપિયા '
+    : languageCode === 'bn-IN'
+    ? ' টাকা '
+    : ' rupees ';
+
+  clean = clean.replace(/₹\s*(\d+)/g, '$1 ' + currencyWord + ' ');
+  clean = clean.replace(/₹/g, currencyWord);
   clean = clean.replace(/(\d+),(\d+)/g, '$1$2'); // Remove commas in numbers (e.g. 3,240 -> 3240)
   clean = clean.replace(/[–—]/g, ', '); // Convert em/en dashes into natural breathing pauses
   clean = clean.replace(/-/g, ' '); // Replace single hyphen with space
@@ -458,7 +472,7 @@ export async function textToSpeech(text: string, languageCode: string, options?:
   }
 
   // Clean and sanitize text, allowing full natural speech output
-  const sanitized = sanitizeForTTS(text);
+  const sanitized = sanitizeForTTS(text, languageCode);
   const safeText = truncateToSafeTTSLength(sanitized, 800);
   
   // Verify that safeText contains actual speakable characters (alphanumeric or Indic)
@@ -840,8 +854,13 @@ export async function roleplayWithSarvam(
     const choice = response?.data?.choices?.[0];
     const content = choice?.message?.content;
     if (content && content.trim().length > 0) {
-      const cleanContent = content.trim();
-      if (!isRoleplayPersonaBroken(cleanContent)) {
+      let cleanContent = content.trim();
+      cleanContent = cleanContent.replace(/^(\**|\[)?\s*(?:Amit Sharma|Officer Amit Sharma|Officer Amit|Inspector Vikram|Vikram Rathore|Rajesh Malhotra|Scammer|Assistant|Caller|Officer|Doctor|Agent|कॉल करने वाला|अमित शर्मा|इंस्पेक्टर विक्रम)[^:\n]*[:\-\]]\s*/i, '');
+      cleanContent = cleanContent.replace(/\([^)]*(?:shout|crying|aside|whisper|tone|sound|voice|stage|sound|noise|चिल्ला|रोते|गुस्से)[^)]*\)/gi, '');
+      cleanContent = cleanContent.replace(/\[[^\]]*\]/g, '');
+      cleanContent = cleanContent.replace(/^["'«»“]+|["'«»”]+$/g, '').trim();
+
+      if (!isRoleplayPersonaBroken(cleanContent) && cleanContent.length > 0) {
         return cleanContent;
       }
       console.warn('[ROLEPLAY API] Model produced polite/assistant leak, falling back to scenario dialogue matrix.');
