@@ -126,6 +126,16 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   const pendingFinalEvalRef = useRef<Message[] | null>(null);
   const finalEvalTimeoutRef = useRef<any>(null);
   const performEvaluationRef = useRef<(msgs: Message[]) => Promise<void>>(async () => {});
+  const isCallEndedRef = useRef(false);
+  const evaluationRef = useRef<{ verdict: 'PASS' | 'NEEDS_PRACTICE'; feedback: string } | null>(null);
+
+  useEffect(() => {
+    isCallEndedRef.current = isCallEnded;
+  }, [isCallEnded]);
+
+  useEffect(() => {
+    evaluationRef.current = evaluation;
+  }, [evaluation]);
 
 
 
@@ -145,6 +155,8 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   const scamInfo = scamsData.find(s => s.id === scamId) || scamsData[0];
 
   const cleanupAudioAndRecording = () => {
+    playTokenRef.current += 1;
+    pendingFinalEvalRef.current = null;
     if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
     if (finalEvalTimeoutRef.current) {
       clearTimeout(finalEvalTimeoutRef.current);
@@ -182,7 +194,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         setIsAudioLoading(true);
         textToSpeech(firstMsg, languageCode, { scamId })
           .then((audioUri) => {
-            if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
+            if (isMounted.current && currentToken === playTokenRef.current && !isCallEndedRef.current && !evaluationRef.current && audioUri) {
               try {
                 player.replace({ uri: audioUri });
                 player.play();
@@ -241,6 +253,15 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       if (status.didJustFinish || status.error) {
         setIsTyping(false);
         setIsAudioLoading(false);
+        if (pendingFinalEvalRef.current) {
+          const msgsToEval = pendingFinalEvalRef.current;
+          pendingFinalEvalRef.current = null;
+          if (finalEvalTimeoutRef.current) {
+            clearTimeout(finalEvalTimeoutRef.current);
+            finalEvalTimeoutRef.current = null;
+          }
+          performEvaluationRef.current(msgsToEval);
+        }
       }
     });
 
@@ -248,6 +269,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     
     return () => { 
       isMounted.current = false; 
+      isCallEndedRef.current = true;
       subscription.remove();
       cleanupAudioAndRecording();
       if (finalEvalTimeoutRef.current) {
@@ -297,14 +319,19 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   }, []);
 
   const performEvaluation = useCallback(async (finalMessages: Message[]) => {
+    playTokenRef.current += 1;
     pendingFinalEvalRef.current = null;
     if (finalEvalTimeoutRef.current) {
       clearTimeout(finalEvalTimeoutRef.current);
       finalEvalTimeoutRef.current = null;
     }
+    setIsCallEnded(true);
+    isCallEndedRef.current = true;
     setIsEvaluating(true);
     setIsTyping(true);
+    setIsRecording(false);
     try { if (player.playing) player.pause(); } catch(e) {}
+    try { await recorder.stop(); } catch(e) {}
 
     const transcript = finalMessages
       .filter(m => m.role !== 'system')
@@ -413,9 +440,10 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
     setMessages(newMessages);
     setIsTyping(true);
 
+    const nextExchange = exchanges + 1;
+    const isFinalTurn = nextExchange >= 5;
+
     try {
-      const nextExchange = exchanges + 1;
-      const isFinalTurn = nextExchange >= 5;
 
       const apiMessages = newMessages.filter(m => m.role !== 'system_context').map(m => ({ role: m.role, content: m.content }));
       
@@ -450,6 +478,17 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       setExchanges(nextExchange);
       if (isFinalTurn) {
         setIsCallEnded(true);
+        isCallEndedRef.current = true;
+        pendingFinalEvalRef.current = updatedMessagesWithScammer;
+
+        if (finalEvalTimeoutRef.current) clearTimeout(finalEvalTimeoutRef.current);
+        finalEvalTimeoutRef.current = setTimeout(() => {
+          if (isMounted.current && pendingFinalEvalRef.current) {
+            const msgsToEval = pendingFinalEvalRef.current;
+            pendingFinalEvalRef.current = null;
+            performEvaluationRef.current(msgsToEval);
+          }
+        }, mode === 'voice' ? 14000 : 2000);
       }
       setIsTyping(false);
 
@@ -461,17 +500,45 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
         setIsAudioLoading(true);
         textToSpeech(scammerResponse, languageCode, { scamId })
           .then((audioUri) => {
-            if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
+            if (isMounted.current && currentToken === playTokenRef.current && !evaluationRef.current && audioUri) {
               try {
                 player.replace({ uri: audioUri });
                 player.play();
               } catch (playErr) {
                 console.log('[ROLEPLAY] Player error:', playErr);
+                if (pendingFinalEvalRef.current) {
+                  const msgsToEval = pendingFinalEvalRef.current;
+                  pendingFinalEvalRef.current = null;
+                  if (finalEvalTimeoutRef.current) {
+                    clearTimeout(finalEvalTimeoutRef.current);
+                    finalEvalTimeoutRef.current = null;
+                  }
+                  performEvaluationRef.current(msgsToEval);
+                }
+              }
+            } else if (isMounted.current && pendingFinalEvalRef.current && (!audioUri || evaluationRef.current)) {
+              if (!evaluationRef.current) {
+                const msgsToEval = pendingFinalEvalRef.current;
+                pendingFinalEvalRef.current = null;
+                if (finalEvalTimeoutRef.current) {
+                  clearTimeout(finalEvalTimeoutRef.current);
+                  finalEvalTimeoutRef.current = null;
+                }
+                performEvaluationRef.current(msgsToEval);
               }
             }
           })
           .catch((ttsErr) => {
             console.log('[ROLEPLAY] TTS failed, showing text without audio:', ttsErr);
+            if (isMounted.current && pendingFinalEvalRef.current && !evaluationRef.current) {
+              const msgsToEval = pendingFinalEvalRef.current;
+              pendingFinalEvalRef.current = null;
+              if (finalEvalTimeoutRef.current) {
+                clearTimeout(finalEvalTimeoutRef.current);
+                finalEvalTimeoutRef.current = null;
+              }
+              performEvaluationRef.current(msgsToEval);
+            }
           })
           .finally(() => {
             if (isMounted.current) setIsAudioLoading(false);
@@ -493,11 +560,26 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
           fallbackMsg = "હેલો? સ્પષ્ટ બોલો! સમય બગાડશો નહીં. તમે અત્યારે જ ઉકેલ લાવો છો કે અમે સીધી કાર્યવાહી શરૂ કરીએ?";
         }
 
-        setMessages(prev => [...prev, { 
+        const updatedFallbackMessages: Message[] = [...messages, { 
           id: 'err_' + Date.now().toString(),
           role: 'assistant', 
           content: fallbackMsg
-        }]);
+        }];
+        setMessages(updatedFallbackMessages);
+        setExchanges(nextExchange);
+        if (isFinalTurn) {
+          setIsCallEnded(true);
+          isCallEndedRef.current = true;
+          pendingFinalEvalRef.current = updatedFallbackMessages;
+          if (finalEvalTimeoutRef.current) clearTimeout(finalEvalTimeoutRef.current);
+          finalEvalTimeoutRef.current = setTimeout(() => {
+            if (isMounted.current && pendingFinalEvalRef.current) {
+              const msgsToEval = pendingFinalEvalRef.current;
+              pendingFinalEvalRef.current = null;
+              performEvaluationRef.current(msgsToEval);
+            }
+          }, mode === 'voice' ? 14000 : 2000);
+        }
         setIsTyping(false);
 
         if (mode === 'voice') {
@@ -508,17 +590,45 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
           setIsAudioLoading(true);
           textToSpeech(fallbackMsg, languageCode, { scamId })
             .then((audioUri) => {
-              if (isMounted.current && currentToken === playTokenRef.current && audioUri) {
+              if (isMounted.current && currentToken === playTokenRef.current && !evaluationRef.current && audioUri) {
                 try {
                   player.replace({ uri: audioUri });
                   player.play();
                 } catch (playErr) {
                   console.log('[ROLEPLAY] Fallback player error:', playErr);
+                  if (pendingFinalEvalRef.current) {
+                    const msgsToEval = pendingFinalEvalRef.current;
+                    pendingFinalEvalRef.current = null;
+                    if (finalEvalTimeoutRef.current) {
+                      clearTimeout(finalEvalTimeoutRef.current);
+                      finalEvalTimeoutRef.current = null;
+                    }
+                    performEvaluationRef.current(msgsToEval);
+                  }
+                }
+              } else if (isMounted.current && pendingFinalEvalRef.current && (!audioUri || evaluationRef.current)) {
+                if (!evaluationRef.current) {
+                  const msgsToEval = pendingFinalEvalRef.current;
+                  pendingFinalEvalRef.current = null;
+                  if (finalEvalTimeoutRef.current) {
+                    clearTimeout(finalEvalTimeoutRef.current);
+                    finalEvalTimeoutRef.current = null;
+                  }
+                  performEvaluationRef.current(msgsToEval);
                 }
               }
             })
             .catch((ttsErr) => {
               console.log('[ROLEPLAY] Fallback TTS failed:', ttsErr);
+              if (isMounted.current && pendingFinalEvalRef.current && !evaluationRef.current) {
+                const msgsToEval = pendingFinalEvalRef.current;
+                pendingFinalEvalRef.current = null;
+                if (finalEvalTimeoutRef.current) {
+                  clearTimeout(finalEvalTimeoutRef.current);
+                  finalEvalTimeoutRef.current = null;
+                }
+                performEvaluationRef.current(msgsToEval);
+              }
             })
             .finally(() => {
               if (isMounted.current) setIsAudioLoading(false);
@@ -529,9 +639,9 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   }, [messages, exchanges, scamId, languageCode, languageName, mode, player, performEvaluation]);
 
   const handleSendText = useCallback(async (text: string) => {
-    if (!text.trim() || isTyping) return;
+    if (!text.trim() || isTyping || isCallEnded || isCallEndedRef.current || evaluation || evaluationRef.current || isEvaluating) return;
     await processUserMessage(text.trim());
-  }, [isTyping, processUserMessage]);
+  }, [isTyping, isCallEnded, evaluation, isEvaluating, processUserMessage]);
 
   const stopRecordingAndProcess = useCallback(async () => {
     if (recordingTimeoutRef.current) {
@@ -539,6 +649,10 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       recordingTimeoutRef.current = null;
     }
     setIsRecording(false);
+    if (isCallEndedRef.current || evaluationRef.current) {
+      try { await recorder.stop(); } catch(e) {}
+      return;
+    }
     setIsTranscribing(true);
     setIsTyping(true); // Lock while processing
     try {
@@ -546,7 +660,21 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
       const uri = recorder.uri;
       if (!uri) throw new Error("No audio URI");
       
+      if (isCallEndedRef.current || evaluationRef.current) {
+        if (isMounted.current) {
+          setIsTranscribing(false);
+          setIsTyping(false);
+        }
+        return;
+      }
       const transcript = await speechToText(uri, languageCode);
+      if (!isMounted.current || isCallEndedRef.current || evaluationRef.current) {
+        if (isMounted.current) {
+          setIsTranscribing(false);
+          setIsTyping(false);
+        }
+        return;
+      }
       if (isMounted.current) setIsTranscribing(false);
       if (transcript.trim()) {
          await processUserMessage(transcript);
@@ -577,7 +705,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   }, [recorder, languageCode, processUserMessage, t]);
 
   const toggleRecord = useCallback(async () => {
-    if (isTyping || isTranscribing) return; // Ignore if processing
+    if (isTyping || isTranscribing || isCallEnded || isCallEndedRef.current || evaluation || evaluationRef.current || isEvaluating) return;
 
     // Allow user to interrupt scammer speech
     try { if (player.playing) player.pause(); } catch(e) {}
@@ -614,6 +742,9 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
 
   const forceReveal = useCallback(async () => {
     if (isTyping && messages.length <= 1) return;
+    playTokenRef.current += 1;
+    setIsCallEnded(true);
+    isCallEndedRef.current = true;
     pendingFinalEvalRef.current = null;
     if (finalEvalTimeoutRef.current) {
       clearTimeout(finalEvalTimeoutRef.current);
