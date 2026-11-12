@@ -111,7 +111,7 @@ export default function ScamRoleplayScreen({ route, navigation }: any) {
   
   const [isRecording, setIsRecording] = useState(false);
   
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<any>(null);
   const isMounted = useRef(true);
 
   // Audio Hooks & Animations

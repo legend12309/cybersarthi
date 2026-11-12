@@ -16,7 +16,7 @@ export default function QuizScreen({ navigation }: any) {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isFinished, setIsFinished] = useState(false);
   
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<any>(null);
   const isMounted = useRef(true);
 
   useEffect(() => {

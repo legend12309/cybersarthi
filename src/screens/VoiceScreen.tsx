@@ -946,7 +946,7 @@ export default function VoiceScreen({ navigation }: any) {
                   </ScrollView>
                 </View>
               </View>
-            ) : null
+            ) : undefined
           }
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}
